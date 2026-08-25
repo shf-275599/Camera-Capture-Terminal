@@ -40,6 +40,15 @@ int fputc(int ch, FILE *f)
 }
 #endif
 /****************************************************************************/
+uint8_t Rx_Data = 0;
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if(huart->Instance == USART1)
+    {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
+        HAL_UART_Receive_IT(&huart1, &Rx_Data, 1);
+    }
+}
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -84,7 +93,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  HAL_UART_Receive_IT(&huart1, &Rx_Data, 1);
   /* USER CODE END USART1_Init 2 */
 
 }
