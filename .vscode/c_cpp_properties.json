@@ -1,0 +1,77 @@
+{
+    "configurations": [
+        {
+            "name": "CM4",
+            "compilerPath": "arm-none-eabi-gcc",
+            "compilerArgs": [
+                "-mcpu=cortex-m4",
+                "-mthumb",
+                "-mfpu=fpv4-sp-d16",
+                "-mfloat-abi=hard"
+            ],
+            "defines": [
+                "CORE_CM4",
+                "USE_HAL_DRIVER",
+                "STM32H757xx",
+                "USE_PWR_LDO_SUPPLY"
+            ],
+            "includePath": [
+                "${workspaceFolder}/CM4/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/Drivers/CMSIS/Include",
+                "${workspaceFolder}/**"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/CM4/Core/Inc",
+                    "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                    "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                    "${workspaceFolder}/Drivers/CMSIS/Include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "CM7",
+            "compilerPath": "arm-none-eabi-gcc",
+            "compilerArgs": [
+                "-mcpu=cortex-m7",
+                "-mthumb",
+                "-mfpu=fpv5-d16",
+                "-mfloat-abi=hard"
+            ],
+            "defines": [
+                "CORE_CM7",
+                "USE_HAL_DRIVER",
+                "STM32H757xx",
+                "USE_PWR_LDO_SUPPLY"
+            ],
+            "includePath": [
+                "${workspaceFolder}/CM7/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/Drivers/CMSIS/Include",
+                "${workspaceFolder}/**"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/CM7/Core/Inc",
+                    "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                    "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                    "${workspaceFolder}/Drivers/CMSIS/Include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}
