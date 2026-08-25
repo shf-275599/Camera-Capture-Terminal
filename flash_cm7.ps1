@@ -3,6 +3,16 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
+$make = Get-Command make -ErrorAction SilentlyContinue
+if (-not $make) {
+    throw 'make was not found. Install GNU Make or add it to PATH.'
+}
+
+& $make.Source -C (Join-Path $PSScriptRoot 'Makefile\CM7')
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
 $firmware = Join-Path $PSScriptRoot 'Makefile\CM7\build\BaseProject_CM7.elf'
 $cliCandidates = @(
     $env:STM32_PROGRAMMER_CLI,
