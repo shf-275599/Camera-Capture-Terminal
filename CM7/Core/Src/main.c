@@ -140,7 +140,6 @@ Error_Handler();
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
 
-  printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
