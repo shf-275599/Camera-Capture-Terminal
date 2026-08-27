@@ -134,12 +134,12 @@ Error_Handler();
 /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
-  
+  memory_protection_unit_init();  // 必须要最先初始化 MPU
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-  memory_protection_unit_init();
+  printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
