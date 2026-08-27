@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param()
+param(
+    [ValidateRange(0, 256)]
+    [int]$Jobs = 0
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -8,7 +11,12 @@ if (-not $make) {
     throw 'make was not found. Install GNU Make or add it to PATH.'
 }
 
-& $make.Source -C (Join-Path $PSScriptRoot 'Makefile\CM4')
+$makeArgs = @('-C', (Join-Path $PSScriptRoot 'Makefile\CM4'))
+if ($Jobs -gt 0) {
+    $makeArgs += "-j$Jobs"
+}
+
+& $make.Source @makeArgs
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
