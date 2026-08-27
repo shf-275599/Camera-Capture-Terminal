@@ -21,8 +21,8 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-/****************************************************************************/
 #include <stdio.h>
+/****************************************************************************/
 // 重定向printf到串口
 #ifdef __GNUC__
 // GCC编译器
@@ -40,6 +40,11 @@ int fputc(int ch, FILE *f)
 }
 #endif
 /****************************************************************************/
+/**
+ * @brief  串口接收完成回调函数
+ * @param  huart 串口句柄
+ * @retval 无
+ * */
 uint8_t Rx_Data = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
