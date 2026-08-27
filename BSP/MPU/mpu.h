@@ -3,5 +3,6 @@
 
 #include "main.h"
 
+void memory_protection_unit_init(void);
 
 #endif
