@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "mpu.h"
+#include "bsp_sys.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -134,11 +134,12 @@ Error_Handler();
 /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
-  memory_protection_unit_init();  // 必须要最先初始化 MPU
+  bsp_sys_init();  // 系统初始化
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
+
   printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
