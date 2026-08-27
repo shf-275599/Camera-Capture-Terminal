@@ -76,7 +76,9 @@ C_SOURCES =  \
 ../../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
 ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
 ../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
+../../BSP/bsp_delay.c \
+../../BSP/bsp_sys.c \
 
 # ASM sources
 ASM_SOURCES =  \
@@ -147,8 +149,8 @@ C_INCLUDES =  \
 -I../../Middlewares/Third_Party/FreeRTOS/Source/include \
 -I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 -I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--I../../Drivers/CMSIS/RTOS2/Include
-
+-I../../Drivers/CMSIS/RTOS2/Include \
+-I../../BSP \
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
