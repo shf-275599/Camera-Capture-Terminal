@@ -117,7 +117,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("Hello World!\n");
+  printf("All configured peripherals have been initialized\n");
 
   /* USER CODE END 2 */
 
