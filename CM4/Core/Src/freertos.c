@@ -72,7 +72,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  printf("FreeRTOS initialization...\n");
+  printf("CM4: FreeRTOS initialization...\n");
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
