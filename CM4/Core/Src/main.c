@@ -20,6 +20,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#include "openamp.h"
 #include "usart.h"
 #include "gpio.h"
 
