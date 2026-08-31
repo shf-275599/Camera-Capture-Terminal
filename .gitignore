@@ -13,7 +13,6 @@ ninja_log
 # IDE generated project metadata and user settings
 .settings/
 .vscode/*
-!.vscode/c_cpp_properties.json
 .idea/
 .mxproject
 *.user
@@ -47,7 +46,6 @@ release/
 *.stldr
 *.svd.bak
 *.launch
-c_cpp_properties.json
 
 # Logs and temporary files
 *.log
