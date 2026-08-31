@@ -47,6 +47,7 @@ release/
 *.stldr
 *.svd.bak
 *.launch
+c_cpp_properties.json
 
 # Logs and temporary files
 *.log
