@@ -6,6 +6,23 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-MakefileVariable {
+    param([string]$Path, [string]$Name)
+    $matches = @(Select-String -Path $Path -Pattern "^\s*$Name\s*=\s*(\S+)\s*$" | ForEach-Object { $_.Matches[0].Groups[1].Value })
+    if ($matches.Count -ne 1) { throw "Makefile must contain exactly one $Name assignment: $Path" }
+    return $matches[0]
+}
+
+function Resolve-ProgrammerCli {
+    $command = Get-Command STM32_Programmer_CLI.exe -ErrorAction SilentlyContinue
+    $candidates = @($env:STM32_PROGRAMMER_CLI)
+    if ($command) { $candidates += $command.Source }
+    $candidates += @('D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe', 'C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe', 'C:\Program Files\STMicroelectronics\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe')
+    $cli = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+    if (-not $cli) { throw 'STM32_Programmer_CLI.exe was not found. Set STM32_PROGRAMMER_CLI, add it to PATH, or install STM32CubeProgrammer.' }
+    return $cli
+}
+
 $make = Get-Command make -ErrorAction SilentlyContinue
 if (-not $make) {
     throw 'make was not found. Install GNU Make or add it to PATH.'
@@ -21,31 +38,29 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$cm7Firmware = Join-Path $PSScriptRoot 'Makefile\CM7\build\BaseProject_CM7.elf'
-$cm4Firmware = Join-Path $PSScriptRoot 'Makefile\CM4\build\BaseProject_CM4.elf'
-$cliCandidates = @(
-    $env:STM32_PROGRAMMER_CLI,
-    'D:\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe',
-    'C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe',
-    'C:\Program Files\STMicroelectronics\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe'
-)
-
-$cli = $cliCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-if (-not $cli) {
-    throw 'STM32_Programmer_CLI.exe was not found. Set STM32_PROGRAMMER_CLI or install STM32CubeProgrammer.'
+$firmwares = @()
+foreach ($core in @('CM7', 'CM4')) {
+    $makeDirectory = Join-Path $PSScriptRoot "Makefile\$core"
+    $makefile = Join-Path $makeDirectory 'Makefile'
+    if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "$core Makefile was not found: $makefile" }
+    $target = Get-MakefileVariable -Path $makefile -Name 'TARGET'
+    $buildDirectory = Get-MakefileVariable -Path $makefile -Name 'BUILD_DIR'
+    $firmwares += Join-Path (Join-Path $makeDirectory $buildDirectory) "$target.elf"
 }
-foreach ($firmware in @($cm7Firmware, $cm4Firmware)) {
-    if (-not (Test-Path $firmware)) {
+
+foreach ($firmware in $firmwares) {
+    if (-not (Test-Path -LiteralPath $firmware -PathType Leaf)) {
         throw "Firmware was not found: $firmware`nBuild both cores first with make -C Makefile/CM7 and make -C Makefile/CM4."
     }
 }
 
-& $cli -c port=SWD mode=UR -w $cm7Firmware -v
+$cli = Resolve-ProgrammerCli
+& $cli -c port=SWD mode=UR -w $firmwares[0] -v
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-& $cli -c port=SWD mode=UR -w $cm4Firmware -v -rst
+& $cli -c port=SWD mode=UR -w $firmwares[1] -v -rst
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
