@@ -40,6 +40,8 @@ C_SOURCES =  \
 ../../BSP/bsp_sys.c \
 ../../BSP/MPU/mpu.c \
 ../../BSP/SDRAM/sdram.c \
+../../BSP/LCD/lcd.c \
+../../BSP/LCD/lcd_ltdc.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
@@ -177,6 +179,7 @@ C_INCLUDES =  \
 -I../../BSP \
 -I../../BSP/MPU \
 -I../../BSP/SDRAM \
+-I../../BSP/LCD \
 -I../../CM7/Core/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
