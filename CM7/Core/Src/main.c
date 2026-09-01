@@ -20,6 +20,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#include "dma2d.h"
 #include "ltdc.h"
 #include "openamp.h"
 #include "gpio.h"
@@ -152,6 +153,7 @@ Error_Handler();
   MX_GPIO_Init();
   MX_FMC_Init();
   MX_LTDC_Init();
+  MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
   sdram_init();
   sdram_test();
