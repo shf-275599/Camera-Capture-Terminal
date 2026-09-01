@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include "mpu.h"
 #include "bsp_sys.h"
 #include "sdram.h"
 #include "lcd.h"
@@ -146,7 +147,8 @@ Error_Handler();
 /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
-  bsp_sys_init();  // 系统初始化
+  memory_protection_unit_init();  // 初始化内存保护单元
+  scb_cache_init();               // 初始化缓存
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */

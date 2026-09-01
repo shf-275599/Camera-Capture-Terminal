@@ -3,6 +3,6 @@
 
 #include "main.h"
 
-uint8_t bsp_sys_init(void);
+uint8_t scb_cache_init(void);
 
 #endif
