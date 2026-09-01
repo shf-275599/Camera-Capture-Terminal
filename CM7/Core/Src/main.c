@@ -80,7 +80,10 @@ void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
-
+static void ipc_share_region_clear(void)
+{
+  memset((void*)0x38000000, 0, 0x00010000); // 清除 SRAM4（D3）区域，64KB 大小
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,7 +124,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  memory_protection_unit_init();  // 初始化内存保护单元
+  scb_cache_init();               // 初始化缓存
+  ipc_share_region_clear();       // 清除 IPC 共享区域
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -147,8 +152,7 @@ Error_Handler();
 /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
-  memory_protection_unit_init();  // 初始化内存保护单元
-  scb_cache_init();               // 初始化缓存
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -157,6 +161,13 @@ Error_Handler();
   MX_LTDC_Init();
   MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
+  struct rpmsg_endpoint s_ept;
+  rpmsg_ns_bind_cb ns_bind_cb = NULL;
+  OPENAMP_init_ept(&s_ept);
+  /* Master + NameService：等 Remote 建好 "ipc_demo*/
+  MX_OPENAMP_Init(RPMSG_MASTER, ns_bind_cb);
+  OPENAMP_Wait_EndPointready(&s_ept);
+
   sdram_init();
   sdram_test();
   lcd_init();
