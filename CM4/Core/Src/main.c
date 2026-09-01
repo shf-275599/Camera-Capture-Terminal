@@ -155,11 +155,15 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  printf("CM4: OpenAMP initializing\n");
   OPENAMP_init_ept(&s_ept);
+  printf("CM4: OPENAMP_init_ept\n");
   if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
   {
+    printf("CM4: MX_OPENAMP_Init failed\n");
     Error_Handler();
   }
+  printf("CM4: MX_OPENAMP_Init\n");
   if (OPENAMP_create_endpoint(&s_ept,
                               RPMSG_SERVICE_NAME,
                               RPMSG_ADDR_ANY,
