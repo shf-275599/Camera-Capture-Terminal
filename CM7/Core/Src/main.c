@@ -20,6 +20,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#include "ltdc.h"
 #include "openamp.h"
 #include "gpio.h"
 #include "fmc.h"
@@ -150,6 +151,7 @@ Error_Handler();
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_FMC_Init();
+  MX_LTDC_Init();
   /* USER CODE BEGIN 2 */
   sdram_init();
   sdram_test();
