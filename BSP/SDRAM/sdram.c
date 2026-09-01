@@ -3,6 +3,7 @@
  * @brief   SDRAM 驱动（CubeMX FMC + 上电初始化时序）
  */
 #include "sdram.h"
+#include "fmc.h"
 #include <stdio.h>
 
 /**
@@ -11,7 +12,7 @@
 void sdram_init(void)
 {
     sdram_initialization_sequence();
-    HAL_SDRAM_ProgramRefreshRate(&hsdram2, SDRAM_REFRESH_COUNT);
+    HAL_SDRAM_ProgramRefreshRate(&hsdram1, SDRAM_REFRESH_COUNT);
 }
 
 /**
@@ -63,7 +64,7 @@ uint8_t sdram_send_cmd(uint8_t bankx, uint8_t cmd, uint8_t refresh, uint16_t reg
     command.AutoRefreshNumber = refresh;
     command.ModeRegisterDefinition = regval;
 
-    if (HAL_SDRAM_SendCommand(&hsdram2, &command, 0x1000U) == HAL_OK)
+    if (HAL_SDRAM_SendCommand(&hsdram1, &command, 0x1000U) == HAL_OK)
     {
         return 0;
     }

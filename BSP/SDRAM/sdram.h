@@ -6,7 +6,6 @@
 #define BSP_SDRAM_H
 
 #include "main.h"
-#include "fmc.h"
 
 #define BANK6_SDRAM_ADDR           ((uint32_t)0xD0000000U)
 
