@@ -47,6 +47,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 /* Private Define 自定义宏常量 */
+#define RPMSG_SERVICE_NAME "ipc_demo"
 
 /* DUAL_CORE_BOOT_SYNC_SEQUENCE: Define for dual core boot synchronization    */
 /*                             demonstration code based on hardware semaphore */
@@ -83,6 +84,31 @@ void MX_FREERTOS_Init(void);
 static void ipc_share_region_clear(void)
 {
   memset((void*)0x38000000, 0, 0x00010000); // 清除 SRAM4（D3）区域，64KB 大小
+}
+
+static int cm7_rx_callback(struct rpmsg_endpoint *ept,
+                           void *data,
+                           size_t len,
+                           uint32_t src,
+                           void *priv)
+{
+  char message[64];
+
+  (void)ept;
+  (void)src;
+  (void)priv;
+
+  if (len >= sizeof(message))
+  {
+    len = sizeof(message) - 1;
+  }
+
+  memcpy(message, data, len);
+  message[len] = '\0';
+
+  printf("CM7 RX: %s\n", message);
+
+  return RPMSG_SUCCESS;
 }
 /* USER CODE END PFP */
 
@@ -162,8 +188,24 @@ Error_Handler();
   MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
   OPENAMP_init_ept(&s_ept);
-  MX_OPENAMP_Init(RPMSG_MASTER, NULL);
+  if (MX_OPENAMP_Init(RPMSG_MASTER, NULL) != 0)
+  {
+    Error_Handler();
+  }
+  if (OPENAMP_create_endpoint(&s_ept,
+                              RPMSG_SERVICE_NAME,
+                              RPMSG_ADDR_ANY,
+                              cm7_rx_callback,
+                              NULL) != 0)
+  {
+    Error_Handler();
+  }
   OPENAMP_Wait_EndPointready(&s_ept);
+  const char message[] = "hello from CM7";
+  if (rpmsg_send(&s_ept, message, sizeof(message)) != 0)
+  {
+    printf("CM7: rpmsg_send failed\n");
+  }
 
   sdram_init();
   sdram_test();
