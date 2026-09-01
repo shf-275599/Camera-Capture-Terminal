@@ -14,7 +14,7 @@
 #define RGB_80_8001280       0
 
 /* 0: BSP 完整初始化 LTDC（与例程39一致）；1: 使用 CubeMX 的 MX_LTDC_Init */
-#define BSP_USE_CUBEMX_LTDC  0
+#define BSP_USE_CUBEMX_LTDC  1
 
 typedef struct
 {
