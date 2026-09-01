@@ -34,7 +34,7 @@
 #include <string.h>
 #include "bsp_sys.h"
 #include "sdram.h"
-
+#include "lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -157,6 +157,7 @@ Error_Handler();
   /* USER CODE BEGIN 2 */
   sdram_init();
   sdram_test();
+  lcd_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
