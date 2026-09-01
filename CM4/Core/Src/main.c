@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,12 +65,14 @@
 
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
+static struct rpmsg_endpoint s_ept;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
+/* Private Function Prototypes 私有函数原型 */
 
 /* USER CODE END PFP */
 
