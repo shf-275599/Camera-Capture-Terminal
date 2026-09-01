@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main.h"
+#include "openamp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +63,7 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+void OpenAMP_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -75,9 +77,19 @@ void MX_FREERTOS_Init(void) {
   BaseType_t xReturn = pdPASS;
   xReturn = xTaskCreate((TaskFunction_t)StartDefaultTask,
                         (char *)"defaultTask",
-                        (uint16_t)256,
+                        (uint16_t)128 * 4,
                         (void *)NULL,
                         (uint8_t)1,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
+  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
+                        (char *)"OpenAMP_Task",
+                        (uint16_t)256,
+                        (void *)NULL,
+                        (uint8_t)2,
                         (TaskHandle_t *)NULL);
   if (xReturn != pdPASS)
   {
@@ -128,16 +140,25 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    HAL_GPIO_WritePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin, GPIO_PIN_RESET);
-    osDelay(1000);
-    HAL_GPIO_WritePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin, GPIO_PIN_SET);
-    osDelay(1000);
+    // HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
+    // osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+void OpenAMP_Task(void *argument)
+{
+  /* USER CODE BEGIN OpenAMP_Task */
+  /* Infinite loop */
+  for (;;)
+  {
+    OPENAMP_check_for_message();
+    HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
+    osDelay(1000);
+  }
+  /* USER CODE END OpenAMP_Task */
+}
 /* USER CODE END Application */
 
