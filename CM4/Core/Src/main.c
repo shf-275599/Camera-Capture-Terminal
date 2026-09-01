@@ -73,7 +73,36 @@ static struct rpmsg_endpoint s_ept;
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
+static int rx_callback(struct rpmsg_endpoint *rp_chnl, 
+                       void *data, 
+                       size_t len, 
+                       uint32_t src, 
+                       void *priv)
+{
+  char msg[64];
+  memset(msg, 0, sizeof(msg));
 
+  (void)src;
+  (void)priv;
+
+  if (len >=sizeof(msg))
+  {
+    len = sizeof(msg) - 1;
+  }
+
+  memcpy(msg, data, len);
+  msg[len] = '\0';
+
+  printf("CM4: Received message: %s\n", msg);
+
+  if (is_rpmsg_ept_ready(rp_chnl))
+  {
+    const char reply[] = "Hello, from CM4!";
+    rpmsg_send(rp_chnl, reply, strlen(reply));
+  }
+
+  return RPMSG_SUCCESS;
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
