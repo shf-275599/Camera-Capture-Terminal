@@ -506,6 +506,18 @@ uint16_t ltdc_panelid_read(void)
     idx |= (uint8_t)HAL_GPIO_ReadPin(GPIOK, GPIO_PIN_2) << 1;  /* 读取M1 */
     idx |= (uint8_t)HAL_GPIO_ReadPin(GPIOK, GPIO_PIN_6) << 2;  /* 读取M2 */
 
+    /* 面板ID复用的3根数据线必须恢复为LTDC功能，否则RGB565高位颜色会异常 */
+    gpio_init_struct.Mode = GPIO_MODE_AF_PP;
+    gpio_init_struct.Pull = GPIO_NOPULL;
+    gpio_init_struct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    gpio_init_struct.Alternate = GPIO_AF14_LTDC;
+
+    gpio_init_struct.Pin = GPIO_PIN_6;
+    HAL_GPIO_Init(GPIOJ, &gpio_init_struct);
+
+    gpio_init_struct.Pin = GPIO_PIN_2 | GPIO_PIN_6;
+    HAL_GPIO_Init(GPIOK, &gpio_init_struct);
+
     switch (idx)
     {
         case 0 :
