@@ -155,7 +155,20 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  
+  OPENAMP_init_ept(&s_ept);
+  if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
+  {
+    Error_Handler();
+  }
+  if (OPENAMP_create_endpoint(&s_ept,
+                              RPMSG_SERVICE_NAME,
+                              RPMSG_ADDR_ANY,
+                              cm4_rx_callback,
+                              NULL) != 0)
+  {
+    Error_Handler();
+  }
+  printf("CM4: OpenAMP ready\n");
   printf("CM4: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 

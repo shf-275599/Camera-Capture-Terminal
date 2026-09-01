@@ -72,7 +72,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
-
+static struct rpmsg_endpoint s_ept;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -161,11 +161,8 @@ Error_Handler();
   MX_LTDC_Init();
   MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
-  struct rpmsg_endpoint s_ept;
-  rpmsg_ns_bind_cb ns_bind_cb = NULL;
   OPENAMP_init_ept(&s_ept);
-  /* Master + NameService：等 Remote 建好 "ipc_demo*/
-  MX_OPENAMP_Init(RPMSG_MASTER, ns_bind_cb);
+  MX_OPENAMP_Init(RPMSG_MASTER, NULL);
   OPENAMP_Wait_EndPointready(&s_ept);
 
   sdram_init();
