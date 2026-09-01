@@ -36,6 +36,10 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
+../../BSP/bsp_delay.c \
+../../BSP/bsp_sys.c \
+../../BSP/MPU/mpu.c \
+../../BSP/SDRAM/sdram.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
@@ -73,9 +77,6 @@ C_SOURCES =  \
 ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
 ../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
 ../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
-../../BSP/bsp_delay.c \
-../../BSP/bsp_sys.c \
-../../BSP/MPU/mpu.c \
 ../../CM7/OPENAMP/mbox_hsem.c \
 ../../CM7/OPENAMP/openamp.c \
 ../../CM7/OPENAMP/rsc_table.c \
@@ -170,6 +171,9 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
+-I../../BSP \
+-I../../BSP/MPU \
+-I../../BSP/SDRAM \
 -I../../CM7/Core/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
@@ -179,8 +183,6 @@ C_INCLUDES =  \
 -I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 -I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 -I../../Drivers/CMSIS/RTOS2/Include \
--I../../BSP \
--I../../BSP/MPU \
 -I../../CM7/OPENAMP \
 -I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/include \
 -I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include \
