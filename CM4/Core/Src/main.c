@@ -73,7 +73,7 @@ static struct rpmsg_endpoint s_ept;
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
-static int rx_callback(struct rpmsg_endpoint *rp_chnl, 
+static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl, 
                        void *data, 
                        size_t len, 
                        uint32_t src, 
