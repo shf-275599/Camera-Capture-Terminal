@@ -163,9 +163,7 @@ Error_Handler();
   MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init();
-  
   sdram_init();
-  sdram_test();
   lcd_init();
   /* USER CODE END 2 */
 
