@@ -1,5 +1,6 @@
 #include "app_ipc_cm4.h"
 #include "openamp.h"
+#include "main.h"
 
 static struct rpmsg_endpoint s_ept;
 
@@ -36,23 +37,17 @@ static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl,
 
 void app_ipc_cm4_init(void)
 {
-  printf("CM4: OpenAMP initializing\n");
   OPENAMP_init_ept(&s_ept);
-  printf("CM4: OPENAMP_init_ept OK\n");
   if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
   {
-    printf("CM4: MX_OPENAMP_Init failed\n");
     Error_Handler();
   }
-  printf("CM4: MX_OPENAMP_Init OK\n");
   if (OPENAMP_create_endpoint(&s_ept,
                               RPMSG_SERVICE_NAME,
                               RPMSG_ADDR_ANY,
                               cm4_rx_callback,
                               NULL) != 0)
   {
-    printf("CM4: OPENAMP_create_endpoint failed\n");
     Error_Handler();
   }
-  printf("CM4: OpenAMP ready\n");
 }
