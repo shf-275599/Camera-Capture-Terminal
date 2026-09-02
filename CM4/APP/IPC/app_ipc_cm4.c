@@ -4,19 +4,20 @@
 
 static struct rpmsg_endpoint s_ept;
 
-static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl, 
-                       void *data, 
-                       size_t len, 
-                       uint32_t src, 
-                       void *priv)
+static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl,
+                           void *data,
+                           size_t len,
+                           uint32_t src,
+                           void *priv)
 {
   char msg[64];
+
   memset(msg, 0, sizeof(msg));
 
   (void)src;
   (void)priv;
 
-  if (len >=sizeof(msg))
+  if (len >= sizeof(msg))
   {
     len = sizeof(msg) - 1;
   }
@@ -25,12 +26,6 @@ static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl,
   msg[len] = '\0';
 
   printf("CM4: Received message: %s\n", msg);
-
-  if (is_rpmsg_ept_ready(rp_chnl))
-  {
-    const char reply[] = "Hello, from CM4!";
-    rpmsg_send(rp_chnl, reply, strlen(reply));
-  }
 
   return RPMSG_SUCCESS;
 }
