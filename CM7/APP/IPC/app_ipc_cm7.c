@@ -48,9 +48,10 @@ void app_ipc_cm7_init(void)
 
 void app_ipc_cm7_send(void)
 {
+  OPENAMP_Wait_EndPointready(&s_ept);
   const char message[] = "hello from CM7";
   if (rpmsg_send(&s_ept, message, sizeof(message)) != 0)
   {
-    Error_Handler();
+    printf("CM7: rpmsg_send failed\n");
   }
 }
