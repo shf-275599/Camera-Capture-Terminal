@@ -74,27 +74,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  BaseType_t xReturn = pdPASS;
-  xReturn = xTaskCreate((TaskFunction_t)StartDefaultTask,
-                        (char *)"defaultTask",
-                        (uint16_t)128 * 4,
-                        (void *)NULL,
-                        (uint8_t)1,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
-  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
-                        (char *)"OpenAMP_Task",
-                        (uint16_t)256,
-                        (void *)NULL,
-                        (uint8_t)2,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
+
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -119,6 +99,17 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  BaseType_t xReturn = pdPASS;
+  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
+                        (char *)"OpenAMP_Task",
+                        (uint16_t)256,
+                        (void *)NULL,
+                        (uint8_t)1,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -140,7 +131,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    // HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
+    HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
     osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
@@ -155,7 +146,6 @@ void OpenAMP_Task(void *argument)
   for (;;)
   {
     OPENAMP_check_for_message();
-    HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
     osDelay(1000);
   }
   /* USER CODE END OpenAMP_Task */
