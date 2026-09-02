@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include "app_ipc_cm4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,7 +40,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 /* Private Define 自定义宏常量 */
-#define RPMSG_SERVICE_NAME "ipc_demo"
 
 /* DUAL_CORE_BOOT_SYNC_SEQUENCE: Define for dual core boot synchronization    */
 /*                             demonstration code based on hardware semaphore */
@@ -65,7 +65,6 @@
 
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
-static struct rpmsg_endpoint s_ept;
 
 /* USER CODE END PV */
 
@@ -73,36 +72,7 @@ static struct rpmsg_endpoint s_ept;
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
-static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl, 
-                       void *data, 
-                       size_t len, 
-                       uint32_t src, 
-                       void *priv)
-{
-  char msg[64];
-  memset(msg, 0, sizeof(msg));
 
-  (void)src;
-  (void)priv;
-
-  if (len >=sizeof(msg))
-  {
-    len = sizeof(msg) - 1;
-  }
-
-  memcpy(msg, data, len);
-  msg[len] = '\0';
-
-  printf("CM4: Received message: %s\n", msg);
-
-  if (is_rpmsg_ept_ready(rp_chnl))
-  {
-    const char reply[] = "Hello, from CM4!";
-    rpmsg_send(rp_chnl, reply, strlen(reply));
-  }
-
-  return RPMSG_SUCCESS;
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -155,24 +125,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("CM4: OpenAMP initializing\n");
-  OPENAMP_init_ept(&s_ept);
-  printf("CM4: OPENAMP_init_ept\n");
-  if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
-  {
-    printf("CM4: MX_OPENAMP_Init failed\n");
-    Error_Handler();
-  }
-  printf("CM4: MX_OPENAMP_Init\n");
-  if (OPENAMP_create_endpoint(&s_ept,
-                              RPMSG_SERVICE_NAME,
-                              RPMSG_ADDR_ANY,
-                              cm4_rx_callback,
-                              NULL) != 0)
-  {
-    Error_Handler();
-  }
-  printf("CM4: OpenAMP ready\n");
+  app_ipc_cm4_init();
   printf("CM4: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
