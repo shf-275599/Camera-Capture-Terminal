@@ -76,7 +76,7 @@ void app_ipc_cm7_init(void)
     Error_Handler();
   }
   OPENAMP_Wait_EndPointready(&s_ept);
-  printf("CM7: printf redirected through OpenAMP\r\n");
+  printf("CM7: OpenAMP have been initialized\r\n");
 }
 
 void app_ipc_cm7_send(void)

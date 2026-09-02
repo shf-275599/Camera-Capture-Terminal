@@ -165,6 +165,7 @@ Error_Handler();
   app_ipc_cm7_init();
   sdram_init();
   lcd_init();
+  printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */

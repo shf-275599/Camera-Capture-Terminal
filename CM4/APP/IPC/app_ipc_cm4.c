@@ -25,7 +25,7 @@ static int cm4_rx_callback(struct rpmsg_endpoint *rp_chnl,
   memcpy(msg, data, len);
   msg[len] = '\0';
 
-  printf("CM4: Received message: %s\n", msg);
+  printf("%s", msg);
 
   return RPMSG_SUCCESS;
 }
@@ -45,4 +45,5 @@ void app_ipc_cm4_init(void)
   {
     Error_Handler();
   }
+  printf("CM4: OpenAMP have been initialized\r\n");
 }

@@ -203,7 +203,7 @@ void lcd_init(void)
      * 里面(卡死在f_putc函数), 所以, 必须初始化串口1, 或者屏蔽掉下面
      * 这行 printf 语句 !!!!!!!
      */
-    printf("LCD ID:%x\r\n", lcddev.id); /* 打印LCD ID */
+    printf("CM7: LCD ID:%x\n", lcddev.id); /* 打印LCD ID */
     
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */
     {
