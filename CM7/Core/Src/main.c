@@ -164,7 +164,6 @@ Error_Handler();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init();
   app_ipc_cm7_send();
-
   sdram_init();
   sdram_test();
   lcd_init();
