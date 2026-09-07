@@ -42,7 +42,7 @@ C_SOURCES =  \
 ../../BSP/SDRAM/sdram.c \
 ../../BSP/LCD/lcd.c \
 ../../BSP/LCD/lcd_ltdc.c \
-../../Middlewares/Third_Party/TJpgDec/tjpgd.c \
+../../Utilities/TJpgDec/tjpgd.c \
 ../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
@@ -186,7 +186,7 @@ C_INCLUDES =  \
 -I../../BSP/LCD \
 -I../../CM7/APP/IPC \
 -I../../CM7/Core/Inc \
--I../../Middlewares/Third_Party/TJpgDec\
+-I../../Utilities/TJpgDec\
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
