@@ -42,7 +42,7 @@ C_SOURCES =  \
 ../../BSP/SDRAM/sdram.c \
 ../../BSP/LCD/lcd.c \
 ../../BSP/LCD/lcd_ltdc.c \
-../../Utilities/TJpgDec/tjpgd.c \
+../../Utilities/TJpgDec/tjpgd_utils.c \
 ../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
