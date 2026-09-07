@@ -9,8 +9,8 @@
 ## 构建与清理
 
 - 在仓库根目录下，使用 `make -C Makefile` 构建两个固件镜像；根 Makefile 先构建 CM4，再构建 CM7。
-- 单独构建某个核：`make -C Makefile/CM4` 或 `make -C Makefile/CM7`。生成的 ELF/HEX/BIN/MAP 文件位于对应的 `Makefile/CM4/build` 或 `Makefile/CM7/build` 目录下。
-- Makefile 需要 `arm-none-eabi-*` 工具链在 `PATH` 中，或者通过 `GCC_PATH=/path/to/toolchain make -C Makefile` 指定工具链目录。
+- 单独构建某个核：`./flash_cm7.ps1`、`./flash_cm4.ps1` 或 `./flash_all.ps1`。生成的 ELF/HEX/BIN/MAP 文件位于对应的 `Makefile/CM4/build` 或 `Makefile/CM7/build` 目录下。
+- Makefile 直接通过 `./flash_cm7.ps1`、`./flash_cm4.ps1` 或 `./flash_all.ps1` 构建。
 - 清理生成的核输出：在 PowerShell 中运行 `./clean.ps1`，或直接执行 `make -C Makefile/CM4 clean` 和 `make -C Makefile/CM7 clean`。
 - 仓库没有测试或 lint 套件。对源码更改的验证重点是受影响核的构建成功；涉及共享启动/OpenAMP 代码的更改应同时构建两个核。
 
