@@ -24,7 +24,7 @@
 /                     Some performance improvement.
 /----------------------------------------------------------------------------*/
 
-#include "tjpgd.h"
+#include "tjpgd_utils.h"
 
 
 #if JD_FASTDECODE == 2
