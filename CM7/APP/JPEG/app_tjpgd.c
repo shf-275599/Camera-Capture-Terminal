@@ -10,7 +10,7 @@
  * 完成数据读取和像素输出。本文件的输入源是编译进固件的 const 数组，
  * 后续接入 FatFS 时可将输入回调替换为 f_read()，解码及显示流程无需改变。
  */
-#include "app_jpeg.h"
+#include "app_tjpgd.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -192,9 +192,4 @@ void app_tjpgd_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, 
     __DSB();
 
     printf("CM7: JPEG decode result=%d\n", (int)result);
-}
-
-void app_jpeg_run(void)
-{
-
 }

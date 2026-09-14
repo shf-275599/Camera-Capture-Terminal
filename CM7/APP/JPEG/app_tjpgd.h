@@ -1,8 +1,8 @@
-#ifndef APP_JPEG_H
-#define APP_JPEG_H
+#ifndef APP_TJGD_D_H
+#define APP_TJGD_D_H
 
 #include <stdint.h>
 
 void app_tjpgd_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y);
 
-#endif /* APP_JPEG_H */
+#endif /* APP_TJGD_D_H */

@@ -28,7 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "main.h"
 #include "openamp.h"
-#include "app_jpeg.h"
+#include "app_tjpgd.h"
 #include "jpeg_test_data.h"
 /* USER CODE END Includes */
 
