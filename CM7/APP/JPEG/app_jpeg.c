@@ -135,6 +135,8 @@ static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
  * @brief  解码内置测试 JPEG，并将其居中显示在 LCD 上
  * @param  jpeg_data  JPEG 图片数据指针
  * @param  jpeg_data_size JPEG 图片数据大小（字节数）
+ * @param  x          图片左上角 x 坐标（0 为左上角）
+ * @param  y          图片左上角 y 坐标（0 为左上角）
  * @return None
  *
  * 执行步骤：
@@ -146,7 +148,7 @@ static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
  * @note 当前 scale 参数为 0，表示按原始尺寸解码。TJpgDec 支持 0~3，
  *       分别对应 1、1/2、1/4、1/8 尺寸。
  */
-void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size)
+void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y)
 {
     /* JDEC 保存本次解码状态，只需在函数执行期间保持有效。 */
     JDEC decoder;
@@ -180,8 +182,8 @@ void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size)
     }
 
     /* 计算左上角坐标，使图片在 LCD 水平和垂直方向居中。 */
-    context.x = (lcddev.width - decoder.width) / 2U;
-    context.y = (lcddev.height - decoder.height) / 2U;
+    context.x = x;
+    context.y = y;
 
     /* scale=0 表示不缩放；解码器将重复调用 jpeg_output() 输出 MCU。 */
     result = jd_decomp(&decoder, jpeg_output, 0U);

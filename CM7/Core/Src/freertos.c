@@ -131,7 +131,7 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  app_jpeg_run(jpeg_test_data, sizeof(jpeg_test_data));
+  app_jpeg_run(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
 
   /* Infinite loop */
   for (;;)
