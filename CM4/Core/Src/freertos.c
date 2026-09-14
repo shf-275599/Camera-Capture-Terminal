@@ -60,11 +60,10 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void OpenAMP_Task(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-void OpenAMP_task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -102,8 +101,8 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   BaseType_t xReturn = pdPASS;
-  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_task,
-                        (char *)"OpenAMP_task",
+  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
+                        (char *)"OpenAMP_Task",
                         (uint16_t)256,
                         (void *)NULL,
                         (uint8_t)1,
@@ -141,7 +140,7 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void OpenAMP_task(void *argument)
+void OpenAMP_Task(void *argument)
 {
   (void)argument;
 
