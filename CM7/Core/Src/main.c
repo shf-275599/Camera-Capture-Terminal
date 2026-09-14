@@ -21,7 +21,9 @@
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #include "dma2d.h"
+#include "jpeg.h"
 #include "ltdc.h"
+#include "mdma.h"
 #include "openamp.h"
 #include "gpio.h"
 #include "fmc.h"
@@ -158,8 +160,10 @@ Error_Handler();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_MDMA_Init();
   MX_FMC_Init();
   MX_LTDC_Init();
+  MX_JPEG_Init();
   MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init();

@@ -53,6 +53,8 @@ void BusFault_Handler(void);
 void UsageFault_Handler(void);
 void DebugMon_Handler(void);
 void TIM2_IRQHandler(void);
+void JPEG_IRQHandler(void);
+void MDMA_IRQHandler(void);
 void HSEM1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
