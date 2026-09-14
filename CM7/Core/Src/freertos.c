@@ -75,7 +75,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-
+  app_jpeg_run(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
   printf("CM7: FreeRTOS have been initialized\n");
   /* USER CODE END Init */
 
@@ -130,7 +130,6 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  app_jpeg_run(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
 
   /* Infinite loop */
   for (;;)
