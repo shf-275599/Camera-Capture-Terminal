@@ -40,7 +40,7 @@ typedef struct
 static uint8_t jpeg_work_pool[JPEG_WORK_POOL_SIZE];
 
 /**
- * @brief  从内置 const 数组向 TJpgDec 提供 JPEG 字节流
+ * @brief  向 TJpgDec 提供 JPEG 字节流
  * @param  decoder TJpgDec 解码器对象，device 指向 jpeg_context_t
  * @param  buffer  目标缓冲区；为 NULL 时仅跳过 count 字节，不复制数据
  * @param  count   TJpgDec 请求读取或跳过的字节数
@@ -75,7 +75,7 @@ static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
 
 /**
  * @brief  将 TJpgDec 输出的 RGB565 像素块写入 LTDC 帧缓冲
- * @param  decoder TJpgDec 解码器对象，device 指向 jpeg_test_context_t
+ * @param  decoder TJpgDec 解码器对象，device 指向 jpeg_context_t
  * @param  bitmap  当前 MCU 解码后的 RGB565 像素数组，按行紧密排列
  * @param  rect    当前输出块在 JPEG 图片中的坐标，四个边界均为闭区间
  * @return 1 表示成功并继续解码，0 表示终止解码
