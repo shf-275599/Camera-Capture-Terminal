@@ -43,6 +43,7 @@ C_SOURCES =  \
 ../../BSP/LCD/lcd.c \
 ../../BSP/LCD/lcd_ltdc.c \
 ../../Utilities/TJpgDec/tjpgd_utils.c \
+../../CM7/APP/JPEG/app_jpeg_test.c \
 ../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
@@ -184,6 +185,7 @@ C_INCLUDES =  \
 -I../../BSP/MPU \
 -I../../BSP/SDRAM \
 -I../../BSP/LCD \
+-I../../CM7/APP/JPEG \
 -I../../CM7/APP/IPC \
 -I../../CM7/Core/Inc \
 -I../../Utilities/TJpgDec\

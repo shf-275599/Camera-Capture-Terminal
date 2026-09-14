@@ -26,6 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_jpeg_test.h"
 #include "main.h"
 #include "openamp.h"
 /* USER CODE END Includes */
@@ -129,6 +130,8 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
+  app_jpeg_test_run();
+
   /* Infinite loop */
   for (;;)
   {
