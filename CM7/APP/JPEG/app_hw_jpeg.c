@@ -1,4 +1,4 @@
-#include "app_jpeg.h"
+#include "app_hw_jpeg.h"
 #include <string.h>
 #include <stdio.h>
 #include "jpeg.h"

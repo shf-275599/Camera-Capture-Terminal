@@ -10,11 +10,9 @@
  * 完成数据读取和像素输出。本文件的输入源是编译进固件的 const 数组，
  * 后续接入 FatFS 时可将输入回调替换为 f_read()，解码及显示流程无需改变。
  */
-#include "app_tjpgd.h"
-
+#include "app_sw_jpeg.h"
 #include <stdio.h>
 #include <string.h>
-
 #include "lcd.h"
 #include "tjpgd_utils.h"
 
