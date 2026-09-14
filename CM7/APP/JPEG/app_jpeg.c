@@ -10,12 +10,11 @@
  * 完成数据读取和像素输出。本文件的输入源是编译进固件的 const 数组，
  * 后续接入 FatFS 时可将输入回调替换为 f_read()，解码及显示流程无需改变。
  */
-#include "app_jpeg_test.h"
+#include "app_jpeg.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#include "jpeg_test_data.h"
 #include "lcd.h"
 #include "tjpgd_utils.h"
 
@@ -51,7 +50,7 @@ static uint8_t jpeg_work_pool[JPEG_WORK_POOL_SIZE];
  *       传为 NULL。即使不执行 memcpy，也必须推进 position，否则解析器
  *       会重复读取同一段数据。
  */
-static size_t jpeg_test_input(JDEC *decoder, uint8_t *buffer, size_t count)
+static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
 {
     /* jd_prepare() 已将调用者传入的会话上下文保存到 decoder->device。 */
     jpeg_test_context_t *context = (jpeg_test_context_t *)decoder->device;
@@ -85,7 +84,7 @@ static size_t jpeg_test_input(JDEC *decoder, uint8_t *buffer, size_t count)
  *       输出整张图片。边缘 MCU 可能比内部 MCU 小，因此每次都必须根据
  *       rect 重新计算宽度和高度。
  */
-static int jpeg_test_output(JDEC *decoder, void *bitmap, JRECT *rect)
+static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
 {
     jpeg_test_context_t *context = (jpeg_test_context_t *)decoder->device;
     const uint16_t *source = (const uint16_t *)bitmap;
@@ -134,6 +133,9 @@ static int jpeg_test_output(JDEC *decoder, void *bitmap, JRECT *rect)
 
 /**
  * @brief  解码内置测试 JPEG，并将其居中显示在 LCD 上
+ * @param  jpeg_data  JPEG 图片数据指针
+ * @param  jpeg_data_size JPEG 图片数据大小（字节数）
+ * @return None
  *
  * 执行步骤：
  * 1. 初始化内存输入上下文；
@@ -144,22 +146,22 @@ static int jpeg_test_output(JDEC *decoder, void *bitmap, JRECT *rect)
  * @note 当前 scale 参数为 0，表示按原始尺寸解码。TJpgDec 支持 0~3，
  *       分别对应 1、1/2、1/4、1/8 尺寸。
  */
-void app_jpeg_test_run(void)
+void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size)
 {
     /* JDEC 保存本次解码状态，只需在函数执行期间保持有效。 */
     JDEC decoder;
     JRESULT result;
     /* 输入数据位于 Flash；显示坐标在解析出图片尺寸后再计算。 */
     jpeg_test_context_t context = {
-        .data = jpeg_test_data,
-        .size = jpeg_test_data_size,
+        .data = jpeg_data,
+        .size = jpeg_data_size,
         .position = 0U,
         .x = 0U,
         .y = 0U,
     };
 
     /* 解析 JPEG 文件头，并从 jpeg_work_pool 中分配解码器内部数据。 */
-    result = jd_prepare(&decoder, jpeg_test_input, jpeg_work_pool,
+    result = jd_prepare(&decoder, jpeg_input, jpeg_work_pool,
                         sizeof(jpeg_work_pool), &context);
     if (result != JDR_OK)
     {
@@ -181,8 +183,8 @@ void app_jpeg_test_run(void)
     context.x = (lcddev.width - decoder.width) / 2U;
     context.y = (lcddev.height - decoder.height) / 2U;
 
-    /* scale=0 表示不缩放；解码器将重复调用 jpeg_test_output() 输出 MCU。 */
-    result = jd_decomp(&decoder, jpeg_test_output, 0U);
+    /* scale=0 表示不缩放；解码器将重复调用 jpeg_output() 输出 MCU。 */
+    result = jd_decomp(&decoder, jpeg_output, 0U);
 
     /* 确保所有显式内存操作在打印完成状态前已经结束。 */
     __DSB();
