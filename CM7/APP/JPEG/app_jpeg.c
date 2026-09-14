@@ -22,7 +22,7 @@
 #define JPEG_WORK_POOL_SIZE  (8192U)
 
 /**
- * @brief JPEG 测试过程的输入状态和显示位置
+ * @brief JPEG 解码过程的输入状态和显示位置
  *
  * 该结构通过 jd_prepare() 的 dev 参数保存到 JDEC::device，输入和输出
  * 回调因此可以共享同一个会话上下文，而不需要使用全局读写状态。
@@ -34,14 +34,14 @@ typedef struct
     size_t position;     /* 输入回调当前读取偏移 */
     uint16_t x;          /* 图片左上角在 LCD 中的 X 坐标 */
     uint16_t y;          /* 图片左上角在 LCD 中的 Y 坐标 */
-} jpeg_test_context_t;
+} jpeg_context_t;
 
 /* 静态分配可避免依赖 FreeRTOS 堆；解码期间该内存池必须保持有效。 */
 static uint8_t jpeg_work_pool[JPEG_WORK_POOL_SIZE];
 
 /**
  * @brief  从内置 const 数组向 TJpgDec 提供 JPEG 字节流
- * @param  decoder TJpgDec 解码器对象，device 指向 jpeg_test_context_t
+ * @param  decoder TJpgDec 解码器对象，device 指向 jpeg_context_t
  * @param  buffer  目标缓冲区；为 NULL 时仅跳过 count 字节，不复制数据
  * @param  count   TJpgDec 请求读取或跳过的字节数
  * @return 实际读取或跳过的字节数；到达数据末尾时可能小于 count
@@ -53,7 +53,7 @@ static uint8_t jpeg_work_pool[JPEG_WORK_POOL_SIZE];
 static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
 {
     /* jd_prepare() 已将调用者传入的会话上下文保存到 decoder->device。 */
-    jpeg_test_context_t *context = (jpeg_test_context_t *)decoder->device;
+    jpeg_context_t *context = (jpeg_context_t *)decoder->device;
     size_t remaining = context->size - context->position;
 
     /* 将本次读取限制在数组边界内，避免读取 const 数组之外的数据。 */
@@ -86,7 +86,7 @@ static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
  */
 static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
 {
-    jpeg_test_context_t *context = (jpeg_test_context_t *)decoder->device;
+    jpeg_context_t *context = (jpeg_context_t *)decoder->device;
     const uint16_t *source = (const uint16_t *)bitmap;
     /* JRECT 的 right 和 bottom 属于有效区域，因此尺寸计算需要加 1。 */
     uint16_t width = rect->right - rect->left + 1U;
@@ -152,7 +152,7 @@ void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size)
     JDEC decoder;
     JRESULT result;
     /* 输入数据位于 Flash；显示坐标在解析出图片尺寸后再计算。 */
-    jpeg_test_context_t context = {
+    jpeg_context_t context = {
         .data = jpeg_data,
         .size = jpeg_data_size,
         .position = 0U,
