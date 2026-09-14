@@ -148,7 +148,7 @@ static int tjpgd_output(JDEC *decoder, void *bitmap, JRECT *rect)
  * @note 当前 scale 参数为 0，表示按原始尺寸解码。TJpgDec 支持 0~3，
  *       分别对应 1、1/2、1/4、1/8 尺寸。
  */
-void app_tjpgd_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y)
+void jpeg_sw_decode(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y)
 {
     /* JDEC 保存本次解码状态，只需在函数执行期间保持有效。 */
     JDEC decoder;
