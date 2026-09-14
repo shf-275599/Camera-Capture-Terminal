@@ -1,6 +1,6 @@
-#ifndef APP_TJGD_D_H
-#define APP_TJGD_D_H
+#ifndef APP_HW_JPEG_H
+#define APP_HW_JPEG_H
 
 
 
-#endif /* APP_TJGD_D_H */
+#endif /* APP_HW_JPEG_H */
