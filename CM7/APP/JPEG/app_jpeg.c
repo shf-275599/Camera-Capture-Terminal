@@ -50,7 +50,7 @@ static uint8_t jpeg_work_pool[JPEG_WORK_POOL_SIZE];
  *       传为 NULL。即使不执行 memcpy，也必须推进 position，否则解析器
  *       会重复读取同一段数据。
  */
-static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
+static size_t tjpgd_input(JDEC *decoder, uint8_t *buffer, size_t count)
 {
     /* jd_prepare() 已将调用者传入的会话上下文保存到 decoder->device。 */
     jpeg_context_t *context = (jpeg_context_t *)decoder->device;
@@ -84,7 +84,7 @@ static size_t jpeg_input(JDEC *decoder, uint8_t *buffer, size_t count)
  *       输出整张图片。边缘 MCU 可能比内部 MCU 小，因此每次都必须根据
  *       rect 重新计算宽度和高度。
  */
-static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
+static int tjpgd_output(JDEC *decoder, void *bitmap, JRECT *rect)
 {
     jpeg_context_t *context = (jpeg_context_t *)decoder->device;
     const uint16_t *source = (const uint16_t *)bitmap;
@@ -148,7 +148,7 @@ static int jpeg_output(JDEC *decoder, void *bitmap, JRECT *rect)
  * @note 当前 scale 参数为 0，表示按原始尺寸解码。TJpgDec 支持 0~3，
  *       分别对应 1、1/2、1/4、1/8 尺寸。
  */
-void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y)
+void app_tjpgd_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, uint16_t y)
 {
     /* JDEC 保存本次解码状态，只需在函数执行期间保持有效。 */
     JDEC decoder;
@@ -163,7 +163,7 @@ void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, u
     };
 
     /* 解析 JPEG 文件头，并从 jpeg_work_pool 中分配解码器内部数据。 */
-    result = jd_prepare(&decoder, jpeg_input, jpeg_work_pool,
+    result = jd_prepare(&decoder, tjpgd_input, jpeg_work_pool,
                         sizeof(jpeg_work_pool), &context);
     if (result != JDR_OK)
     {
@@ -186,10 +186,15 @@ void app_jpeg_run(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x, u
     context.y = y;
 
     /* scale=0 表示不缩放；解码器将重复调用 jpeg_output() 输出 MCU。 */
-    result = jd_decomp(&decoder, jpeg_output, 0U);
+    result = jd_decomp(&decoder, tjpgd_output, 0U);
 
     /* 确保所有显式内存操作在打印完成状态前已经结束。 */
     __DSB();
 
     printf("CM7: JPEG decode result=%d\n", (int)result);
+}
+
+void app_jpeg_run(void)
+{
+
 }
