@@ -137,6 +137,9 @@ void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg,
 
   next = (remain > JPEG_CHUNK_SIZE) ? JPEG_CHUNK_SIZE : remain;
   HAL_JPEG_ConfigOutputBuffer(hjpeg, data + length, next);
+
+  JPEG_InitColorTables();
+  JPEG_GetDecodeColorConvertFunc();
 }
 
 /**
