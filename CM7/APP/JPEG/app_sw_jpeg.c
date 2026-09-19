@@ -1,6 +1,6 @@
 /**
- * @file    app_jpeg_test.c
- * @brief   使用 TJpgDec 解码内置 JPEG 数据并显示到 LTDC LCD
+ * @file    app_sw_jpeg.c
+ * @brief   使用 TJpgDec 软件解码 JPEG，并将 RGB565 图像写入 LCD 帧缓冲
  *
  * 数据流如下：
  * jpeg_test_data[]（Flash） -> TJpgDec -> RGB565 MCU 像素块
@@ -130,18 +130,18 @@ static int tjpgd_output(JDEC *decoder, void *bitmap, JRECT *rect)
 }
 
 /**
- * @brief  解码内置测试 JPEG，并将其居中显示在 LCD 上
+ * @brief  使用 TJpgDec 解码 JPEG，并将图像输出到指定 LCD 坐标
  * @param  jpeg_data  JPEG 图片数据指针
  * @param  jpeg_data_size JPEG 图片数据大小（字节数）
- * @param  x          图片左上角 x 坐标（0 为左上角）
- * @param  y          图片左上角 y 坐标（0 为左上角）
+ * @param  x          图片左上角 X 坐标（0 为 LCD 左边界）
+ * @param  y          图片左上角 Y 坐标（0 为 LCD 上边界）
  * @return None
  *
  * 执行步骤：
  * 1. 初始化内存输入上下文；
  * 2. 调用 jd_prepare() 解析 JPEG 头并建立解码表；
  * 3. 检查原图尺寸是否超出 LCD；
- * 4. 计算居中坐标并调用 jd_decomp() 输出 RGB565 像素。
+ * 4. 使用调用者提供的坐标并调用 jd_decomp() 输出 RGB565 像素。
  *
  * @note 当前 scale 参数为 0，表示按原始尺寸解码。TJpgDec 支持 0~3，
  *       分别对应 1、1/2、1/4、1/8 尺寸。
@@ -179,7 +179,7 @@ void jpeg_sw_decode(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x,
         return;
     }
 
-    /* 计算左上角坐标，使图片在 LCD 水平和垂直方向居中。 */
+    /* 保存调用者提供的左上角坐标，输出回调会据此定位每个 MCU 像素块。 */
     context.x = x;
     context.y = y;
 
