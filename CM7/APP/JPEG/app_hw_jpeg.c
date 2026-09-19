@@ -2,8 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "jpeg.h"
+#include "jpeg_utils.h"
 
-#define JPEG_CHUNK_SIZE (64U * 1024U) // JPEG DMA 单次输入数据块大小
+#define JPEG_CHUNK_SIZE (128U * 1024U) // JPEG DMA 单次输入数据块大小
 uint8_t *jpeg_in = NULL;              // JPEG 压缩码流缓冲区
 uint8_t *jpeg_mcu = NULL;             // JPEG 解码输出缓冲区，用于接收外设输出的 YCbCr MCU 数据
 uint32_t jpeg_in_size = 0;            // 当前 JPEG 压缩码流的总字节数
