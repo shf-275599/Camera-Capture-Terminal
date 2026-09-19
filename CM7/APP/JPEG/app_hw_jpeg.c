@@ -35,6 +35,9 @@ int jpeg_hw_decode(uint8_t *in, uint32_t in_size, uint8_t *mcu_out)
   memset(&g_jpeg, 0, sizeof(g_jpeg)); // 清除上一帧会话状态、计数和 JPEG 配置信息。
   g_jpeg.in_size = in_size;           // 保存码流总长度
   g_jpeg.active = 1;                  // 标记会话已开始
+  jpeg_in = in;                       // 保存输入指针
+  jpeg_mcu = mcu_out;                 // 保存输出指针
+  jpeg_in_size = in_size;             // 保存码流总长度
 
   first_in = (in_size > JPEG_CHUNK_SIZE) ? JPEG_CHUNK_SIZE : in_size; // 首块不能超过 DMA 输入块容量或实际码流长度
 
