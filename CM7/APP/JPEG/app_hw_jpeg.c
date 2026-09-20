@@ -8,17 +8,22 @@
 
 #define JPEG_MCU_BUFFER_ADDR 0xD0100000U
 #define JPEG_RGB_BUFFER_ADDR 0xD0110000U
+#define JPEG_INPUT_BUFFER_ADDR 0xD01E0000U
 #define JPEG_MCU_BUFFER_SIZE (32U * 1024U)
 #define JPEG_RGB_BUFFER_SIZE (800U * 480U * 2U)
 
 #define JPEG_INPUT_CHUNK_SIZE (32U * 1024U)   // JPEG DMA 单次输入数据块大小
 #define JPEG_OUTPUT_BUFFER_SIZE (32U * 1024U) // JPEG 解码输出缓冲区大小
+#define JPEG_MDMA_TRANSFER_UNIT 32U
 
 #define JPEG_MCU_BUFFER \
   ((uint8_t *)JPEG_MCU_BUFFER_ADDR) // MCU 数据缓冲区指针
 
 #define JPEG_RGB_BUFFER \
   ((uint8_t *)JPEG_RGB_BUFFER_ADDR) // RGB 数据缓冲区指针
+
+#define JPEG_INPUT_BUFFER \
+  ((uint8_t *)JPEG_INPUT_BUFFER_ADDR) // MDMA 输入缓冲区指针
 
 typedef struct
 {
@@ -34,6 +39,11 @@ typedef struct
 
 static jpeg_session_t g_jpeg;              // 当前 JPEG 解码会话
 static const uint8_t *g_jpeg_input = NULL; // 当前 JPEG 解码会话的输入指针
+
+static void jpeg_cache_clean(const void *address, uint32_t length);
+static void jpeg_cache_invalidate(void *address, uint32_t length);
+static int jpeg_convert_to_rgb565(void);
+static int jpeg_copy_rgb565_to_lcd(uint16_t x, uint16_t y);
 /**
  * @brief JPEG 解码函数
  *
@@ -44,6 +54,7 @@ static const uint8_t *g_jpeg_input = NULL; // 当前 JPEG 解码会话的输入�
  */
 int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
 {
+  uint32_t input_size;
   uint32_t first_input;
   uint32_t start_tick;
 
@@ -62,13 +73,24 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
+  input_size = (size + JPEG_MDMA_TRANSFER_UNIT - 1U) &
+               ~(JPEG_MDMA_TRANSFER_UNIT - 1U);
+  if (input_size > JPEG_INPUT_CHUNK_SIZE)
+  {
+    return -1;
+  }
+
   memset(&g_jpeg, 0, sizeof(g_jpeg));
 
-  g_jpeg_input = data;
-  g_jpeg.in_size = size;
+  memcpy(JPEG_INPUT_BUFFER, data, size);
+  memset(JPEG_INPUT_BUFFER + size, 0, input_size - size);
+  jpeg_cache_clean(JPEG_INPUT_BUFFER, input_size);
+
+  g_jpeg_input = JPEG_INPUT_BUFFER;
+  g_jpeg.in_size = input_size;
   g_jpeg.active = 1U;
 
-  first_input = size;
+  first_input = input_size;
   if (first_input > JPEG_INPUT_CHUNK_SIZE)
   {
     first_input = JPEG_INPUT_CHUNK_SIZE;
@@ -84,7 +106,7 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
                         JPEG_OUTPUT_BUFFER_SIZE);
 
   if (HAL_JPEG_Decode_DMA(&hjpeg,
-                          (uint8_t *)data,
+                          JPEG_INPUT_BUFFER,
                           first_input,
                           JPEG_MCU_BUFFER,
                           JPEG_OUTPUT_BUFFER_SIZE) != HAL_OK)
