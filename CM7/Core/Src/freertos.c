@@ -28,8 +28,10 @@
 /* USER CODE BEGIN Includes */
 #include "main.h"
 #include "openamp.h"
-#include "app_sw_jpeg.h"
 #include "jpeg_test_data.h"
+#include "app_sw_jpeg.h"
+#include "app_hw_jpeg.h"
+#include "jpeg_utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,7 +77,12 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  jpeg_sw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
+  // jpeg_sw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
+  JPEG_InitColorTables();
+  if (jpeg_hw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0U, 0U) != 0)
+  {
+      printf("CM7: Hardware JPEG decode failed\n");
+  }
   printf("CM7: FreeRTOS have been initialized\n");
   /* USER CODE END Init */
 
