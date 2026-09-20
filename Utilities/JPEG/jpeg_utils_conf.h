@@ -29,8 +29,8 @@
 
 
 /* Includes ------------------------------------------------------------------*/
-/*#include "stm32fXxx_hal.h" */
-/* #include "stm32fXxx_hal_jpeg.h" */
+#include "stm32h7xx_hal.h" 
+#include "stm32h7xx_hal_jpeg.h" 
 
 /* Private define ------------------------------------------------------------*/
 /** @addtogroup JPEG_Private_Defines
