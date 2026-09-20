@@ -1,3 +1,20 @@
+/**
+ * @file    app_hw_jpeg.c
+ * @brief   使用 STM32H7 JPEG Codec 和 MDMA 解码 JPEG，并将 RGB565 图像写入 LCD 帧缓冲
+ *
+ * 数据流如下：
+ * JPEG 压缩数据 -> SDRAM 输入缓冲 -> MDMA -> JPEG Codec
+ * -> YCbCr MCU 缓冲（SDRAM） -> jpeg_utils -> RGB565 缓冲（SDRAM）
+ * -> LTDC 帧缓冲（SDRAM） -> LCD。
+ *
+ * JPEG Codec 负责解析码流并输出按 MCU 排列的 YCbCr 数据，jpeg_utils 根据
+ * JPEG 头中的颜色空间和色度采样方式将其转换为 RGB565。由于输入、MCU、
+ * RGB 和 LTDC 帧缓冲均位于可缓存 SDRAM，CPU 与 MDMA/LTDC 切换缓冲所有权
+ * 时必须执行相应的 D-Cache Clean 或 Invalidate 操作。
+ *
+ * 当前实现使用固定 SDRAM 地址和单个 32 KiB MCU 输出缓冲，适合输出数据可
+ * 完整放入该缓冲的图片。更大图片需要改为分块输出或双缓冲流水处理。
+ */
 #include "app_hw_jpeg.h"
 #include <string.h>
 #include <stdio.h>
@@ -6,51 +23,78 @@
 #include "ltdc.h"
 #include "lcd.h"
 
+/*
+ * SDRAM 缓冲布局。地址避开从 0xD0000000 开始的 800 x 480 RGB565
+ * LTDC 帧缓冲，各区域之间也不重叠。
+ */
 #define JPEG_MCU_BUFFER_ADDR 0xD0100000U
 #define JPEG_RGB_BUFFER_ADDR 0xD0110000U
 #define JPEG_INPUT_BUFFER_ADDR 0xD01E0000U
 #define JPEG_MCU_BUFFER_SIZE (32U * 1024U)
 #define JPEG_RGB_BUFFER_SIZE (800U * 480U * 2U)
 
-#define JPEG_INPUT_CHUNK_SIZE (32U * 1024U)   // JPEG DMA 单次输入数据块大小
-#define JPEG_OUTPUT_BUFFER_SIZE (32U * 1024U) // JPEG 解码输出缓冲区大小
+/* JPEG 输入和输出 MDMA 单次可访问的最大缓冲容量。 */
+#define JPEG_INPUT_CHUNK_SIZE (32U * 1024U)
+#define JPEG_OUTPUT_BUFFER_SIZE (32U * 1024U)
+/* JPEG FIFO 阈值请求对应 32 字节 MDMA BufferTransferLength。 */
 #define JPEG_MDMA_TRANSFER_UNIT 32U
 
+/* JPEG Codec 通过 MDMA 将解码后的 YCbCr MCU 数据写入该缓冲。 */
 #define JPEG_MCU_BUFFER \
-  ((uint8_t *)JPEG_MCU_BUFFER_ADDR) // MCU 数据缓冲区指针
+  ((uint8_t *)JPEG_MCU_BUFFER_ADDR)
 
+/* jpeg_utils 将 MCU 数据转换为按图片宽度紧密排列的 RGB565 像素。 */
 #define JPEG_RGB_BUFFER \
-  ((uint8_t *)JPEG_RGB_BUFFER_ADDR) // RGB 数据缓冲区指针
+  ((uint8_t *)JPEG_RGB_BUFFER_ADDR)
 
+/* 原始码流复制到该缓冲并按 MDMA 传输单元补齐后交给 JPEG Codec。 */
 #define JPEG_INPUT_BUFFER \
-  ((uint8_t *)JPEG_INPUT_BUFFER_ADDR) // MDMA 输入缓冲区指针
+  ((uint8_t *)JPEG_INPUT_BUFFER_ADDR)
 
+/**
+ * @brief 一次硬件 JPEG 解码会话的异步状态
+ *
+ * JPEG 和 MDMA 中断回调通过该结构与同步等待流程交换状态。active 用于
+ * 拒绝并发解码，并防止会话结束后到达的回调修改下一次解码状态。
+ */
 typedef struct
 {
   volatile uint8_t active;     // 会话是否仍在进行
   volatile uint8_t info_ready; // JPEG 头解析完成后置位
   volatile uint8_t done;       // 完成解码后置位
-  volatile uint8_t error;      // 检测到外设或 DMA 错误后置位
-  volatile uint32_t in_off;    // 输入码流偏移量
-  uint32_t in_size;            // 输入码流总长度
-  uint32_t out_size;           // MCU 数据字节数
-  JPEG_ConfTypeDef info;       // JPEG 头解析得到的图像配置，如尺寸、颜色分量和采样信息
+  volatile uint8_t error;      // 检测到外设或 MDMA 错误后置位 
+  volatile uint32_t in_off;    // 已被 JPEG Codec 消耗的输入字节数 
+  uint32_t in_size;            // 按 MDMA 传输单元补齐后的输入长度 
+  uint32_t out_size;           // JPEG Codec 实际输出的 MCU 数据字节数
+  JPEG_ConfTypeDef info;       // 图片尺寸、颜色空间和色度采样信息
 } jpeg_session_t;
 
-static jpeg_session_t g_jpeg;              // 当前 JPEG 解码会话
-static const uint8_t *g_jpeg_input = NULL; // 当前 JPEG 解码会话的输入指针
+/* HAL JPEG 回调没有用户上下文参数，因此当前实现使用单个全局会话。 */
+static jpeg_session_t g_jpeg;
+static const uint8_t *g_jpeg_input = NULL;
 
+/* 文件内部辅助函数，不作为硬件 JPEG 模块的公共接口。 */
 static void jpeg_cache_clean(const void *address, uint32_t length);
 static void jpeg_cache_invalidate(void *address, uint32_t length);
 static int jpeg_convert_to_rgb565(void);
 static int jpeg_copy_rgb565_to_lcd(uint16_t x, uint16_t y);
+
 /**
- * @brief JPEG 解码函数
+ * @brief  使用 JPEG Codec 解码 JPEG，并将图像输出到指定 LCD 坐标
+ * @param  data JPEG 压缩数据指针
+ * @param  size JPEG 压缩数据长度（字节数）
+ * @param  x    图片左上角 X 坐标（0 为 LCD 左边界）
+ * @param  y    图片左上角 Y 坐标（0 为 LCD 上边界）
+ * @return 0 表示解码并显示成功，-1 表示参数、硬件解码、转换或显示失败
  *
- * @param in 输入 JPEG 压缩码流指针
- * @param in_size 输入 JPEG 压缩码流长度
- * @param mcu_out 输出 MCU 数据指针
- * @return int 0 成功，-1 失败
+ * 执行步骤：
+ * 1. 检查参数、JPEG SOI 标记和会话状态；
+ * 2. 将码流复制到 SDRAM，并按 32 字节 MDMA 传输单元补齐；
+ * 3. 启动 JPEG Codec 和 MDMA，等待完成、错误或超时；
+ * 4. 失效 MCU 缓冲 Cache，将 YCbCr MCU 数据转换为 RGB565；
+ * 5. 按 LCD 行跨度将 RGB565 图像复制到 LTDC 帧缓冲。
+ *
+ * @note 当前函数同步等待异步硬件回调，且全局会话只允许一次解码操作。
  */
 int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
 {
@@ -63,16 +107,22 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
+  /* JPEG 文件必须以 SOI 标记 0xFFD8 开始。 */
   if ((data[0] != 0xFFU) || (data[1] != 0xD8U))
   {
     return -1;
   }
 
+  /* 当前 HAL 回调共享全局状态，不允许两个调用者同时解码。 */
   if (g_jpeg.active)
   {
     return -1;
   }
 
+  /*
+   * HAL 会把输入长度向下截断到 MDMA BufferTransferLength 的整数倍。
+   * 先向上补齐可避免非对齐 JPEG 的末尾 EOI 标记被截掉。
+   */
   input_size = (size + JPEG_MDMA_TRANSFER_UNIT - 1U) &
                ~(JPEG_MDMA_TRANSFER_UNIT - 1U);
   if (input_size > JPEG_INPUT_CHUNK_SIZE)
@@ -82,6 +132,10 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
 
   memset(&g_jpeg, 0, sizeof(g_jpeg));
 
+  /*
+   * 输入源可能位于 Flash 或任意 RAM。统一复制到 MDMA 可访问的 SDRAM，
+   * 补零不会影响已经由 EOI 标记结束的 JPEG 码流。
+   */
   memcpy(JPEG_INPUT_BUFFER, data, size);
   memset(JPEG_INPUT_BUFFER + size, 0, input_size - size);
   jpeg_cache_clean(JPEG_INPUT_BUFFER, input_size);
@@ -105,6 +159,7 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
   jpeg_cache_invalidate(JPEG_MCU_BUFFER,
                         JPEG_OUTPUT_BUFFER_SIZE);
 
+  /* HAL_JPEG_Decode_DMA() 非阻塞，后续状态由 JPEG/MDMA 中断回调更新。 */
   if (HAL_JPEG_Decode_DMA(&hjpeg,
                           JPEG_INPUT_BUFFER,
                           first_input,
@@ -115,6 +170,7 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
+  /* 等待中断更新会话状态；WFI 可降低等待期间的 CPU 活动。 */
   start_tick = HAL_GetTick();
 
   while (!g_jpeg.done &&
@@ -124,6 +180,7 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     __WFI();
   }
 
+  /* 超时不一定设置 HAL 错误码，因此也以 done 标志判断是否真正完成。 */
   if (!g_jpeg.done || g_jpeg.error)
   {
     HAL_JPEG_Abort(&hjpeg);
@@ -134,6 +191,7 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
+  /* MDMA 已写完 MCU 缓冲，CPU 读取前丢弃对应的旧 Cache Line。 */
   jpeg_cache_invalidate(JPEG_MCU_BUFFER,
                         g_jpeg.out_size);
 
@@ -159,10 +217,11 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
 }
 
 /**
- * @brief JPEG 头信息就绪回调
+ * @brief  保存 JPEG Codec 解析得到的图片信息
+ * @param  hjpeg JPEG 外设句柄
+ * @param  info  JPEG 头中的尺寸、颜色空间和色度采样信息
  *
- * @param hjpeg JPEG 外设句柄
- * @param info 解码后的 JPEG 头信息就绪时被触发，用于通知应用层解码完成并提供 JPEG 头信息。
+ * @note 该回调只表示 JPEG 头解析完成，不表示整张图片已经解码完成。
  */
 void HAL_JPEG_InfoReadyCallback(JPEG_HandleTypeDef *hjpeg,
                                 JPEG_ConfTypeDef *info)
@@ -179,11 +238,12 @@ void HAL_JPEG_InfoReadyCallback(JPEG_HandleTypeDef *hjpeg,
 }
 
 /**
- * @brief JPEG 输入数据回调
+ * @brief  在当前输入块被消耗后向 JPEG Codec 提供下一块码流
+ * @param  hjpeg JPEG 外设句柄
+ * @param  length 当前输入块已消耗的字节数
  *
- * @param hjpeg JPEG 外设句柄
- * @param length 已消耗的输入数据长度
- * @note 该回调在解码过程中被触发，用于通知应用层解码完成并提供 MCU 数据。
+ * @note 当全部输入已提交时，必须使用长度 0 配置输入缓冲，通知 HAL
+ *       不再有后续数据。当前输入已整体复制到连续 SDRAM 缓冲中。
  */
 void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t length)
 {
@@ -195,6 +255,7 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t length)
     return;
   }
 
+  /* 防止异常回调长度导致无符号减法下溢和输入地址越界。 */
   if (length > g_jpeg.in_size - g_jpeg.in_off)
   {
     g_jpeg.error = 1U;
@@ -205,6 +266,7 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t length)
   g_jpeg.in_off += length;
   remaining = g_jpeg.in_size - g_jpeg.in_off;
 
+  /* 长度 0 是 HAL JPEG 表示“输入流已经结束”的约定。 */
   if (remaining == 0U)
   {
     HAL_JPEG_ConfigInputBuffer(
@@ -227,12 +289,13 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t length)
 }
 
 /**
- * @brief JPEG 数据就绪回调
+ * @brief  记录 JPEG Codec 已写入输出缓冲的 MCU 数据长度
+ * @param  hjpeg JPEG 外设句柄
+ * @param  data  本次输出数据的首地址
+ * @param  length 本次输出数据长度（字节数）
  *
- * @param hjpeg JPEG 外设句柄
- * @param data 解码后的 MCU 数据指针
- * @param length 解码后的 MCU 数据长度
- * @note 该回调在解码完成后被触发，用于通知应用层解码完成并提供 MCU 数据。
+ * @note 当前实现要求整张图片的 MCU 数据不超过 32 KiB，因此这里只累计
+ *       输出长度，不配置下一输出缓冲。大图需要在此处接入分块或双缓冲。
  */
 void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg,
                                 uint8_t *data, uint32_t length)
@@ -245,6 +308,7 @@ void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg,
     return;
   }
 
+  /* 检查累计长度，避免后续颜色转换读取固定 MCU 缓冲之外的数据。 */
   if (length > JPEG_OUTPUT_BUFFER_SIZE - g_jpeg.out_size)
   {
     g_jpeg.error = 1U;
@@ -255,10 +319,10 @@ void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg,
 }
 
 /**
- * @brief JPEG 解码完成回调
+ * @brief  标记 JPEG 硬件解码完成
+ * @param  hjpeg JPEG 外设句柄
  *
- * @param hjpeg JPEG 外设句柄
- * @note 该回调在解码完成后被触发，用于通知应用层解码完成。
+ * @note HAL 已传输完最后一段输出数据后才调用该回调。
  */
 void HAL_JPEG_DecodeCpltCallback(JPEG_HandleTypeDef *hjpeg)
 {
@@ -271,10 +335,8 @@ void HAL_JPEG_DecodeCpltCallback(JPEG_HandleTypeDef *hjpeg)
 }
 
 /**
- * @brief JPEG 错误回调
- *
- * @param hjpeg JPEG 外设句柄
- * @note 该回调在解码过程中检测到外设或 DMA 错误时被触发，用于通知应用层错误。
+ * @brief  标记 JPEG Codec 或 MDMA 解码错误
+ * @param  hjpeg JPEG 外设句柄
  */
 void HAL_JPEG_ErrorCallback(JPEG_HandleTypeDef *hjpeg)
 {
@@ -287,11 +349,12 @@ void HAL_JPEG_ErrorCallback(JPEG_HandleTypeDef *hjpeg)
 }
 
 /**
- * @brief 清除缓存
+ * @brief  将指定范围的 D-Cache 脏数据写回主存
+ * @param  address 缓存起始地址
+ * @param  length  缓存长度（字节数）
  *
- * @param address 缓存起始地址
- * @param length 缓存长度
- * @note 该函数用于清除指定地址范围的缓存，确保数据从主内存刷新到缓存中。
+ * @note Cortex-M7 D-Cache Line 为 32 字节，因此操作范围向两端扩展到
+ *       Cache Line 边界。用于 CPU 写、MDMA 或 LTDC 读的所有权切换。
  */
 static void jpeg_cache_clean(const void *address, uint32_t length)
 {
@@ -307,11 +370,12 @@ static void jpeg_cache_clean(const void *address, uint32_t length)
 }
 
 /**
- * @brief 使缓缓存
+ * @brief  失效指定范围的 D-Cache，使 CPU 后续从主存重新读取数据
+ * @param  address 缓存起始地址
+ * @param  length  缓存长度（字节数）
  *
- * @param address 缓存起始地址
- * @param length 缓存长度
- * @note 该函数用于使缓指定地址范围的缓存，确保数据从缓存刷新到主内存。
+ * @note 用于 MDMA 写、CPU 读的所有权切换；操作范围按 32 字节 Cache
+ *       Line 对齐，避免 CPU 继续读取 MDMA 写入前的缓存副本。
  */
 static void jpeg_cache_invalidate(void *address, uint32_t length)
 {
@@ -327,10 +391,11 @@ static void jpeg_cache_invalidate(void *address, uint32_t length)
 }
 
 /**
- * @brief 将解码后的 MCU 数据转换为 RGB565 格式
+ * @brief  根据 JPEG 头信息将 YCbCr MCU 数据转换为 RGB565
+ * @return 0 表示转换成功，-1 表示图片尺寸、颜色格式或 MCU 数量异常
  *
- * @note 该函数用于将解码后的 MCU 数据转换为 RGB565 格式，确保数据从缓存刷新到主内存。
- * @return int 0 成功，-1 失败
+ * @note JPEG_GetDecodeColorConvertFunc() 根据颜色空间和色度采样方式选择
+ *       对应转换函数。RGB 输出按图片自身宽度紧密排列，不含 LCD 行偏移。
  */
 static int jpeg_convert_to_rgb565(void)
 {
@@ -344,6 +409,7 @@ static int jpeg_convert_to_rgb565(void)
     return -1;
   }
 
+  /* 当前 RGB 缓冲和 LCD 均按最大 800 x 480 RGB565 设计。 */
   if ((g_jpeg.info.ImageWidth > 800U) ||
       (g_jpeg.info.ImageHeight > 480U))
   {
@@ -366,6 +432,7 @@ static int jpeg_convert_to_rgb565(void)
 
   converted_bytes = 0U;
 
+  /* 转换函数只处理完整 MCU，返回值应与 JPEG 头计算的 MCU 总数一致。 */
   converted_mcus = convert(JPEG_MCU_BUFFER,
                            JPEG_RGB_BUFFER,
                            0U,
@@ -381,12 +448,13 @@ static int jpeg_convert_to_rgb565(void)
 }
 
 /**
- * @brief 将 RGB565 格式的图像复制到 LCD 显示区域
+ * @brief  将紧密排列的 RGB565 图像复制到指定 LCD 显示区域
+ * @param  x LCD 显示区域的起始 X 坐标
+ * @param  y LCD 显示区域的起始 Y 坐标
+ * @return 0 表示复制成功，-1 表示目标区域超出 LCD 边界
  *
- * @param x LCD 显示区域的起始 X 坐标
- * @param y LCD 显示区域的起始 Y 坐标
- * @note 该函数用于将 RGB565 格式的图像复制到 LCD 显示区域，确保数据从缓存刷新到主内存。
- * @return int 0 成功，-1 失败
+ * @note RGB 缓冲每行只有 ImageWidth 个像素，而 LTDC 帧缓冲每行有
+ *       lcddev.width 个像素，因此必须逐行复制并使用 LCD 宽度计算目标地址。
  */
 static int jpeg_copy_rgb565_to_lcd(uint16_t x, uint16_t y)
 {
@@ -419,6 +487,7 @@ static int jpeg_copy_rgb565_to_lcd(uint16_t x, uint16_t y)
            source,
            width * sizeof(uint16_t));
 
+    /* CPU 写入可缓存 SDRAM 后执行 Clean，确保 LTDC 能读到最新像素。 */
     jpeg_cache_clean(destination,
                      width * sizeof(uint16_t));
   }
