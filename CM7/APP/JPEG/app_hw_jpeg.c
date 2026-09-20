@@ -66,6 +66,7 @@ typedef struct
   volatile uint32_t in_off;    // 已被 JPEG Codec 消耗的输入字节数 
   uint32_t in_size;            // 按 MDMA 传输单元补齐后的输入长度 
   uint32_t out_size;           // JPEG Codec 实际输出的 MCU 数据字节数
+  uint32_t rgb_stride;         // MCU 对齐后的 RGB 缓冲行宽，单位为像素
   JPEG_ConfTypeDef info;       // 图片尺寸、颜色空间和色度采样信息
 } jpeg_session_t;
 
@@ -399,7 +400,10 @@ static void jpeg_cache_invalidate(void *address, uint32_t length)
  */
 static int jpeg_convert_to_rgb565(void)
 {
+  JPEG_ConfTypeDef convert_info;
   JPEG_YCbCrToRGB_Convert_Function convert;
+  uint32_t mcu_width;
+  uint32_t mcu_height;
   uint32_t image_mcu_count;
   uint32_t converted_bytes;
   uint32_t converted_mcus;
@@ -416,20 +420,49 @@ static int jpeg_convert_to_rgb565(void)
     return -1;
   }
 
-  if ((g_jpeg.info.ImageWidth *
-       g_jpeg.info.ImageHeight * 2U) >
+  if ((g_jpeg.info.ColorSpace == JPEG_YCBCR_COLORSPACE) &&
+      (g_jpeg.info.ChromaSubsampling == JPEG_420_SUBSAMPLING))
+  {
+    mcu_width = 16U;
+    mcu_height = 16U;
+  }
+  else if ((g_jpeg.info.ColorSpace == JPEG_YCBCR_COLORSPACE) &&
+           (g_jpeg.info.ChromaSubsampling == JPEG_422_SUBSAMPLING))
+  {
+    mcu_width = 16U;
+    mcu_height = 8U;
+  }
+  else
+  {
+    mcu_width = 8U;
+    mcu_height = 8U;
+  }
+
+  /*
+   * jpeg_utils 按完整 MCU 写入边缘像素，却使用 ImageWidth 作为 RGB 行跨度。
+   * 原图宽度不是 MCU 整数倍时，右侧填充像素会串写到下一行。转换阶段
+   * 临时使用 MCU 对齐尺寸，为边缘填充像素保留独立空间；显示时再裁剪。
+   */
+  convert_info = g_jpeg.info;
+  convert_info.ImageWidth = (g_jpeg.info.ImageWidth + mcu_width - 1U) &
+                            ~(mcu_width - 1U);
+  convert_info.ImageHeight = (g_jpeg.info.ImageHeight + mcu_height - 1U) &
+                             ~(mcu_height - 1U);
+
+  if ((convert_info.ImageWidth * convert_info.ImageHeight * 2U) >
       JPEG_RGB_BUFFER_SIZE)
   {
     return -1;
   }
 
-  if (JPEG_GetDecodeColorConvertFunc(&g_jpeg.info,
+  if (JPEG_GetDecodeColorConvertFunc(&convert_info,
                                      &convert,
                                      &image_mcu_count) != HAL_OK)
   {
     return -1;
   }
 
+  g_jpeg.rgb_stride = convert_info.ImageWidth;
   converted_bytes = 0U;
 
   /* 转换函数只处理完整 MCU，返回值应与 JPEG 头计算的 MCU 总数一致。 */
@@ -477,7 +510,7 @@ static int jpeg_copy_rgb565_to_lcd(uint16_t x, uint16_t y)
     uint16_t *destination;
 
     source = (const uint16_t *)JPEG_RGB_BUFFER +
-             row * width;
+             row * g_jpeg.rgb_stride;
 
     destination = (uint16_t *)LTDC_FRAME_BUF_ADDR +
                   (y + row) * lcddev.width +
