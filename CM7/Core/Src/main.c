@@ -20,7 +20,10 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#include "dcmi.h"
+#include "dma.h"
 #include "dma2d.h"
+#include "i2c.h"
 #include "jpeg.h"
 #include "ltdc.h"
 #include "mdma.h"
@@ -161,10 +164,13 @@ Error_Handler();
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_MDMA_Init();
+  MX_DMA_Init();
   MX_FMC_Init();
   MX_LTDC_Init();
   MX_JPEG_Init();
   MX_DMA2D_Init();
+  MX_DCMI_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init();
   sdram_init();
