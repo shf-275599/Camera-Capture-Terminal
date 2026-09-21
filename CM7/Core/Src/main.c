@@ -42,6 +42,7 @@
 #include "sdram.h"
 #include "lcd.h"
 #include "app_ipc_cm7.h"
+#include "camera_test.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -176,6 +177,7 @@ Error_Handler();
   sdram_init();
   lcd_init();
   printf("CM7: All configured peripherals have been initialized\n");
+  camera_init_test();
   /* USER CODE END 2 */
 
   /* Init scheduler */
