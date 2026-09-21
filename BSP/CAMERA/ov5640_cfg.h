@@ -1,10 +1,10 @@
 /**
  ****************************************************************************************************
- * @file        atk_mc5640_cfg.h
+ * @file        ov5640_cfg.h
  * @author      正点原子团队(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       ATK-MC5640模块寄存器配置
+ * @brief       OV5640模块寄存器配置
  * @license     Copyright (c) 2020-2032, 广州市星翼电子科技有限公司
  ****************************************************************************************************
  * @attention
@@ -23,17 +23,17 @@
 
 #include "ov5640.h"
 
-/* ATK-MC5640模块固件下载起始地址 */
-#define ATK_MC5640_FW_DOWNLOAD_ADDR 0x8000
+/* OV5640模块固件下载起始地址 */
+#define OV5640_FW_DOWNLOAD_ADDR 0x8000
 
 typedef struct
 {
     uint16_t reg;
     uint8_t dat;
-} atk_mc5640_reg_cfg_t;
+} ov5640_reg_cfg_t;
 
-/* ATK-MC5640模块寄存器初始化配置表 */
-const atk_mc5640_reg_cfg_t atk_mc5640_init_cfg[] = {
+/* OV5640模块寄存器初始化配置表 */
+const ov5640_reg_cfg_t ov5640_init_cfg[] = {
     {0x3008, 0x42},
     {0x3103, 0x03},
     {0x3017, 0xFF},
@@ -243,11 +243,11 @@ const atk_mc5640_reg_cfg_t atk_mc5640_init_cfg[] = {
     {0x4740, 0x21},
 };
 
-/* ATK-MC5640模块输出RGB565寄存器配置表
+/* OV5640模块输出RGB565寄存器配置表
  * 15FPS
  * 最大支持1280*800的RGB565图像输出
  */
-const atk_mc5640_reg_cfg_t atk_mc5640_rgb565_cfg[] = {
+const ov5640_reg_cfg_t ov5640_rgb565_cfg[] = {
     {0x4300, 0x6F},
     {0x501F, 0x01},
     {0x3035, 0x41},
@@ -295,11 +295,11 @@ const atk_mc5640_reg_cfg_t atk_mc5640_rgb565_cfg[] = {
     {0x3503, 0x00},
 };
 
-/* ATK-MC5640模块输出JPEG寄存器配置表
+/* OV5640模块输出JPEG寄存器配置表
  * 7.5FPS
  * 最大支持2592*1944的JPEG图像输出
  */
-const atk_mc5640_reg_cfg_t atk_mc5640_jpeg_cfg[] = {
+const ov5640_reg_cfg_t ov5640_jpeg_cfg[] = {
     {0x4300, 0x30},
     {0x501F, 0x00},
     {0x3035, 0x21},
@@ -343,8 +343,8 @@ const atk_mc5640_reg_cfg_t atk_mc5640_jpeg_cfg[] = {
     {0x3503, 0x00},
 };
 
-/* ATK-MC5640自动对焦固件 */
-const uint8_t atk_mc5640_auto_focus_firmware[] = {
+/* OV5640自动对焦固件 */
+const uint8_t ov5640_auto_focus_firmware[] = {
     0x02, 0x0F, 0xD6, 0x02, 0x0A, 0x39, 0xC2, 0x01, 0x22, 0x22, 0x00, 0x02, 0x0F, 0xB2, 0xE5, 0x1F,
     0x70, 0x72, 0xF5, 0x1E, 0xD2, 0x35, 0xFF, 0xEF, 0x25, 0xE0, 0x24, 0x4E, 0xF8, 0xE4, 0xF6, 0x08,
     0xF6, 0x0F, 0xBF, 0x34, 0xF2, 0x90, 0x0E, 0x93, 0xE4, 0x93, 0xFF, 0xE5, 0x4B, 0xC3, 0x9F, 0x50,
