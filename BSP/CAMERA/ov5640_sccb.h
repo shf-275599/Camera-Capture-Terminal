@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640_sccb.h
- * @author      ÕıµãÔ­×ÓÍÅ¶Ó(ALIENTEK)
+ * @author      æ­£ç‚¹åŸå­å›¢é˜Ÿ(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640Ä£¿éSCCB½Ó¿ÚÇı¶¯´úÂë
- * @license     Copyright (c) 2020-2032, ¹ãÖİÊĞĞÇÒíµç×Ó¿Æ¼¼ÓĞÏŞ¹«Ë¾
+ * @brief       OV5640æ¨¡å—SCCBæ¥å£é©±åŠ¨ä»£ç 
+ * @license     Copyright (c) 2020-2032, å¹¿å·å¸‚æ˜Ÿç¿¼ç”µå­ç§‘æŠ€æœ‰é™å…¬å¸
  ****************************************************************************************************
  * @attention
  *
- * ÊµÑéÆ½Ì¨:ÕıµãÔ­×Ó °¢²¨ÂŞ H743¿ª·¢°å
- * ÔÚÏßÊÓÆµ:www.yuanzige.com
- * ¼¼ÊõÂÛÌ³:www.openedv.com
- * ¹«Ë¾ÍøÖ·:www.alientek.com
- * ¹ºÂòµØÖ·:openedv.taobao.com
+ * å®éªŒå¹³å°:æ­£ç‚¹åŸå­ é˜¿æ³¢ç½— H743å¼€å‘æ¿
+ * åœ¨çº¿è§†é¢‘:www.yuanzige.com
+ * æŠ€æœ¯è®ºå›:www.openedv.com
+ * å…¬å¸ç½‘å€:www.alientek.com
+ * è´­ä¹°åœ°å€:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -23,10 +23,10 @@
 
 #include "bsp_sys.h"
 
-/* ¶¨ÒåOV5640µÄSCCBÍ¨Ñ¶Òı½ÅÊÇ·ñÓĞÍâ½ÓÉÏÀ­µç×è */
+/* å®šä¹‰OV5640çš„SCCBé€šè®¯å¼•è„šæ˜¯å¦æœ‰å¤–æ¥ä¸Šæ‹‰ç”µé˜» */
 #define OV5640_SCCB_GPIO_PULLUP             1
 
-/* Òı½Å¶¨Òå */
+/* å¼•è„šå®šä¹‰ */
 #define OV5640_SCCB_SCL_GPIO_PORT           GPIOB
 #define OV5640_SCCB_SCL_GPIO_PIN            GPIO_PIN_4
 #define OV5640_SCCB_SCL_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
@@ -34,7 +34,7 @@
 #define OV5640_SCCB_SDA_GPIO_PIN            GPIO_PIN_3
 #define OV5640_SCCB_SDA_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
 
-/* IO²Ù×÷ */
+/* IOæ“ä½œ */
 #define OV5640_SCCB_SCL(x)                  do{ x ?                                                                                             \
                                                     HAL_GPIO_WritePin(OV5640_SCCB_SCL_GPIO_PORT, OV5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_SET) :  \
                                                     HAL_GPIO_WritePin(OV5640_SCCB_SCL_GPIO_PORT, OV5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_RESET); \
@@ -45,10 +45,10 @@
                                                 }while(0)
 #define OV5640_SCCB_READ_SDA()              HAL_GPIO_ReadPin(OV5640_SCCB_SDA_GPIO_PORT, OV5640_SCCB_SDA_GPIO_PIN)
 
-/* ²Ù×÷º¯Êı */
-void ov5640_sccb_init(void);                                                        /* OV5640 SCCB½Ó¿Ú³õÊ¼»¯ */
-void ov5640_sccb_3_phase_write(uint8_t id_addr, uint16_t sub_addr, uint8_t dat);    /* SCCB½Ó¿Ú3½×¶ÎĞ´´«Êä */
-void ov5640_sccb_2_phase_write(uint8_t id_addr, uint16_t sub_addr);                 /* SCCB½Ó¿Ú2½×¶ÎĞ´´«Êä */
-void ov5640_sccb_2_phase_read(uint8_t id_addr, uint8_t *dat);                       /* SCCB½Ó¿Ú2½×¶Î¶Á´«Êä */
+/* æ“ä½œå‡½æ•° */
+void ov5640_sccb_init(void);                                                        /* OV5640 SCCBæ¥å£åˆå§‹åŒ– */
+void ov5640_sccb_3_phase_write(uint8_t id_addr, uint16_t sub_addr, uint8_t dat);    /* SCCBæ¥å£3é˜¶æ®µå†™ä¼ è¾“ */
+void ov5640_sccb_2_phase_write(uint8_t id_addr, uint16_t sub_addr);                 /* SCCBæ¥å£2é˜¶æ®µå†™ä¼ è¾“ */
+void ov5640_sccb_2_phase_read(uint8_t id_addr, uint8_t *dat);                       /* SCCBæ¥å£2é˜¶æ®µè¯»ä¼ è¾“ */
 
 #endif

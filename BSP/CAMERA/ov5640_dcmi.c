@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640_dcmi.c
- * @author      ÕıµãÔ­×ÓÍÅ¶Ó(ALIENTEK)
+ * @author      æ­£ç‚¹åŸå­å›¢é˜Ÿ(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640Ä£¿éDCMI½Ó¿ÚÇı¶¯´úÂë
- * @license     Copyright (c) 2020-2032, ¹ãÖİÊĞĞÇÒíµç×Ó¿Æ¼¼ÓĞÏŞ¹«Ë¾
+ * @brief       OV5640æ¨¡å—DCMIæ¥å£é©±åŠ¨ä»£ç 
+ * @license     Copyright (c) 2020-2032, å¹¿å·å¸‚æ˜Ÿç¿¼ç”µå­ç§‘æŠ€æœ‰é™å…¬å¸
  ****************************************************************************************************
  * @attention
  *
- * ÊµÑéÆ½Ì¨:ÕıµãÔ­×Ó °¢²¨ÂŞ H743¿ª·¢°å
- * ÔÚÏßÊÓÆµ:www.yuanzige.com
- * ¼¼ÊõÂÛÌ³:www.openedv.com
- * ¹«Ë¾ÍøÖ·:www.alientek.com
- * ¹ºÂòµØÖ·:openedv.taobao.com
+ * å®éªŒå¹³å°:æ­£ç‚¹åŸå­ é˜¿æ³¢ç½— H743å¼€å‘æ¿
+ * åœ¨çº¿è§†é¢‘:www.yuanzige.com
+ * æŠ€æœ¯è®ºå›:www.openedv.com
+ * å…¬å¸ç½‘å€:www.alientek.com
+ * è´­ä¹°åœ°å€:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -21,16 +21,16 @@
 #include "ov5640_dcmi.h"
 #include "dcmi.h"
 
-/* OV5640Ä£¿éDCMI½Ó¿ÚÊı¾İ½á¹¹Ìå */
+/* OV5640æ¨¡å—DCMIæ¥å£æ•°æ®ç»“æ„ä½“ */
 static struct
 {
     uint8_t frame_sem;
 } g_ov5640_dcmi_sta = {0};
 
 /**
- * @brief       OV5640Ä£¿éDCMI½Ó¿ÚÖ¡ÖĞ¶Ï»Øµ÷º¯Êı
- * @param       ÎŞ
- * @retval      ÎŞ
+ * @brief       OV5640æ¨¡å—DCMIæ¥å£å¸§ä¸­æ–­å›è°ƒå‡½æ•°
+ * @param       æ— 
+ * @retval      æ— 
  */
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
@@ -38,26 +38,26 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
- * @brief       ¿ªÊ¼OV5640Ä£¿éDCMI½Ó¿ÚDMA´«Êä
- * @param       dts_addr        : Ö¡Êı¾İµÄ½ÓÊÕÄ¿µÄµØÖ·
- *              meminc          : DMA_MINC_DISABLE: Ö¡Êı¾İ½ÓÊÕµÄÄ¿µÄµØÖ·×Ô¶¯Ôö¼Ó
- *                                DMA_MINC_ENABLE : Ö¡Êı¾İ½ÓÊÕµÄÄ¿µÄµØÖ·²»×Ô¶¯Ôö¼Ó
- *              memdataalignment: DMA_MDATAALIGN_BYTE    : Ö¡Êı¾İ½ÓÊÕ»º³åµÄÎ»¿íÎª8±ÈÌØ
- *                                DMA_MDATAALIGN_HALFWORD: Ö¡Êı¾İ½ÓÊÕ»º³åµÄÎ»¿íÎª16±ÈÌØ
- *                                DMA_MDATAALIGN_WORD    : Ö¡Êı¾İ½ÓÊÕ»º³åµÄÎ»¿íÎª32±ÈÌØ
- *              len             : ´«ÊäµÄÖ¡Êı¾İ´óĞ¡
- * @retval      ÎŞ
+ * @brief       å¼€å§‹OV5640æ¨¡å—DCMIæ¥å£DMAä¼ è¾“
+ * @param       dts_addr        : å¸§æ•°æ®çš„æ¥æ”¶ç›®çš„åœ°å€
+ *              meminc          : DMA_MINC_DISABLE: å¸§æ•°æ®æ¥æ”¶çš„ç›®çš„åœ°å€è‡ªåŠ¨å¢åŠ 
+ *                                DMA_MINC_ENABLE : å¸§æ•°æ®æ¥æ”¶çš„ç›®çš„åœ°å€ä¸è‡ªåŠ¨å¢åŠ 
+ *              memdataalignment: DMA_MDATAALIGN_BYTE    : å¸§æ•°æ®æ¥æ”¶ç¼“å†²çš„ä½å®½ä¸º8æ¯”ç‰¹
+ *                                DMA_MDATAALIGN_HALFWORD: å¸§æ•°æ®æ¥æ”¶ç¼“å†²çš„ä½å®½ä¸º16æ¯”ç‰¹
+ *                                DMA_MDATAALIGN_WORD    : å¸§æ•°æ®æ¥æ”¶ç¼“å†²çš„ä½å®½ä¸º32æ¯”ç‰¹
+ *              len             : ä¼ è¾“çš„å¸§æ•°æ®å¤§å°
+ * @retval      æ— 
  */
 void ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len)
 {
-    /* Çå¿ÕÖ¡½ÓÊÕÍê³É±ê¼Ç
-     * Ê¹ÄÜDCMIÖ¡½ÓÊÕÖĞ¶Ï
+    /* æ¸…ç©ºå¸§æ¥æ”¶å®Œæˆæ ‡è®°
+     * ä½¿èƒ½DCMIå¸§æ¥æ”¶ä¸­æ–­
      */
     g_ov5640_dcmi_sta.frame_sem = 0;
     __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
     HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len);
     
-    /* µÈ´ı´«ÊäÍê³É */
+    /* ç­‰å¾…ä¼ è¾“å®Œæˆ */
     while (g_ov5640_dcmi_sta.frame_sem == 0);
     HAL_DCMI_Stop(&hdcmi);
 }

@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640_dcmi.h
- * @author      ÕıµãÔ­×ÓÍÅ¶Ó(ALIENTEK)
+ * @author      æ­£ç‚¹åŸå­å›¢é˜Ÿ(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640Ä£¿éDCMI½Ó¿ÚÇı¶¯´úÂë
- * @license     Copyright (c) 2020-2032, ¹ãÖİÊĞĞÇÒíµç×Ó¿Æ¼¼ÓĞÏŞ¹«Ë¾
+ * @brief       OV5640æ¨¡å—DCMIæ¥å£é©±åŠ¨ä»£ç 
+ * @license     Copyright (c) 2020-2032, å¹¿å·å¸‚æ˜Ÿç¿¼ç”µå­ç§‘æŠ€æœ‰é™å…¬å¸
  ****************************************************************************************************
  * @attention
  *
- * ÊµÑéÆ½Ì¨:ÕıµãÔ­×Ó °¢²¨ÂŞ H743¿ª·¢°å
- * ÔÚÏßÊÓÆµ:www.yuanzige.com
- * ¼¼ÊõÂÛÌ³:www.openedv.com
- * ¹«Ë¾ÍøÖ·:www.alientek.com
- * ¹ºÂòµØÖ·:openedv.taobao.com
+ * å®éªŒå¹³å°:æ­£ç‚¹åŸå­ é˜¿æ³¢ç½— H743å¼€å‘æ¿
+ * åœ¨çº¿è§†é¢‘:www.yuanzige.com
+ * æŠ€æœ¯è®ºå›:www.openedv.com
+ * å…¬å¸ç½‘å€:www.alientek.com
+ * è´­ä¹°åœ°å€:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -23,13 +23,13 @@
 
 #include "ov5640.h"
 
-/* ´íÎó´úÂë */
-#define OV5640_DCMI_EOK     0   /* Ã»ÓĞ´íÎó */
-#define OV5640_DCMI_ERROR   1   /* ´íÎó */
-#define OV5640_DCMI_EINVAL  2   /* ·Ç·¨²ÎÊı */
+/* é”™è¯¯ä»£ç  */
+#define OV5640_DCMI_EOK     0   /* æ²¡æœ‰é”™è¯¯ */
+#define OV5640_DCMI_ERROR   1   /* é”™è¯¯ */
+#define OV5640_DCMI_EINVAL  2   /* éæ³•å‚æ•° */
 
-/* ²Ù×÷º¯Êı */
-void ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len);    /* ¿ªÊ¼OV5640Ä£¿éDCMI½Ó¿ÚDMA´«Êä */
+/* æ“ä½œå‡½æ•° */
+void ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len);    /* å¼€å§‹OV5640æ¨¡å—DCMIæ¥å£DMAä¼ è¾“ */
 
 #endif
 

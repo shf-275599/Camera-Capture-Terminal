@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640.c
- * @author      ����ԭ���Ŷ�(ALIENTEK)
+ * @author      正点原子团队(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640ģ����������
- * @license     Copyright (c) 2020-2032, �������������ӿƼ����޹�˾
+ * @brief       OV5640模块驱动代码
+ * @license     Copyright (c) 2020-2032, 广州星翼电子科技有限公司
  ****************************************************************************************************
  * @attention
  *
- * ʵ��ƽ̨:����ԭ�� ������ H743������
- * ������Ƶ:www.yuanzige.com
- * ������̳:www.openedv.com
- * ��˾��ַ:www.alientek.com
- * �����ַ:openedv.taobao.com
+ * 实战平台:正点原子 战舰H743开发板
+ * 官方视频:www.yuanzige.com
+ * 官方论坛:www.openedv.com
+ * 公司地址:www.alientek.com
+ * 购买地址:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -24,20 +24,20 @@
 #include "ov5640_dcmi.h"
 #include "bsp_delay.h"
 
-/* OV5640ģ��оƬID */
+/* OV5640模块芯片ID */
 #define ov5640_CHIP_ID  0x5640
 
-/* OV5640ģ��̼����س�ʱʱ�䣬��λ�����루ms�� */
+/* OV5640模块固件下载超时时间，单位毫秒(ms) */
 #define ov5640_TIMEOUT  5000
 
-/* OV5640�Ĵ�����ö�� */
+/* OV5640寄存器组枚举 */
 typedef enum
 {
-    ov5640_REG_BANK_DSP = 0x00, /* DSP�Ĵ����� */
-    ov5640_REG_BANK_SENSOR,     /* Sensor�Ĵ����� */
+    ov5640_REG_BANK_DSP = 0x00, /* DSP寄存器 */
+    ov5640_REG_BANK_SENSOR,     /* Sensor寄存器 */
 } ov5640_reg_bank_t;
 
-/* OV5640ģ�����ݽṹ�� */
+/* OV5640模块数据结构体 */
 static struct
 {
     struct {
@@ -55,10 +55,10 @@ static struct
 } g_ov5640_sta = {0};
 
 /**
- * @brief       OV5640ģ��д�Ĵ���
- * @param       reg: �Ĵ�����ַ
- *              dat: ��д���ֵ
- * @retval      ��
+ * @brief       OV5640模块写寄存器
+ * @param       reg: 寄存器的地址
+ *              dat: 要写入的值
+ * @retval      
  */
 static void ov5640_write_reg(uint16_t reg, uint8_t dat)
 {
@@ -66,9 +66,9 @@ static void ov5640_write_reg(uint16_t reg, uint8_t dat)
 }
 
 /**
- * @brief       OV5640ģ����Ĵ���
- * @param       reg: �Ĵ����ĵ�ַ
- * @retval      ��ȡ���ļĴ���ֵ
+ * @brief       OV5640模块读寄存器
+ * @param       reg: 寄存器的地址
+ * @retval      读取到的寄存器值
  */
 static uint8_t ov5640_read_reg(uint16_t reg)
 {
@@ -81,9 +81,9 @@ static uint8_t ov5640_read_reg(uint16_t reg)
 }
 
 /**
- * @brief       ��ȡOV5640ģ��ISP���봰�ڳߴ�
- * @param       ��
- * @retval      ��
+ * @brief       获取OV5640模块ISP输入窗口尺寸
+ * @param       
+ * @retval      
  */
 static void ov5640_get_isp_input_size(void)
 {
@@ -121,9 +121,9 @@ static void ov5640_get_isp_input_size(void)
 }
 
 /**
- * @brief       ��ȡOV5640ģ��Ԥ���Ŵ��ڳߴ�
- * @param       ��
- * @retval      ��
+ * @brief       读取OV5640模块预览放大器窗口尺寸
+ * @param       
+ * @retval      
  */
 static void ov5640_get_pre_scaling_size(void)
 {
@@ -151,9 +151,9 @@ static void ov5640_get_pre_scaling_size(void)
 }
 
 /**
- * @brief       ��ȡOV5640ģ�����ͼ��ߴ�
- * @param       ��
- * @retval      ��
+ * @brief       读取OV5640模块输出图像尺寸
+ * @param       
+ * @retval      
  */
 static void ov5640_get_output_size(void)
 {
@@ -179,9 +179,9 @@ static void ov5640_get_output_size(void)
 }
 
 /**
- * @brief       OV5640ģ��Ӳ����ʼ��
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块硬件初始化
+ * @param       
+ * @retval      
  */
 static void ov5640_hw_init(void)
 {
@@ -190,9 +190,9 @@ static void ov5640_hw_init(void)
 }
 
 /**
- * @brief       OV5640ģ���˳�����ģʽ
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块退出掉电模式
+ * @param       
+ * @retval      
  */
 static void ov5640_exit_power_down(void)
 {
@@ -205,9 +205,9 @@ static void ov5640_exit_power_down(void)
 }
 
 /**
- * @brief       OV5640ģ��Ӳ����λ
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块硬件复位
+ * @param       
+ * @retval      
  */
 static void ov5640_hw_reset(void)
 {
@@ -218,9 +218,9 @@ static void ov5640_hw_reset(void)
 }
 
 /**
- * @brief       OV5640ģ��������λ
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块软件复位
+ * @param       
+ * @retval      
  */
 static void ov5640_sw_reset(void)
 {
@@ -234,9 +234,9 @@ static void ov5640_sw_reset(void)
 }
 
 /**
- * @brief       ��ȡOV5640ģ��оƬID
- * @param       ��
- * @retval      оƬID
+ * @brief       读取OV5640模块芯片ID
+ * @param       
+ * @retval      芯片ID
  */
 static uint16_t ov5640_get_chip_id(void)
 {
@@ -249,9 +249,9 @@ static uint16_t ov5640_get_chip_id(void)
 }
 
 /**
- * @brief       ��ʼ��OV5640�Ĵ�������
- * @param       ��
- * @retval      ��
+ * @brief       ʼOV5640寄存器序列
+ * @param       
+ * @retval      
  */
 static void ov5640_init_reg(void)
 {
@@ -264,38 +264,38 @@ static void ov5640_init_reg(void)
 }
 
 /**
- * @brief       ��ʼ��OV5640ģ��
- * @param       ��
- * @retval      OV5640_EOK   : OV5640ģ���ʼ���ɹ�
- *              OV5640_ERROR : ͨѶ������OV5640ģ���ʼ��ʧ��
- *              ov5640_ENOMEM: �ڴ治�㣬OV5640ģ���ʼ��ʧ��
+ * @brief       ʼOV5640模块
+ * @param       
+ * @retval      OV5640_EOK   : OV5640模块初始化成功
+ *              OV5640_ERROR : ͨѶOV5640模块初始化失败
+ *              OV5640_ENOMEM: 内存不足，OV5640模块初始化失败
  */
 uint8_t ov5640_init(void)
 {
     uint16_t chip_id;
     
-    ov5640_hw_init();               /* OV5640ģ��Ӳ����ʼ�� */
-    ov5640_exit_power_down();       /* OV5640ģ���˳�����ģʽ */
-    ov5640_hw_reset();              /* OV5640ģ��Ӳ����λ */
-    ov5640_sccb_init();             /* OV5640 SCCB�ӿڳ�ʼ�� */
-    ov5640_sw_reset();              /* OV5640ģ��������λ */
+    ov5640_hw_init();               /* OV5640模块硬件初始化 */
+    ov5640_exit_power_down();       /* OV5640模块退出掉电模式 */
+    ov5640_hw_reset();              /* OV5640模块硬件复位 */
+    ov5640_sccb_init();             /* OV5640 SCCB接口初始化 */
+    ov5640_sw_reset();              /* OV5640模块软件复位 */
     
-    chip_id = ov5640_get_chip_id(); /* ��ȡоƬID */
+    chip_id = ov5640_get_chip_id(); /* 获取芯片ID */
     if (chip_id != ov5640_CHIP_ID)
     {
         return OV5640_ERROR;
     }
     
-    ov5640_init_reg();              /* ��ʼ��OV5640�Ĵ������� */
+    ov5640_init_reg();              /* ʼOV5640寄存器序列 */
     
     return OV5640_EOK;
 }
 
 /**
- * @brief       ��ʼ��OV5640ģ���Զ��Խ�
- * @param       ��
- * @retval      OV5640_EOK     : OV5640ģ���Զ��Խ���ʼ���ɹ�
- *              OV5640_ETIMEOUT: OV5640ģ�����ع̼���ʱ
+ * @brief       ʼOV5640模块自动对焦
+ * @param       
+ * @retval      OV5640_EOK     : OV5640模块自动对焦初始化成功
+ *              OV5640_ETIMEOUT: OV5640模块曝光过程超时
  */
 uint8_t ov5640_auto_focus_init(void)
 {
@@ -337,10 +337,10 @@ uint8_t ov5640_auto_focus_init(void)
 }
 
 /**
- * @brief       OV5640ģ���Զ��Խ�һ��
- * @param       ��
- * @retval      OV5640_EOK     : OV5640ģ���Զ��Խ�һ�γɹ�
- *              OV5640_ETIMEOUT: OV5640ģ���Զ��Խ�һ�γ�ʱ
+ * @brief       OV5640模块自动对焦һ
+ * @param       
+ * @retval      OV5640_EOK     : OV5640模块自动对焦一次成功
+ *              OV5640_ETIMEOUT: OV5640模块自动对焦一次超时
  */
 uint8_t ov5640_auto_focus_once(void)
 {
@@ -365,10 +365,10 @@ uint8_t ov5640_auto_focus_once(void)
 }
 
 /**
- * @brief       OV5640ģ������Զ��Խ�
- * @param       ��
- * @retval      OV5640_EOK     : OV5640ģ������Զ��Խ��ɹ�
- *              OV5640_ETIMEOUT: OV5640ģ������Զ��Խ���ʱ
+ * @brief       OV5640模块连续自动对焦
+ * @param       
+ * @retval      OV5640_EOK     : OV5640模块连续自动对焦成功
+ *              OV5640_ETIMEOUT: OV5640模块连续自动对焦ʱ
  */
 uint8_t ov5640_auto_focus_continuance(void)
 {
@@ -413,9 +413,9 @@ uint8_t ov5640_auto_focus_continuance(void)
 
 #if (ov5640_LED_CTL_BY_OV5640 == 0)
 /**
- * @brief       ����OV5640ģ�������
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块补光灯
+ * @param       
+ * @retval      
  */
 void ov5640_led_on(void)
 {
@@ -423,9 +423,9 @@ void ov5640_led_on(void)
 }
 
 /**
- * @brief       �ر�OV5640ģ�������
- * @param       ��
- * @retval      ��
+ * @brief       关闭OV5640模块补光灯
+ * @param       
+ * @retval      
  */
 void ov5640_led_off(void)
 {
@@ -433,9 +433,9 @@ void ov5640_led_off(void)
 }
 #else
 /**
- * @brief       ����OV5640ģ�������
- * @param       ��
- * @retval      ��
+ * @brief       OV5640模块补光灯
+ * @param       
+ * @retval      
  */
 void ov5640_led_on(void)
 {
@@ -445,9 +445,9 @@ void ov5640_led_on(void)
 }
 
 /**
- * @brief       �ر�OV5640ģ�������
- * @param       ��
- * @retval      ��
+ * @brief       关闭OV5640模块补光灯
+ * @param       
+ * @retval      
  */
 void ov5640_led_off(void)
 {
@@ -458,15 +458,15 @@ void ov5640_led_off(void)
 #endif
 
 /**
- * @brief       ����OV5640ģ��ƹ�ģʽ
+ * @brief       OV5640模块光线模式
  * @param       mode: OV5640_LIGHT_MODE_ADVANCED_AWB : Advanced AWB
  *                    OV5640_LIGHT_MODE_SIMPLE_AWB   : Simple AWB
  *                    OV5640_LIGHT_MODE_MANUAL_DAY   : Manual day
  *                    OV5640_LIGHT_MODE_MANUAL_A     : Manual A
  *                    OV5640_LIGHT_MODE_MANUAL_CWF   : Manual cwf
  *                    OV5640_LIGHT_MODE_MANUAL_CLOUDY: Manual cloudy
- * @retval      OV5640_EOK   : ����OV5640ģ��ƹ�ģʽ�ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : OV5640模块光线模式设置成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
 {
@@ -561,7 +561,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
 }
 
 /**
- * @brief       ����OV5640ģ��ɫ�ʱ��Ͷ�
+ * @brief       OV5640模块色彩饱和度
  * @param       saturation: OV5640_COLOR_SATURATION_0: +4
  *                          OV5640_COLOR_SATURATION_1: +3
  *                          OV5640_COLOR_SATURATION_2: +2
@@ -571,8 +571,8 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
  *                          OV5640_COLOR_SATURATION_6: -2
  *                          OV5640_COLOR_SATURATION_7: -3
  *                          OV5640_COLOR_SATURATION_8: -4
- * @retval      OV5640_EOK   : ����OV5640ģ��ɫ�ʱ��Ͷȳɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : OV5640模块色彩饱和度设置成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
 {
@@ -669,7 +669,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
 }
 
 /**
- * @brief       ����OV5640ģ������
+ * @brief       OV5640模块
  * @param       brightness: OV5640_BRIGHTNESS_0: +4
  *                          OV5640_BRIGHTNESS_1: +3
  *                          OV5640_BRIGHTNESS_2: +2
@@ -679,8 +679,8 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
  *                          OV5640_BRIGHTNESS_6: -2
  *                          OV5640_BRIGHTNESS_7: -3
  *                          OV5640_BRIGHTNESS_8: -4
- * @retval      OV5640_EOK   : ����OV5640ģ�����ȳɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块亮度成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
 {
@@ -768,7 +768,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
 }
 
 /**
- * @brief       ����OV5640ģ��Աȶ�
+ * @brief       OV5640模块对比度
  * @param       contrast: OV5640_CONTRAST_0: +4
  *                        OV5640_CONTRAST_1: +3
  *                        OV5640_CONTRAST_2: +2
@@ -778,8 +778,8 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
  *                        OV5640_CONTRAST_6: -2
  *                        OV5640_CONTRAST_7: -3
  *                        OV5640_CONTRAST_8: -4
- * @retval      OV5640_EOK   : ����OV5640ģ��Աȶȳɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : OV5640模块对比度设置成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
 {
@@ -876,7 +876,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
 }
 
 /**
- * @brief       ����OV5640ģ��ɫ��
+ * @brief       OV5640模块ɫ
  * @param       contrast: OV5640_HUE_0 : -180 degree
  *                        OV5640_HUE_1 : -150 degree
  *                        OV5640_HUE_2 : -120 degree
@@ -889,8 +889,8 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
  *                        OV5640_HUE_9 : +90 degree
  *                        OV5640_HUE_10: +120 degree
  *                        OV5640_HUE_11: +150 degree
- * @retval      OV5640_EOK   : ����OV5640ģ��ɫ��ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : OV5640模块色相设置成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_hue(ov5640_hue_t hue)
 {
@@ -1014,7 +1014,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
 }
 
 /**
- * @brief       ����OV5640ģ������Ч��
+ * @brief       OV5640模块Ч
  * @param       contrast: OV5640_SPECIAL_EFFECT_NORMAL  : Normal
  *                        OV5640_SPECIAL_EFFECT_BW      : B&W
  *                        OV5640_SPECIAL_EFFECT_BLUISH  : Bluish
@@ -1022,8 +1022,8 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
  *                        OV5640_SPECIAL_EFFECT_REDDISH : Reddish 
  *                        OV5640_SPECIAL_EFFECT_GREENISH: Greenish
  *                        OV5640_SPECIAL_EFFECT_NEGATIVE: Negative
- * @retval      OV5640_EOK   : ����OV5640ģ������Ч���ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : OV5640模块特殊效果设置成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
 {
@@ -1091,7 +1091,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
 }
 
 /**
- * @brief       ����OV5640ģ���ع��
+ * @brief       OV5640模块补光灯ع
  * @param       contrast: OV5640_EXPOSURE_LEVEL_0 : -1.7EV
  *                        OV5640_EXPOSURE_LEVEL_1 : -1.3EV
  *                        OV5640_EXPOSURE_LEVEL_2 : -1.0EV
@@ -1103,8 +1103,8 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
  *                        OV5640_EXPOSURE_LEVEL_8 : 1.0EV
  *                        OV5640_EXPOSURE_LEVEL_9 : 1.3EV
  *                        OV5640_EXPOSURE_LEVEL_10: 1.7EV
- * @retval      OV5640_EOK   : ����OV5640ģ���ع�ȳɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块曝光成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
 {
@@ -1230,7 +1230,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
 }
 
 /**
- * @brief       ����OV5640ģ�����
+ * @brief       OV5640模块补光灯
  * @param       contrast: OV5640_SHARPNESS_OFF  : Sharpness OFF
  *                        OV5640_SHARPNESS_1    : Sharpness 1
  *                        OV5640_SHARPNESS_2    : Sharpness 2
@@ -1241,8 +1241,8 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
  *                        OV5640_SHARPNESS_7    : Sharpness 7
  *                        OV5640_SHARPNESS_8    : Sharpness 8
  *                        OV5640_SHARPNESS_AUTO : Sharpness Auto
- * @retval      OV5640_EOK   : ����OV5640ģ����ȳɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块锐度成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_sharpness_level(ov5640_sharpness_t sharpness)
 {
@@ -1325,13 +1325,13 @@ uint8_t ov5640_set_sharpness_level(ov5640_sharpness_t sharpness)
 }
 
 /**
- * @brief       ����OV5640ģ�龵��/��ת
+ * @brief       设置OV5640模块镜像/翻转
  * @param       contrast: OV5640_MIRROR_FLIP_0: MIRROR
  *                        OV5640_MIRROR_FLIP_1: FLIP
  *                        OV5640_MIRROR_FLIP_2: MIRROR & FLIP
  *                        OV5640_MIRROR_FLIP_3: Normal
- * @retval      OV5640_EOK   : ����OV5640ģ�龵��/��ת�ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块镜像/翻转成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
 {
@@ -1398,12 +1398,12 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
 }
 
 /**
- * @brief       ����OV5640ģ�����ͼ��
+ * @brief       OV5640模块补光灯ͼ
  * @param       contrast: OV5640_TEST_PATTERN_OFF         : OFF
  *                        OV5640_TEST_PATTERN_COLOR_BAR   : Color bar
  *                        OV5640_TEST_PATTERN_COLOR_SQUARE: Color square
- * @retval      OV5640_EOK   : ����OV5640ģ�����ͼ���ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块测试图成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_test_pattern(ov5640_test_pattern_t pattern)
 {
@@ -1437,11 +1437,11 @@ uint8_t ov5640_set_test_pattern(ov5640_test_pattern_t pattern)
 }
 
 /**
- * @brief       ����OV5640ģ�����ͼ���ʽ
+ * @brief       设置OV5640模块输出图像格式
  * @param       mode: OV5640_OUTPUT_FORMAT_RGB565: RGB565
  *                    OV5640_OUTPUT_FORMAT_JPEG  : JPEG
- * @retval      OV5640_EOK   : ����OV5640ģ�����ͼ���ʽ�ɹ�
- *              OV5640_EINVAL: �����������
+ * @retval      OV5640_EOK   : 设置OV5640模块输出图像格式成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_output_format(ov5640_output_format_t format)
 {
@@ -1475,14 +1475,14 @@ uint8_t ov5640_set_output_format(ov5640_output_format_t format)
 }
 
 /**
- * @brief       ����OV5640ģ��ISP���봰�ڳߴ�
- * @note        OV5640ģ��ISP���봰�ڵ����ߴ�Ϊ0x0A3F*0x079F
- * @param       x     : ISP���봰����ʼX����
- *              y     : ISP���봰����ʼY����
- *              width : ISP���봰�ڿ���
- *              height: ISP���봰�ڸ߶�
- * @retval      OV5640_EOK   : ����OV5640ģ��ISP���봰�ڳߴ�ɹ�
- *              OV5640_EINVAL: �����������
+ * @brief       OV5640模块ISP输入窗口尺寸
+ * @note        OV5640模块ISP输入窗口的最大尺寸为0x0A3F*0x079F
+ * @param       x     : ISP输入窗口的起始X坐标
+ *              y     : ISP输入窗口的起始Y坐标
+ *              width : ISP输入窗口的宽度
+ *              height: ISP输入窗口的高度
+ * @retval      OV5640_EOK   : 设置OV5640模块ISP输入窗口尺寸成功
+ *              OV5640_EINVAL: 非法参数
  */
 uint8_t ov5640_set_isp_input_window(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
@@ -1541,11 +1541,11 @@ uint8_t ov5640_set_isp_input_window(uint16_t x, uint16_t y, uint16_t width, uint
 }
 
 /**
- * @brief       ����OV5640ģ��Ԥ���Ŵ���ƫ��
- * @note        OV5640ģ��Ԥ���Ŵ��ڳߴ����С��ISP���봰�ڳߴ�
- * @param       x_offset: Ԥ���Ŵ���Xƫ��
- *              y_offset: Ԥ���Ŵ���Yƫ��
- * @retval      OV5640_EOK   : ����OV5640ģ��Ԥ���Ŵ���ƫ�Ƴɹ�
+ * @brief       OV5640模块预览放大器偏移
+ * @note        OV5640模块预览放大器窗口尺寸小于ISP输入窗口尺寸
+ * @param       x_offset: 预览放大器的X偏移
+ *              y_offset: 预览放大器的Y偏移
+ * @retval      OV5640_EOK   : 设置OV5640模块预览放大器偏移成功
  */
 uint8_t ov5640_set_pre_scaling_window(uint16_t x_offset, uint16_t y_offset)
 {
@@ -1573,10 +1573,10 @@ uint8_t ov5640_set_pre_scaling_window(uint16_t x_offset, uint16_t y_offset)
 }
 
 /**
- * @brief       ����OV5640ģ�����ͼ��ߴ�
- * @param       width : ʵ�����ͼ��Ŀ��ȣ����ܱ����ţ�
- *              height: ʵ�����ͼ��ĸ߶ȣ����ܱ����ţ�
- * @retval      OV5640_EOK   : ����OV5640ģ�����ͼ�񴰿ڳɹ�
+ * @brief       OV5640模块输出图像尺寸
+ * @param       width : 实际输出图像的宽度（不受缩放影响）
+ *              height: ʵ际输出图像的高度（不受缩放影响）
+ * @retval      OV5640_EOK   : 设置OV5640模块输出图像窗口成功
  */
 uint8_t ov5640_set_output_size(uint16_t width, uint16_t height)
 {
@@ -1609,18 +1609,18 @@ uint8_t ov5640_set_output_size(uint16_t width, uint16_t height)
 }
 
 /**
- * @brief       ��ȡOV5640ģ�������һ֡ͼ������
- * @param       dts_addr : ֡���ݵĽ��ջ�����׵�ַ
- *              type: OV5640_GET_TYPE_DTS_8B_NOINC : ͼ���������ֽڷ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�̶�����
- *                    OV5640_GET_TYPE_DTS_8B_INC   : ͼ���������ֽڷ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�Զ�����
- *                    OV5640_GET_TYPE_DTS_16B_NOINC: ͼ�������԰��ַ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�̶�����
- *                    OV5640_GET_TYPE_DTS_16B_INC  : ͼ�������԰��ַ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�Զ�����
- *                    OV5640_GET_TYPE_DTS_32B_NOINC: ͼ���������ַ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�̶�����
- *                    OV5640_GET_TYPE_DTS_32B_INC  : ͼ���������ַ�ʽд��Ŀ�ĵ�ַ��Ŀ�ĵ�ַ�Զ�����
- *              before_transfer: ֡���ݴ���ǰ����Ҫ��ɵ����񣬿�ΪNULL
- * @retval      OV5640_EOK   : ��ȡOV5640ģ�������һ֡ͼ�����ݳɹ�
- *              OV5640_EINVAL: �����������
- *              ov5640_EEMPTY: ͼ������Ϊ��
+ * @brief       读取OV5640模块补光灯һ֡ͼ
+ * @param       dts_addr : 帧数据的接收缓冲区首地址
+ *              type: OV5640_GET_TYPE_DTS_8B_NOINC : 图像数据按字节方式写入目的地址，目的地址固定不变
+ *                    OV5640_GET_TYPE_DTS_8B_INC   : 图像数据按字节方式写入目的地址，目的地址自动递增
+ *                    OV5640_GET_TYPE_DTS_16B_NOINC: 图像数据可以按半字方式写入目的地址，目的地址固定不变
+ *                    OV5640_GET_TYPE_DTS_16B_INC  : 图像数据可以按半字方式写入目的地址，目的地址自动递增
+ *                    OV5640_GET_TYPE_DTS_32B_NOINC: 图像数据按字方式写入目的地址，目的地址固定不变
+ *                    OV5640_GET_TYPE_DTS_32B_INC  : 图像数据按字方式写入目的地址，目的地址自动递增
+ *              before_transfer: 帧数据传输前需要完成的工作，可为NULL
+ * @retval      OV5640_EOK   : 获取OV5640模块摄像头一帧图像数据成功
+ *              OV5640_EINVAL: 非法参数
+ *              OV5640_EEMPTY: 图像数据为空
  */
 uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*before_transfer)(void))
 {
