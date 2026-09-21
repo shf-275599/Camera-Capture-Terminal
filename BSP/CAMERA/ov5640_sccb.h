@@ -24,26 +24,26 @@
 #include "bsp_sys.h"
 
 /* 定义OV5640的SCCB通讯引脚是否有外接上拉电阻 */
-#define ov5640_SCCB_GPIO_PULLUP             1
+#define OV5640_SCCB_GPIO_PULLUP             1
 
 /* 引脚定义 */
-#define ov5640_SCCB_SCL_GPIO_PORT           GPIOB
-#define ov5640_SCCB_SCL_GPIO_PIN            GPIO_PIN_4
-#define ov5640_SCCB_SCL_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
-#define ov5640_SCCB_SDA_GPIO_PORT           GPIOB
-#define ov5640_SCCB_SDA_GPIO_PIN            GPIO_PIN_3
-#define ov5640_SCCB_SDA_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
+#define OV5640_SCCB_SCL_GPIO_PORT           GPIOB
+#define OV5640_SCCB_SCL_GPIO_PIN            GPIO_PIN_4
+#define OV5640_SCCB_SCL_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
+#define OV5640_SCCB_SDA_GPIO_PORT           GPIOB
+#define OV5640_SCCB_SDA_GPIO_PIN            GPIO_PIN_3
+#define OV5640_SCCB_SDA_GPIO_CLK_ENABLE()   do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)
 
 /* IO操作 */
-#define ov5640_SCCB_SCL(x)                  do{ x ?                                                                                             \
-                                                    HAL_GPIO_WritePin(ov5640_SCCB_SCL_GPIO_PORT, ov5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_SET) :  \
-                                                    HAL_GPIO_WritePin(ov5640_SCCB_SCL_GPIO_PORT, ov5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_RESET); \
+#define OV5640_SCCB_SCL(x)                  do{ x ?                                                                                             \
+                                                    HAL_GPIO_WritePin(OV5640_SCCB_SCL_GPIO_PORT, OV5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_SET) :  \
+                                                    HAL_GPIO_WritePin(OV5640_SCCB_SCL_GPIO_PORT, OV5640_SCCB_SCL_GPIO_PIN, GPIO_PIN_RESET); \
                                                 }while(0)
-#define ov5640_SCCB_SDA(x)                  do{ x ?                                                                                             \
-                                                    HAL_GPIO_WritePin(ov5640_SCCB_SDA_GPIO_PORT, ov5640_SCCB_SDA_GPIO_PIN, GPIO_PIN_SET) :  \
-                                                    HAL_GPIO_WritePin(ov5640_SCCB_SDA_GPIO_PORT, ov5640_SCCB_SDA_GPIO_PIN, GPIO_PIN_RESET); \
+#define OV5640_SCCB_SDA(x)                  do{ x ?                                                                                             \
+                                                    HAL_GPIO_WritePin(OV5640_SCCB_SDA_GPIO_PORT, OV5640_SCCB_SDA_GPIO_PIN, GPIO_PIN_SET) :  \
+                                                    HAL_GPIO_WritePin(OV5640_SCCB_SDA_GPIO_PORT, OV5640_SCCB_SDA_GPIO_PIN, GPIO_PIN_RESET); \
                                                 }while(0)
-#define ov5640_SCCB_READ_SDA()              HAL_GPIO_ReadPin(ov5640_SCCB_SDA_GPIO_PORT, ov5640_SCCB_SDA_GPIO_PIN)
+#define OV5640_SCCB_READ_SDA()              HAL_GPIO_ReadPin(OV5640_SCCB_SDA_GPIO_PORT, OV5640_SCCB_SDA_GPIO_PIN)
 
 /* 操作函数 */
 void ov5640_sccb_init(void);                                                        /* OV5640 SCCB接口初始化 */

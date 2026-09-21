@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640_sccb.c
- * @author      ÕýµãÔ­×ÓÍÅ¶Ó(ALIENTEK)
+ * @author      ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½Å¶ï¿½(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640Ä£¿éSCCB½Ó¿ÚÇý¶¯´úÂë
- * @license     Copyright (c) 2020-2032, ¹ãÖÝÊÐÐÇÒíµç×Ó¿Æ¼¼ÓÐÏÞ¹«Ë¾
+ * @brief       OV5640Ä£ï¿½ï¿½SCCBï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @license     Copyright (c) 2020-2032, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿Æ¼ï¿½ï¿½ï¿½ï¿½Þ¹ï¿½Ë¾
  ****************************************************************************************************
  * @attention
  *
- * ÊµÑéÆ½Ì¨:ÕýµãÔ­×Ó °¢²¨ÂÞ H743¿ª·¢°å
- * ÔÚÏßÊÓÆµ:www.yuanzige.com
- * ¼¼ÊõÂÛÌ³:www.openedv.com
- * ¹«Ë¾ÍøÖ·:www.alientek.com
- * ¹ºÂòµØÖ·:openedv.taobao.com
+ * Êµï¿½ï¿½Æ½Ì¨:ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ H743ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµ:www.yuanzige.com
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì³:www.openedv.com
+ * ï¿½ï¿½Ë¾ï¿½ï¿½Ö·:www.alientek.com
+ * ï¿½ï¿½ï¿½ï¿½ï¿½Ö·:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -21,48 +21,48 @@
 #include "ov5640_sccb.h"
 #include "bsp_delay.h"
 
-/* SCCB½Ó¿Ú¶ÁÐ´Í¨Ñ¶µØÖ·bit0 */
+/* SCCBï¿½Ó¿Ú¶ï¿½Ð´Í¨Ñ¶ï¿½ï¿½Ö·bit0 */
 #define ov5640_SCCB_WRITE   0x00
 #define ov5640_SCCB_READ    0x01
 
-#if (ov5640_SCCB_GPIO_PULLUP != 0)
+#if (OV5640_SCCB_GPIO_PULLUP != 0)
 /**
- * @brief       ÉèÖÃSCCB½Ó¿ÚSDAÒý½ÅÎªÊä³öÄ£Ê½
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½ï¿½ï¿½SCCBï¿½Ó¿ï¿½SDAï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ä£Ê½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_set_sda_output(void)
 {
     GPIO_InitTypeDef gpio_init_struct = {0};
     
-    gpio_init_struct.Pin    = ov5640_SCCB_SDA_GPIO_PIN;
+    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
     gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ov5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
 }
 
 /**
- * @brief       ÉèÖÃSCCB½Ó¿ÚSDAÒý½ÅÎªÊäÈëÄ£Ê½
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½ï¿½ï¿½SCCBï¿½Ó¿ï¿½SDAï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Ä£Ê½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_set_sda_input(void)
 {
     GPIO_InitTypeDef gpio_init_struct = {0};
     
-    gpio_init_struct.Pin    = ov5640_SCCB_SDA_GPIO_PIN;
+    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
     gpio_init_struct.Mode   = GPIO_MODE_INPUT;
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ov5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
 }
 #endif
 
 /**
- * @brief       SCCB½Ó¿ÚÑÓÊ±º¯Êý
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       SCCBï¿½Ó¿ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static inline void ov5640_sccb_delay(void)
 {
@@ -70,39 +70,39 @@ static inline void ov5640_sccb_delay(void)
 }
 
 /**
- * @brief       SCCB½Ó¿ÚÆðÊ¼ÐÅºÅ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       SCCBï¿½Ó¿ï¿½ï¿½ï¿½Ê¼ï¿½Åºï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_start(void)
 {
-    ov5640_SCCB_SDA(1);
-    ov5640_SCCB_SCL(1);
+    OV5640_SCCB_SDA(1);
+    OV5640_SCCB_SCL(1);
     ov5640_sccb_delay();
-    ov5640_SCCB_SDA(0);
+    OV5640_SCCB_SDA(0);
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(0);
+    OV5640_SCCB_SCL(0);
 }
 
 /**
- * @brief       SCCB½Ó¿ÚÍ£Ö¹ÐÅºÅ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       SCCBï¿½Ó¿ï¿½Í£Ö¹ï¿½Åºï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_stop(void)
 {
-    ov5640_SCCB_SDA(0);
+    OV5640_SCCB_SDA(0);
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(1);
+    OV5640_SCCB_SCL(1);
     ov5640_sccb_delay();
-    ov5640_SCCB_SDA(1);
+    OV5640_SCCB_SDA(1);
     ov5640_sccb_delay();
 }
 
 /**
- * @brief       SCCB½Ó¿ÚÖ÷»úÏò´Ó»úÐ´ÈëÒ»¸ö×Ö½ÚÊý¾Ý
- * @param       dat: ´ýÐ´ÈëµÄÒ»¸ö×Ö½ÚÊý¾Ý
- * @retval      ÎÞ
+ * @brief       SCCBï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó»ï¿½Ð´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       dat: ï¿½ï¿½Ð´ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_write_byte(uint8_t dat)
 {
@@ -112,97 +112,97 @@ static void ov5640_sccb_write_byte(uint8_t dat)
     for (dat_index=7; dat_index>=0; dat_index--)
     {
         dat_bit = (dat >> dat_index) & 0x01;
-        ov5640_SCCB_SDA(dat_bit);
+        OV5640_SCCB_SDA(dat_bit);
         ov5640_sccb_delay();
-        ov5640_SCCB_SCL(1);
+        OV5640_SCCB_SCL(1);
         ov5640_sccb_delay();
-        ov5640_SCCB_SCL(0);
+        OV5640_SCCB_SCL(0);
     }
     
-    ov5640_SCCB_SDA(1);
+    OV5640_SCCB_SDA(1);
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(1);
+    OV5640_SCCB_SCL(1);
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(0);
+    OV5640_SCCB_SCL(0);
 }
 
 /**
- * @brief       SCCB½Ó¿ÚÖ÷»úÏò´Ó»ú¶ÁÈ¡Ò»¸ö×Ö½ÚÊý¾Ý
- * @param       dat: ¶ÁÈ¡µ½µÄÒ»¸ö×Ö½ÚÊý¾Ý
- * @retval      ÎÞ
+ * @brief       SCCBï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó»ï¿½ï¿½ï¿½È¡Ò»ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       dat: ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sccb_read_byte(uint8_t *dat)
 {
     int8_t dat_index;
     uint8_t dat_bit;
     
-#if (ov5640_SCCB_GPIO_PULLUP != 0)
+#if (OV5640_SCCB_GPIO_PULLUP != 0)
     ov5640_sccb_set_sda_input();
 #endif
     
     for (dat_index=7; dat_index>=0; dat_index--)
     {
         ov5640_sccb_delay();
-        ov5640_SCCB_SCL(1);
-        dat_bit = ov5640_SCCB_READ_SDA();
+        OV5640_SCCB_SCL(1);
+        dat_bit = OV5640_SCCB_READ_SDA();
         *dat |= (dat_bit << dat_index);
         ov5640_sccb_delay();
-        ov5640_SCCB_SCL(0);
+        OV5640_SCCB_SCL(0);
     }
     
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(1);
+    OV5640_SCCB_SCL(1);
     ov5640_sccb_delay();
-    ov5640_SCCB_SCL(0);
+    OV5640_SCCB_SCL(0);
     ov5640_sccb_delay();
-    ov5640_SCCB_SDA(0);
+    OV5640_SCCB_SDA(0);
     ov5640_sccb_delay();
     
-#if (ov5640_SCCB_GPIO_PULLUP != 0)
+#if (OV5640_SCCB_GPIO_PULLUP != 0)
     ov5640_sccb_set_sda_output();
 #endif
 }
 
 /**
- * @brief       OV5640 SCCB½Ó¿Ú³õÊ¼»¯
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       OV5640 SCCBï¿½Ó¿Ú³ï¿½Ê¼ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_sccb_init(void)
 {
     GPIO_InitTypeDef gpio_init_struct = {0};
     
-    /* Ê¹ÄÜSCL¡¢SDAÒý½ÅGPIOÊ±ÖÓ */
-    ov5640_SCCB_SCL_GPIO_CLK_ENABLE();
-    ov5640_SCCB_SDA_GPIO_CLK_ENABLE();
+    /* Ê¹ï¿½ï¿½SCLï¿½ï¿½SDAï¿½ï¿½ï¿½ï¿½GPIOÊ±ï¿½ï¿½ */
+    OV5640_SCCB_SCL_GPIO_CLK_ENABLE();
+    OV5640_SCCB_SDA_GPIO_CLK_ENABLE();
     
-    /* ³õÊ¼»¯SCLÒý½Å */
-    gpio_init_struct.Pin    = ov5640_SCCB_SCL_GPIO_PIN;
+    /* ï¿½ï¿½Ê¼ï¿½ï¿½SCLï¿½ï¿½ï¿½ï¿½ */
+    gpio_init_struct.Pin    = OV5640_SCCB_SCL_GPIO_PIN;
     gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ov5640_SCCB_SCL_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SCCB_SCL_GPIO_PORT, &gpio_init_struct);
     
-    /* ³õÊ¼»¯SDAÒý½Å */
-    gpio_init_struct.Pin    = ov5640_SCCB_SDA_GPIO_PIN;
-#if (ov5640_SCCB_GPIO_PULLUP != 0)
+    /* ï¿½ï¿½Ê¼ï¿½ï¿½SDAï¿½ï¿½ï¿½ï¿½ */
+    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
+#if (OV5640_SCCB_GPIO_PULLUP != 0)
     gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
 #else
     gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_OD;
 #endif
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ov5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
     
     ov5640_sccb_stop();
 }
 
 /**
- * @brief       SCCB½Ó¿Ú3½×¶ÎÐ´´«Êä
+ * @brief       SCCBï¿½Ó¿ï¿½3ï¿½×¶ï¿½Ð´ï¿½ï¿½ï¿½ï¿½
  * @param       id_addr : ID Address
  *              sub_addr: Sub-address
  *              dat     : Write Data
- * @retval      ÎÞ
+ * @retval      ï¿½ï¿½
  */
 void ov5640_sccb_3_phase_write(uint8_t id_addr, uint16_t sub_addr, uint8_t dat)
 {
@@ -215,10 +215,10 @@ void ov5640_sccb_3_phase_write(uint8_t id_addr, uint16_t sub_addr, uint8_t dat)
 }
 
 /**
- * @brief       SCCB½Ó¿Ú2½×¶ÎÐ´´«Êä
+ * @brief       SCCBï¿½Ó¿ï¿½2ï¿½×¶ï¿½Ð´ï¿½ï¿½ï¿½ï¿½
  * @param       id_addr : ID Address
  *              sub_addr: Sub-address
- * @retval      ÎÞ
+ * @retval      ï¿½ï¿½
  */
 void ov5640_sccb_2_phase_write(uint8_t id_addr, uint16_t sub_addr)
 {
@@ -230,10 +230,10 @@ void ov5640_sccb_2_phase_write(uint8_t id_addr, uint16_t sub_addr)
 }
 
 /**
- * @brief       SCCB½Ó¿Ú2½×¶Î¶Á´«Êä
+ * @brief       SCCBï¿½Ó¿ï¿½2ï¿½×¶Î¶ï¿½ï¿½ï¿½ï¿½ï¿½
  * @param       id_addr: ID Address
- *              dat: ¶ÁÈ¡µ½µÄÊý¾Ý
- * @retval      ÎÞ
+ *              dat: ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_sccb_2_phase_read(uint8_t id_addr, uint8_t *dat)
 {

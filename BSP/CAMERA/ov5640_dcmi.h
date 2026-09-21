@@ -24,9 +24,9 @@
 #include "ov5640.h"
 
 /* 错误代码 */
-#define ov5640_DCMI_EOK     0   /* 没有错误 */
-#define ov5640_DCMI_ERROR   1   /* 错误 */
-#define ov5640_DCMI_EINVAL  2   /* 非法参数 */
+#define OV5640_DCMI_EOK     0   /* 没有错误 */
+#define OV5640_DCMI_ERROR   1   /* 错误 */
+#define OV5640_DCMI_EINVAL  2   /* 非法参数 */
 
 /* 操作函数 */
 void ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len);    /* 开始OV5640模块DCMI接口DMA传输 */

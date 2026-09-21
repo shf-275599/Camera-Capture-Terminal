@@ -1,19 +1,19 @@
 /**
  ****************************************************************************************************
  * @file        ov5640.c
- * @author      ÕýµãÔ­×ÓÍÅ¶Ó(ALIENTEK)
+ * @author      ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½Å¶ï¿½(ALIENTEK)
  * @version     V1.0
  * @date        2022-06-21
- * @brief       OV5640Ä£¿éÇý¶¯´úÂë
- * @license     Copyright (c) 2020-2032, ¹ãÖÝÊÐÐÇÒíµç×Ó¿Æ¼¼ÓÐÏÞ¹«Ë¾
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @license     Copyright (c) 2020-2032, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿Æ¼ï¿½ï¿½ï¿½ï¿½Þ¹ï¿½Ë¾
  ****************************************************************************************************
  * @attention
  *
- * ÊµÑéÆ½Ì¨:ÕýµãÔ­×Ó °¢²¨ÂÞ H743¿ª·¢°å
- * ÔÚÏßÊÓÆµ:www.yuanzige.com
- * ¼¼ÊõÂÛÌ³:www.openedv.com
- * ¹«Ë¾ÍøÖ·:www.alientek.com
- * ¹ºÂòµØÖ·:openedv.taobao.com
+ * Êµï¿½ï¿½Æ½Ì¨:ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ H743ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµ:www.yuanzige.com
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì³:www.openedv.com
+ * ï¿½ï¿½Ë¾ï¿½ï¿½Ö·:www.alientek.com
+ * ï¿½ï¿½ï¿½ï¿½ï¿½Ö·:openedv.taobao.com
  *
  ****************************************************************************************************
  */
@@ -24,20 +24,20 @@
 #include "ov5640_dcmi.h"
 #include "bsp_delay.h"
 
-/* OV5640Ä£¿éÐ¾Æ¬ID */
+/* OV5640Ä£ï¿½ï¿½Ð¾Æ¬ID */
 #define ov5640_CHIP_ID  0x5640
 
-/* OV5640Ä£¿é¹Ì¼þÏÂÔØ³¬Ê±Ê±¼ä£¬µ¥Î»£ººÁÃë£¨ms£© */
+/* OV5640Ä£ï¿½ï¿½Ì¼ï¿½ï¿½ï¿½ï¿½Ø³ï¿½Ê±Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ë£¨msï¿½ï¿½ */
 #define ov5640_TIMEOUT  5000
 
-/* OV5640¼Ä´æÆ÷¿éÃ¶¾Ù */
+/* OV5640ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½ï¿½ */
 typedef enum
 {
-    ov5640_REG_BANK_DSP = 0x00, /* DSP¼Ä´æÆ÷¿é */
-    ov5640_REG_BANK_SENSOR,     /* Sensor¼Ä´æÆ÷¿é */
+    ov5640_REG_BANK_DSP = 0x00, /* DSPï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ */
+    ov5640_REG_BANK_SENSOR,     /* Sensorï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ */
 } ov5640_reg_bank_t;
 
-/* OV5640Ä£¿éÊý¾Ý½á¹¹Ìå */
+/* OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ */
 static struct
 {
     struct {
@@ -55,35 +55,35 @@ static struct
 } g_ov5640_sta = {0};
 
 /**
- * @brief       OV5640Ä£¿éÐ´¼Ä´æÆ÷
- * @param       reg: ¼Ä´æÆ÷µØÖ·
- *              dat: ´ýÐ´ÈëµÄÖµ
- * @retval      ÎÞ
+ * @brief       OV5640Ä£ï¿½ï¿½Ð´ï¿½Ä´ï¿½ï¿½ï¿½
+ * @param       reg: ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½Ö·
+ *              dat: ï¿½ï¿½Ð´ï¿½ï¿½ï¿½Öµ
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_write_reg(uint16_t reg, uint8_t dat)
 {
-    ov5640_sccb_3_phase_write(ov5640_SCCB_ADDR, reg, dat);
+    ov5640_sccb_3_phase_write(OV5640_SCCB_ADDR, reg, dat);
 }
 
 /**
- * @brief       OV5640Ä£¿é¶Á¼Ä´æÆ÷
- * @param       reg: ¼Ä´æÆ÷µÄµØÖ·
- * @retval      ¶ÁÈ¡µ½µÄ¼Ä´æÆ÷Öµ
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½
+ * @param       reg: ï¿½Ä´ï¿½ï¿½ï¿½ï¿½Äµï¿½Ö·
+ * @retval      ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ä¼Ä´ï¿½ï¿½ï¿½Öµ
  */
 static uint8_t ov5640_read_reg(uint16_t reg)
 {
     uint8_t dat = 0;
     
-    ov5640_sccb_2_phase_write(ov5640_SCCB_ADDR, reg);
-    ov5640_sccb_2_phase_read(ov5640_SCCB_ADDR, &dat);
+    ov5640_sccb_2_phase_write(OV5640_SCCB_ADDR, reg);
+    ov5640_sccb_2_phase_read(OV5640_SCCB_ADDR, &dat);
     
     return dat;
 }
 
 /**
- * @brief       »ñÈ¡OV5640Ä£¿éISPÊäÈë´°¿Ú³ß´ç
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½ISPï¿½ï¿½ï¿½ë´°ï¿½Ú³ß´ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_get_isp_input_size(void)
 {
@@ -121,9 +121,9 @@ static void ov5640_get_isp_input_size(void)
 }
 
 /**
- * @brief       »ñÈ¡OV5640Ä£¿éÔ¤Ëõ·Å´°¿Ú³ß´ç
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½Ú³ß´ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_get_pre_scaling_size(void)
 {
@@ -151,9 +151,9 @@ static void ov5640_get_pre_scaling_size(void)
 }
 
 /**
- * @brief       »ñÈ¡OV5640Ä£¿éÊä³öÍ¼Ïñ³ß´ç
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ß´ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_get_output_size(void)
 {
@@ -179,48 +179,48 @@ static void ov5640_get_output_size(void)
 }
 
 /**
- * @brief       OV5640Ä£¿éÓ²¼þ³õÊ¼»¯
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       OV5640Ä£ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_hw_init(void)
 {
-    ov5640_RST(1);
-    ov5640_PWDN(1);
+    OV5640_RST(1);
+    OV5640_PWDN(1);
 }
 
 /**
- * @brief       OV5640Ä£¿éÍË³öµôµçÄ£Ê½
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_exit_power_down(void)
 {
-    ov5640_RST(0);
+    OV5640_RST(0);
     delay_ms(20);
-    ov5640_PWDN(0);
+    OV5640_PWDN(0);
     delay_ms(5);
-    ov5640_RST(1);
+    OV5640_RST(1);
     delay_ms(20);
 }
 
 /**
- * @brief       OV5640Ä£¿éÓ²¼þ¸´Î»
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       OV5640Ä£ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½Î»
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_hw_reset(void)
 {
-    ov5640_RST(0);
+    OV5640_RST(0);
     delay_ms(20);
-    ov5640_RST(1);
+    OV5640_RST(1);
     delay_ms(20);
 }
 
 /**
- * @brief       OV5640Ä£¿éÈí¼þ¸´Î»
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_sw_reset(void)
 {
@@ -234,8 +234,8 @@ static void ov5640_sw_reset(void)
 }
 
 /**
- * @brief       »ñÈ¡OV5640Ä£¿éÐ¾Æ¬ID
- * @param       ÎÞ
+ * @brief       ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½Ð¾Æ¬ID
+ * @param       ï¿½ï¿½
  * @retval      Ð¾Æ¬ID
  */
 static uint16_t ov5640_get_chip_id(void)
@@ -249,9 +249,9 @@ static uint16_t ov5640_get_chip_id(void)
 }
 
 /**
- * @brief       ³õÊ¼»¯OV5640¼Ä´æÆ÷ÅäÖÃ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½Ê¼ï¿½ï¿½OV5640ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 static void ov5640_init_reg(void)
 {
@@ -264,38 +264,38 @@ static void ov5640_init_reg(void)
 }
 
 /**
- * @brief       ³õÊ¼»¯OV5640Ä£¿é
- * @param       ÎÞ
- * @retval      ov5640_EOK   : OV5640Ä£¿é³õÊ¼»¯³É¹¦
- *              ov5640_ERROR : Í¨Ñ¶³ö´í£¬OV5640Ä£¿é³õÊ¼»¯Ê§°Ü
- *              ov5640_ENOMEM: ÄÚ´æ²»×ã£¬OV5640Ä£¿é³õÊ¼»¯Ê§°Ü
+ * @brief       ï¿½ï¿½Ê¼ï¿½ï¿½OV5640Ä£ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      OV5640_EOK   : OV5640Ä£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½É¹ï¿½
+ *              OV5640_ERROR : Í¨Ñ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê§ï¿½ï¿½
+ *              ov5640_ENOMEM: ï¿½Ú´æ²»ï¿½ã£¬OV5640Ä£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê§ï¿½ï¿½
  */
 uint8_t ov5640_init(void)
 {
     uint16_t chip_id;
     
-    ov5640_hw_init();               /* OV5640Ä£¿éÓ²¼þ³õÊ¼»¯ */
-    ov5640_exit_power_down();       /* OV5640Ä£¿éÍË³öµôµçÄ£Ê½ */
-    ov5640_hw_reset();              /* OV5640Ä£¿éÓ²¼þ¸´Î» */
-    ov5640_sccb_init();             /* OV5640 SCCB½Ó¿Ú³õÊ¼»¯ */
-    ov5640_sw_reset();              /* OV5640Ä£¿éÈí¼þ¸´Î» */
+    ov5640_hw_init();               /* OV5640Ä£ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ */
+    ov5640_exit_power_down();       /* OV5640Ä£ï¿½ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ */
+    ov5640_hw_reset();              /* OV5640Ä£ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½Î» */
+    ov5640_sccb_init();             /* OV5640 SCCBï¿½Ó¿Ú³ï¿½Ê¼ï¿½ï¿½ */
+    ov5640_sw_reset();              /* OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î» */
     
-    chip_id = ov5640_get_chip_id(); /* »ñÈ¡Ð¾Æ¬ID */
+    chip_id = ov5640_get_chip_id(); /* ï¿½ï¿½È¡Ð¾Æ¬ID */
     if (chip_id != ov5640_CHIP_ID)
     {
-        return ov5640_ERROR;
+        return OV5640_ERROR;
     }
     
-    ov5640_init_reg();              /* ³õÊ¼»¯OV5640¼Ä´æÆ÷ÅäÖÃ */
+    ov5640_init_reg();              /* ï¿½ï¿½Ê¼ï¿½ï¿½OV5640ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ³õÊ¼»¯OV5640Ä£¿é×Ô¶¯¶Ô½¹
- * @param       ÎÞ
- * @retval      ov5640_EOK     : OV5640Ä£¿é×Ô¶¯¶Ô½¹³õÊ¼»¯³É¹¦
- *              ov5640_ETIMEOUT: OV5640Ä£¿éÏÂÔØ¹Ì¼þ³¬Ê±
+ * @brief       ï¿½ï¿½Ê¼ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      OV5640_EOK     : OV5640Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½É¹ï¿½
+ *              OV5640_ETIMEOUT: OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹Ì¼ï¿½ï¿½ï¿½Ê±
  */
 uint8_t ov5640_auto_focus_init(void)
 {
@@ -330,17 +330,17 @@ uint8_t ov5640_auto_focus_init(void)
     
     if (reg3029 != 0x70)
     {
-        return ov5640_ETIMEOUT;
+        return OV5640_ETIMEOUT;
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       OV5640Ä£¿é×Ô¶¯¶Ô½¹Ò»´Î
- * @param       ÎÞ
- * @retval      ov5640_EOK     : OV5640Ä£¿é×Ô¶¯¶Ô½¹Ò»´Î³É¹¦
- *              ov5640_ETIMEOUT: OV5640Ä£¿é×Ô¶¯¶Ô½¹Ò»´Î³¬Ê±
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½Ò»ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      OV5640_EOK     : OV5640Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½Ò»ï¿½Î³É¹ï¿½
+ *              OV5640_ETIMEOUT: OV5640Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½Ò»ï¿½Î³ï¿½Ê±
  */
 uint8_t ov5640_auto_focus_once(void)
 {
@@ -358,17 +358,17 @@ uint8_t ov5640_auto_focus_once(void)
     
     if (reg3029 != 0x10)
     {
-        return ov5640_ETIMEOUT;
+        return OV5640_ETIMEOUT;
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       OV5640Ä£¿é³ÖÐø×Ô¶¯¶Ô½¹
- * @param       ÎÞ
- * @retval      ov5640_EOK     : OV5640Ä£¿é³ÖÐø×Ô¶¯¶Ô½¹³É¹¦
- *              ov5640_ETIMEOUT: OV5640Ä£¿é³ÖÐø×Ô¶¯¶Ô½¹³¬Ê±
+ * @brief       OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      OV5640_EOK     : OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½ï¿½É¹ï¿½
+ *              OV5640_ETIMEOUT: OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ô½ï¿½ï¿½ï¿½Ê±
  */
 uint8_t ov5640_auto_focus_continuance(void)
 {
@@ -387,7 +387,7 @@ uint8_t ov5640_auto_focus_continuance(void)
     
     if (reg3023 != 0x00)
     {
-        return ov5640_ETIMEOUT;
+        return OV5640_ETIMEOUT;
     }
     
     reg3023 = ~0;
@@ -405,37 +405,37 @@ uint8_t ov5640_auto_focus_continuance(void)
     
     if (reg3023 != 0x00)
     {
-        return ov5640_ETIMEOUT;
+        return OV5640_ETIMEOUT;
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 #if (ov5640_LED_CTL_BY_OV5640 == 0)
 /**
- * @brief       ¿ªÆôOV5640Ä£¿éÉÁ¹âµÆ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_led_on(void)
 {
-    ov5640_FLASH(1);
+    // ov5640_FLASH(1);
 }
 
 /**
- * @brief       ¹Ø±ÕOV5640Ä£¿éÉÁ¹âµÆ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½Ø±ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_led_off(void)
 {
-    ov5640_FLASH(0);
+    // ov5640_FLASH(0);
 }
 #else
 /**
- * @brief       ¿ªÆôOV5640Ä£¿éÉÁ¹âµÆ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_led_on(void)
 {
@@ -445,9 +445,9 @@ void ov5640_led_on(void)
 }
 
 /**
- * @brief       ¹Ø±ÕOV5640Ä£¿éÉÁ¹âµÆ
- * @param       ÎÞ
- * @retval      ÎÞ
+ * @brief       ï¿½Ø±ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       ï¿½ï¿½
+ * @retval      ï¿½ï¿½
  */
 void ov5640_led_off(void)
 {
@@ -458,21 +458,21 @@ void ov5640_led_off(void)
 #endif
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éµÆ¹âÄ£Ê½
- * @param       mode: ov5640_LIGHT_MODE_ADVANCED_AWB : Advanced AWB
- *                    ov5640_LIGHT_MODE_SIMPLE_AWB   : Simple AWB
- *                    ov5640_LIGHT_MODE_MANUAL_DAY   : Manual day
- *                    ov5640_LIGHT_MODE_MANUAL_A     : Manual A
- *                    ov5640_LIGHT_MODE_MANUAL_CWF   : Manual cwf
- *                    ov5640_LIGHT_MODE_MANUAL_CLOUDY: Manual cloudy
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éµÆ¹âÄ£Ê½³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Æ¹ï¿½Ä£Ê½
+ * @param       mode: OV5640_LIGHT_MODE_ADVANCED_AWB : Advanced AWB
+ *                    OV5640_LIGHT_MODE_SIMPLE_AWB   : Simple AWB
+ *                    OV5640_LIGHT_MODE_MANUAL_DAY   : Manual day
+ *                    OV5640_LIGHT_MODE_MANUAL_A     : Manual A
+ *                    OV5640_LIGHT_MODE_MANUAL_CWF   : Manual cwf
+ *                    OV5640_LIGHT_MODE_MANUAL_CLOUDY: Manual cloudy
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Æ¹ï¿½Ä£Ê½ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
 {
     switch (mode)
     {
-        case ov5640_LIGHT_MODE_ADVANCED_AWB:
+        case OV5640_LIGHT_MODE_ADVANCED_AWB:
         {
             ov5640_write_reg(0x3406, 0x00);
             ov5640_write_reg(0x5192, 0x04);
@@ -499,7 +499,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
             ov5640_write_reg(0x5185, 0x24);
             break;
         }
-        case ov5640_LIGHT_MODE_SIMPLE_AWB:
+        case OV5640_LIGHT_MODE_SIMPLE_AWB:
         {
             ov5640_write_reg(0x3406, 0x00);
             ov5640_write_reg(0x5183, 0x94);
@@ -507,7 +507,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
             ov5640_write_reg(0x5192, 0x00);
             break;
         }
-        case ov5640_LIGHT_MODE_MANUAL_DAY:
+        case OV5640_LIGHT_MODE_MANUAL_DAY:
         {
             ov5640_write_reg(0x3406, 0x01);
             ov5640_write_reg(0x3400, 0x06);
@@ -518,7 +518,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
             ov5640_write_reg(0x3405, 0xF3);
             break;
         }
-        case ov5640_LIGHT_MODE_MANUAL_A:
+        case OV5640_LIGHT_MODE_MANUAL_A:
         {
             ov5640_write_reg(0x3406, 0x01);
             ov5640_write_reg(0x3400, 0x04);
@@ -529,7 +529,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
             ov5640_write_reg(0x3405, 0xB6);
             break;
         }
-        case ov5640_LIGHT_MODE_MANUAL_CWF:
+        case OV5640_LIGHT_MODE_MANUAL_CWF:
         {
             ov5640_write_reg(0x3406, 0x01);
             ov5640_write_reg(0x3400, 0x05);
@@ -540,7 +540,7 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
             ov5640_write_reg(0x3405, 0xCF);
             break;
         }
-        case ov5640_LIGHT_MODE_MANUAL_CLOUDY:
+        case OV5640_LIGHT_MODE_MANUAL_CLOUDY:
         {
             ov5640_write_reg(0x3406, 0x01);
             ov5640_write_reg(0x3400, 0x06);
@@ -553,32 +553,32 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÉ«²Ê±¥ºÍ¶È
- * @param       saturation: ov5640_COLOR_SATURATION_0: +4
- *                          ov5640_COLOR_SATURATION_1: +3
- *                          ov5640_COLOR_SATURATION_2: +2
- *                          ov5640_COLOR_SATURATION_3: +1
- *                          ov5640_COLOR_SATURATION_4: 0
- *                          ov5640_COLOR_SATURATION_5: -1
- *                          ov5640_COLOR_SATURATION_6: -2
- *                          ov5640_COLOR_SATURATION_7: -3
- *                          ov5640_COLOR_SATURATION_8: -4
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÉ«²Ê±¥ºÍ¶È³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½É«ï¿½Ê±ï¿½ï¿½Í¶ï¿½
+ * @param       saturation: OV5640_COLOR_SATURATION_0: +4
+ *                          OV5640_COLOR_SATURATION_1: +3
+ *                          OV5640_COLOR_SATURATION_2: +2
+ *                          OV5640_COLOR_SATURATION_3: +1
+ *                          OV5640_COLOR_SATURATION_4: 0
+ *                          OV5640_COLOR_SATURATION_5: -1
+ *                          OV5640_COLOR_SATURATION_6: -2
+ *                          OV5640_COLOR_SATURATION_7: -3
+ *                          OV5640_COLOR_SATURATION_8: -4
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½É«ï¿½Ê±ï¿½ï¿½Í¶È³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
 {
     switch (saturation)
     {
-        case ov5640_COLOR_SATURATION_0:
+        case OV5640_COLOR_SATURATION_0:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x80);
@@ -587,7 +587,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_1:
+        case OV5640_COLOR_SATURATION_1:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x70);
@@ -596,7 +596,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_2:
+        case OV5640_COLOR_SATURATION_2:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x60);
@@ -605,7 +605,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_3:
+        case OV5640_COLOR_SATURATION_3:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x50);
@@ -614,7 +614,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_4:
+        case OV5640_COLOR_SATURATION_4:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x40);
@@ -623,7 +623,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_5:
+        case OV5640_COLOR_SATURATION_5:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x30);
@@ -632,7 +632,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_6:
+        case OV5640_COLOR_SATURATION_6:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x20);
@@ -641,7 +641,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_7:
+        case OV5640_COLOR_SATURATION_7:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x10);
@@ -650,7 +650,7 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_COLOR_SATURATION_8:
+        case OV5640_COLOR_SATURATION_8:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5583, 0x00);
@@ -661,32 +661,32 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÁÁ¶È
- * @param       brightness: ov5640_BRIGHTNESS_0: +4
- *                          ov5640_BRIGHTNESS_1: +3
- *                          ov5640_BRIGHTNESS_2: +2
- *                          ov5640_BRIGHTNESS_3: +1
- *                          ov5640_BRIGHTNESS_4: 0
- *                          ov5640_BRIGHTNESS_5: -1
- *                          ov5640_BRIGHTNESS_6: -2
- *                          ov5640_BRIGHTNESS_7: -3
- *                          ov5640_BRIGHTNESS_8: -4
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÁÁ¶È³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       brightness: OV5640_BRIGHTNESS_0: +4
+ *                          OV5640_BRIGHTNESS_1: +3
+ *                          OV5640_BRIGHTNESS_2: +2
+ *                          OV5640_BRIGHTNESS_3: +1
+ *                          OV5640_BRIGHTNESS_4: 0
+ *                          OV5640_BRIGHTNESS_5: -1
+ *                          OV5640_BRIGHTNESS_6: -2
+ *                          OV5640_BRIGHTNESS_7: -3
+ *                          OV5640_BRIGHTNESS_8: -4
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½È³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
 {
     switch (brightness)
     {
-        case ov5640_BRIGHTNESS_0:
+        case OV5640_BRIGHTNESS_0:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x40);
@@ -694,7 +694,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_BRIGHTNESS_1:
+        case OV5640_BRIGHTNESS_1:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x30);
@@ -702,7 +702,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_BRIGHTNESS_2:
+        case OV5640_BRIGHTNESS_2:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x20);
@@ -710,7 +710,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_BRIGHTNESS_3:
+        case OV5640_BRIGHTNESS_3:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x10);
@@ -718,7 +718,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_BRIGHTNESS_4:
+        case OV5640_BRIGHTNESS_4:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x00);
@@ -726,7 +726,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_BRIGHTNESS_5:
+        case OV5640_BRIGHTNESS_5:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x10);
@@ -734,7 +734,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x09);
             break;
         }
-        case ov5640_BRIGHTNESS_6:
+        case OV5640_BRIGHTNESS_6:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x20);
@@ -742,7 +742,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x09);
             break;
         }
-        case ov5640_BRIGHTNESS_7:
+        case OV5640_BRIGHTNESS_7:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x30);
@@ -750,7 +750,7 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
             ov5640_write_reg(0x5588, 0x09);
             break;
         }
-        case ov5640_BRIGHTNESS_8:
+        case OV5640_BRIGHTNESS_8:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5587, 0x40);
@@ -760,32 +760,32 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿é¶Ô±È¶È
- * @param       contrast: ov5640_CONTRAST_0: +4
- *                        ov5640_CONTRAST_1: +3
- *                        ov5640_CONTRAST_2: +2
- *                        ov5640_CONTRAST_3: +1
- *                        ov5640_CONTRAST_4: 0
- *                        ov5640_CONTRAST_5: -1
- *                        ov5640_CONTRAST_6: -2
- *                        ov5640_CONTRAST_7: -3
- *                        ov5640_CONTRAST_8: -4
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿é¶Ô±È¶È³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Ô±È¶ï¿½
+ * @param       contrast: OV5640_CONTRAST_0: +4
+ *                        OV5640_CONTRAST_1: +3
+ *                        OV5640_CONTRAST_2: +2
+ *                        OV5640_CONTRAST_3: +1
+ *                        OV5640_CONTRAST_4: 0
+ *                        OV5640_CONTRAST_5: -1
+ *                        OV5640_CONTRAST_6: -2
+ *                        OV5640_CONTRAST_7: -3
+ *                        OV5640_CONTRAST_8: -4
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Ô±È¶È³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
 {
     switch (contrast)
     {
-        case ov5640_CONTRAST_0:
+        case OV5640_CONTRAST_0:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -794,7 +794,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_1:
+        case OV5640_CONTRAST_1:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -803,7 +803,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_2:
+        case OV5640_CONTRAST_2:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -812,7 +812,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_3:
+        case OV5640_CONTRAST_3:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -821,7 +821,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_4:
+        case OV5640_CONTRAST_4:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -830,7 +830,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_5:
+        case OV5640_CONTRAST_5:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -839,7 +839,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_6:
+        case OV5640_CONTRAST_6:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -848,7 +848,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_7:
+        case OV5640_CONTRAST_7:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -857,7 +857,7 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
             ov5640_write_reg(0x5588, 0x41);
             break;
         }
-        case ov5640_CONTRAST_8:
+        case OV5640_CONTRAST_8:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x04);
@@ -868,35 +868,35 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÉ«Ïà
- * @param       contrast: ov5640_HUE_0 : -180 degree
- *                        ov5640_HUE_1 : -150 degree
- *                        ov5640_HUE_2 : -120 degree
- *                        ov5640_HUE_3 : -90 degree
- *                        ov5640_HUE_4 : -60 degree
- *                        ov5640_HUE_5 : -30 degree
- *                        ov5640_HUE_6 : 0 degree
- *                        ov5640_HUE_7 : +30 degree
- *                        ov5640_HUE_8 : +60 degree
- *                        ov5640_HUE_9 : +90 degree
- *                        ov5640_HUE_10: +120 degree
- *                        ov5640_HUE_11: +150 degree
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÉ«Ïà³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½É«ï¿½ï¿½
+ * @param       contrast: OV5640_HUE_0 : -180 degree
+ *                        OV5640_HUE_1 : -150 degree
+ *                        OV5640_HUE_2 : -120 degree
+ *                        OV5640_HUE_3 : -90 degree
+ *                        OV5640_HUE_4 : -60 degree
+ *                        OV5640_HUE_5 : -30 degree
+ *                        OV5640_HUE_6 : 0 degree
+ *                        OV5640_HUE_7 : +30 degree
+ *                        OV5640_HUE_8 : +60 degree
+ *                        OV5640_HUE_9 : +90 degree
+ *                        OV5640_HUE_10: +120 degree
+ *                        OV5640_HUE_11: +150 degree
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½É«ï¿½ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_hue(ov5640_hue_t hue)
 {
     switch (hue)
     {
-        case ov5640_HUE_0:
+        case OV5640_HUE_0:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -905,7 +905,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x32);
             break;
         }
-        case ov5640_HUE_1:
+        case OV5640_HUE_1:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -914,7 +914,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x32);
             break;
         }
-        case ov5640_HUE_2:
+        case OV5640_HUE_2:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -923,7 +923,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x32);
             break;
         }
-        case ov5640_HUE_3:
+        case OV5640_HUE_3:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -932,7 +932,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x02);
             break;
         }
-        case ov5640_HUE_4:
+        case OV5640_HUE_4:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -941,7 +941,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x02);
             break;
         }
-        case ov5640_HUE_5:
+        case OV5640_HUE_5:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -950,7 +950,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x02);
             break;
         }
-        case ov5640_HUE_6:
+        case OV5640_HUE_6:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -959,7 +959,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_HUE_7:
+        case OV5640_HUE_7:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -968,7 +968,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_HUE_8:
+        case OV5640_HUE_8:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -977,7 +977,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x01);
             break;
         }
-        case ov5640_HUE_9:
+        case OV5640_HUE_9:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -986,7 +986,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x31);
             break;
         }
-        case ov5640_HUE_10:
+        case OV5640_HUE_10:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -995,7 +995,7 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
             ov5640_write_reg(0x5588, 0x31);
             break;
         }
-        case ov5640_HUE_11:
+        case OV5640_HUE_11:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x01);
@@ -1006,36 +1006,36 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÌØÊâÐ§¹û
- * @param       contrast: ov5640_SPECIAL_EFFECT_NORMAL  : Normal
- *                        ov5640_SPECIAL_EFFECT_BW      : B&W
- *                        ov5640_SPECIAL_EFFECT_BLUISH  : Bluish
- *                        ov5640_SPECIAL_EFFECT_SEPIA   : Sepia
- *                        ov5640_SPECIAL_EFFECT_REDDISH : Reddish 
- *                        ov5640_SPECIAL_EFFECT_GREENISH: Greenish
- *                        ov5640_SPECIAL_EFFECT_NEGATIVE: Negative
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÌØÊâÐ§¹û³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
+ * @param       contrast: OV5640_SPECIAL_EFFECT_NORMAL  : Normal
+ *                        OV5640_SPECIAL_EFFECT_BW      : B&W
+ *                        OV5640_SPECIAL_EFFECT_BLUISH  : Bluish
+ *                        OV5640_SPECIAL_EFFECT_SEPIA   : Sepia
+ *                        OV5640_SPECIAL_EFFECT_REDDISH : Reddish 
+ *                        OV5640_SPECIAL_EFFECT_GREENISH: Greenish
+ *                        OV5640_SPECIAL_EFFECT_NEGATIVE: Negative
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
 {
     switch (effect)
     {
-        case ov5640_SPECIAL_EFFECT_NORMAL:
+        case OV5640_SPECIAL_EFFECT_NORMAL:
         {
             ov5640_write_reg(0x5001, 0x7F);
             ov5640_write_reg(0x5580, 0x00);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_BW:
+        case OV5640_SPECIAL_EFFECT_BW:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x18);
@@ -1043,7 +1043,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
             ov5640_write_reg(0x5584, 0x80);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_BLUISH:
+        case OV5640_SPECIAL_EFFECT_BLUISH:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x18);
@@ -1051,7 +1051,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
             ov5640_write_reg(0x5584, 0x40);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_SEPIA:
+        case OV5640_SPECIAL_EFFECT_SEPIA:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x18);
@@ -1059,7 +1059,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
             ov5640_write_reg(0x5584, 0xA0);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_REDDISH:
+        case OV5640_SPECIAL_EFFECT_REDDISH:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x18);
@@ -1067,7 +1067,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
             ov5640_write_reg(0x5584, 0xC0);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_GREENISH:
+        case OV5640_SPECIAL_EFFECT_GREENISH:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x18);
@@ -1075,7 +1075,7 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
             ov5640_write_reg(0x5584, 0x60);
             break;
         }
-        case ov5640_SPECIAL_EFFECT_NEGATIVE:
+        case OV5640_SPECIAL_EFFECT_NEGATIVE:
         {
             ov5640_write_reg(0x5001, 0xFF);
             ov5640_write_reg(0x5580, 0x40);
@@ -1083,34 +1083,34 @@ uint8_t ov5640_set_special_effect(ov5640_special_effect_t effect)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÆØ¹â¶È
- * @param       contrast: ov5640_EXPOSURE_LEVEL_0 : -1.7EV
- *                        ov5640_EXPOSURE_LEVEL_1 : -1.3EV
- *                        ov5640_EXPOSURE_LEVEL_2 : -1.0EV
- *                        ov5640_EXPOSURE_LEVEL_3 : -0.7EV
- *                        ov5640_EXPOSURE_LEVEL_4 : -0.3EV
- *                        ov5640_EXPOSURE_LEVEL_5 : default
- *                        ov5640_EXPOSURE_LEVEL_6 : 0.3EV
- *                        ov5640_EXPOSURE_LEVEL_7 : 0.7EV
- *                        ov5640_EXPOSURE_LEVEL_8 : 1.0EV
- *                        ov5640_EXPOSURE_LEVEL_9 : 1.3EV
- *                        ov5640_EXPOSURE_LEVEL_10: 1.7EV
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÆØ¹â¶È³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½
+ * @param       contrast: OV5640_EXPOSURE_LEVEL_0 : -1.7EV
+ *                        OV5640_EXPOSURE_LEVEL_1 : -1.3EV
+ *                        OV5640_EXPOSURE_LEVEL_2 : -1.0EV
+ *                        OV5640_EXPOSURE_LEVEL_3 : -0.7EV
+ *                        OV5640_EXPOSURE_LEVEL_4 : -0.3EV
+ *                        OV5640_EXPOSURE_LEVEL_5 : default
+ *                        OV5640_EXPOSURE_LEVEL_6 : 0.3EV
+ *                        OV5640_EXPOSURE_LEVEL_7 : 0.7EV
+ *                        OV5640_EXPOSURE_LEVEL_8 : 1.0EV
+ *                        OV5640_EXPOSURE_LEVEL_9 : 1.3EV
+ *                        OV5640_EXPOSURE_LEVEL_10: 1.7EV
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½Ø¹ï¿½È³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
 {
     switch (level)
     {
-        case ov5640_EXPOSURE_LEVEL_0:
+        case OV5640_EXPOSURE_LEVEL_0:
         {
             ov5640_write_reg(0x3A0F, 0x10);
             ov5640_write_reg(0x3A10, 0x08);
@@ -1120,7 +1120,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_1:
+        case OV5640_EXPOSURE_LEVEL_1:
         {
             ov5640_write_reg(0x3A0F, 0x18);
             ov5640_write_reg(0x3A10, 0x10);
@@ -1130,7 +1130,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_2:
+        case OV5640_EXPOSURE_LEVEL_2:
         {
             ov5640_write_reg(0x3A0F, 0x20);
             ov5640_write_reg(0x3A10, 0x18);
@@ -1140,7 +1140,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_3:
+        case OV5640_EXPOSURE_LEVEL_3:
         {
             ov5640_write_reg(0x3A0F, 0x28);
             ov5640_write_reg(0x3A10, 0x20);
@@ -1150,7 +1150,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_4:
+        case OV5640_EXPOSURE_LEVEL_4:
         {
             ov5640_write_reg(0x3A0F, 0x30);
             ov5640_write_reg(0x3A10, 0x28);
@@ -1160,7 +1160,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_5:
+        case OV5640_EXPOSURE_LEVEL_5:
         {
             ov5640_write_reg(0x3A0F, 0x38);
             ov5640_write_reg(0x3A10, 0x30);
@@ -1170,7 +1170,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_6:
+        case OV5640_EXPOSURE_LEVEL_6:
         {
             ov5640_write_reg(0x3A0F, 0x40);
             ov5640_write_reg(0x3A10, 0x38);
@@ -1180,7 +1180,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x10);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_7:
+        case OV5640_EXPOSURE_LEVEL_7:
         {
             ov5640_write_reg(0x3A0F, 0x48);
             ov5640_write_reg(0x3A10, 0x40);
@@ -1190,7 +1190,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x20);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_8:
+        case OV5640_EXPOSURE_LEVEL_8:
         {
             ov5640_write_reg(0x3A0F, 0x50);
             ov5640_write_reg(0x3A10, 0x48);
@@ -1200,7 +1200,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x20);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_9:
+        case OV5640_EXPOSURE_LEVEL_9:
         {
             ov5640_write_reg(0x3A0F, 0x58);
             ov5640_write_reg(0x3A10, 0x50);
@@ -1210,7 +1210,7 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
             ov5640_write_reg(0x3A1F, 0x20);
             break;
         }
-        case ov5640_EXPOSURE_LEVEL_10:
+        case OV5640_EXPOSURE_LEVEL_10:
         {
             ov5640_write_reg(0x3A0F, 0x60);
             ov5640_write_reg(0x3A10, 0x58);
@@ -1222,87 +1222,87 @@ uint8_t ov5640_set_exposure_level(ov5640_exposure_level_t level)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÈñ¶È
- * @param       contrast: ov5640_SHARPNESS_OFF  : Sharpness OFF
- *                        ov5640_SHARPNESS_1    : Sharpness 1
- *                        ov5640_SHARPNESS_2    : Sharpness 2
- *                        ov5640_SHARPNESS_3    : Sharpness 3
- *                        ov5640_SHARPNESS_4    : Sharpness 4
- *                        ov5640_SHARPNESS_5    : Sharpness 5
- *                        ov5640_SHARPNESS_6    : Sharpness 6
- *                        ov5640_SHARPNESS_7    : Sharpness 7
- *                        ov5640_SHARPNESS_8    : Sharpness 8
- *                        ov5640_SHARPNESS_AUTO : Sharpness Auto
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÈñ¶È³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       contrast: OV5640_SHARPNESS_OFF  : Sharpness OFF
+ *                        OV5640_SHARPNESS_1    : Sharpness 1
+ *                        OV5640_SHARPNESS_2    : Sharpness 2
+ *                        OV5640_SHARPNESS_3    : Sharpness 3
+ *                        OV5640_SHARPNESS_4    : Sharpness 4
+ *                        OV5640_SHARPNESS_5    : Sharpness 5
+ *                        OV5640_SHARPNESS_6    : Sharpness 6
+ *                        OV5640_SHARPNESS_7    : Sharpness 7
+ *                        OV5640_SHARPNESS_8    : Sharpness 8
+ *                        OV5640_SHARPNESS_AUTO : Sharpness Auto
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½È³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_sharpness_level(ov5640_sharpness_t sharpness)
 {
     switch (sharpness)
     {
-        case ov5640_SHARPNESS_OFF:
+        case OV5640_SHARPNESS_OFF:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x00);
             break;
         }
-        case ov5640_SHARPNESS_1:
+        case OV5640_SHARPNESS_1:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x02);
             break;
         }
-        case ov5640_SHARPNESS_2:
+        case OV5640_SHARPNESS_2:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x04);
             break;
         }
-        case ov5640_SHARPNESS_3:
+        case OV5640_SHARPNESS_3:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x08);
             break;
         }
-        case ov5640_SHARPNESS_4:
+        case OV5640_SHARPNESS_4:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x0C);
             break;
         }
-        case ov5640_SHARPNESS_5:
+        case OV5640_SHARPNESS_5:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x10);
             break;
         }
-        case ov5640_SHARPNESS_6:
+        case OV5640_SHARPNESS_6:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x14);
             break;
         }
-        case ov5640_SHARPNESS_7:
+        case OV5640_SHARPNESS_7:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x18);
             break;
         }
-        case ov5640_SHARPNESS_8:
+        case OV5640_SHARPNESS_8:
         {
             ov5640_write_reg(0x5308, 0x65);
             ov5640_write_reg(0x5302, 0x20);
             break;
         }
-        case ov5640_SHARPNESS_AUTO:
+        case OV5640_SHARPNESS_AUTO:
         {
             ov5640_write_reg(0x5308, 0x25);
             ov5640_write_reg(0x5300, 0x08);
@@ -1317,21 +1317,21 @@ uint8_t ov5640_set_sharpness_level(ov5640_sharpness_t sharpness)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿é¾µÏñ/·­×ª
- * @param       contrast: ov5640_MIRROR_FLIP_0: MIRROR
- *                        ov5640_MIRROR_FLIP_1: FLIP
- *                        ov5640_MIRROR_FLIP_2: MIRROR & FLIP
- *                        ov5640_MIRROR_FLIP_3: Normal
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿é¾µÏñ/·­×ª³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½é¾µï¿½ï¿½/ï¿½ï¿½×ª
+ * @param       contrast: OV5640_MIRROR_FLIP_0: MIRROR
+ *                        OV5640_MIRROR_FLIP_1: FLIP
+ *                        OV5640_MIRROR_FLIP_2: MIRROR & FLIP
+ *                        OV5640_MIRROR_FLIP_3: Normal
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½é¾µï¿½ï¿½/ï¿½ï¿½×ªï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
 {
@@ -1340,7 +1340,7 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
     
     switch (mirror_flip)
     {
-        case ov5640_MIRROR_FLIP_0:
+        case OV5640_MIRROR_FLIP_0:
         {
             reg3820 = ov5640_read_reg(0x3820);
             reg3820 = reg3820 & 0xF9;
@@ -1352,7 +1352,7 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
             ov5640_write_reg(0x3821, reg3821);
             break;
         }
-        case ov5640_MIRROR_FLIP_1:
+        case OV5640_MIRROR_FLIP_1:
         {
             reg3820 = ov5640_read_reg(0x3820);
             reg3820 = reg3820 & 0xF9;
@@ -1364,7 +1364,7 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
             ov5640_write_reg(0x3821, reg3821);
             break;
         }
-        case ov5640_MIRROR_FLIP_2:
+        case OV5640_MIRROR_FLIP_2:
         {
             reg3820 = ov5640_read_reg(0x3820);
             reg3820 = reg3820 & 0xF9;
@@ -1376,7 +1376,7 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
             ov5640_write_reg(0x3821, reg3821);
             break;
         }
-        case ov5640_MIRROR_FLIP_3:
+        case OV5640_MIRROR_FLIP_3:
         {
             reg3820 = ov5640_read_reg(0x3820);
             reg3820 = reg3820 & 0xF9;
@@ -1390,38 +1390,38 @@ uint8_t ov5640_set_mirror_flip(ov5640_mirror_flip_t mirror_flip)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿é²âÊÔÍ¼°¸
- * @param       contrast: ov5640_TEST_PATTERN_OFF         : OFF
- *                        ov5640_TEST_PATTERN_COLOR_BAR   : Color bar
- *                        ov5640_TEST_PATTERN_COLOR_SQUARE: Color square
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿é²âÊÔÍ¼°¸³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+ * @param       contrast: OV5640_TEST_PATTERN_OFF         : OFF
+ *                        OV5640_TEST_PATTERN_COLOR_BAR   : Color bar
+ *                        OV5640_TEST_PATTERN_COLOR_SQUARE: Color square
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_test_pattern(ov5640_test_pattern_t pattern)
 {
     switch (pattern)
     {
-        case ov5640_TEST_PATTERN_OFF:
+        case OV5640_TEST_PATTERN_OFF:
         {
             ov5640_write_reg(0x503D, 0x00);
             ov5640_write_reg(0x4741, 0x00);
             break;
         }
-        case ov5640_TEST_PATTERN_COLOR_BAR:
+        case OV5640_TEST_PATTERN_COLOR_BAR:
         {
             ov5640_write_reg(0x503D, 0x80);
             ov5640_write_reg(0x4741, 0x00);
             break;
         }
-        case ov5640_TEST_PATTERN_COLOR_SQUARE:
+        case OV5640_TEST_PATTERN_COLOR_SQUARE:
         {
             ov5640_write_reg(0x503D, 0x82);
             ov5640_write_reg(0x4741, 0x00);
@@ -1429,19 +1429,19 @@ uint8_t ov5640_set_test_pattern(ov5640_test_pattern_t pattern)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÊä³öÍ¼Ïñ¸ñÊ½
- * @param       mode: ov5640_OUTPUT_FORMAT_RGB565: RGB565
- *                    ov5640_OUTPUT_FORMAT_JPEG  : JPEG
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÊä³öÍ¼Ïñ¸ñÊ½³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ê½
+ * @param       mode: OV5640_OUTPUT_FORMAT_RGB565: RGB565
+ *                    OV5640_OUTPUT_FORMAT_JPEG  : JPEG
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ê½ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_output_format(ov5640_output_format_t format)
 {
@@ -1449,7 +1449,7 @@ uint8_t ov5640_set_output_format(ov5640_output_format_t format)
     
     switch (format)
     {
-        case ov5640_OUTPUT_FORMAT_RGB565:
+        case OV5640_OUTPUT_FORMAT_RGB565:
         {
             for (cfg_index=0; cfg_index<sizeof(ov5640_rgb565_cfg)/sizeof(ov5640_rgb565_cfg[0]); cfg_index++)
             {
@@ -1457,7 +1457,7 @@ uint8_t ov5640_set_output_format(ov5640_output_format_t format)
             }
             break;
         }
-        case ov5640_OUTPUT_FORMAT_JPEG:
+        case OV5640_OUTPUT_FORMAT_JPEG:
         {
             for (cfg_index=0; cfg_index<sizeof(ov5640_jpeg_cfg)/sizeof(ov5640_jpeg_cfg[0]); cfg_index++)
             {
@@ -1467,22 +1467,22 @@ uint8_t ov5640_set_output_format(ov5640_output_format_t format)
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éISPÊäÈë´°¿Ú³ß´ç
- * @note        OV5640Ä£¿éISPÊäÈë´°¿ÚµÄ×î´ó³ß´çÎª0x0A3F*0x079F
- * @param       x     : ISPÊäÈë´°¿ÚÆðÊ¼X×ø±ê
- *              y     : ISPÊäÈë´°¿ÚÆðÊ¼Y×ø±ê
- *              width : ISPÊäÈë´°¿Ú¿í¶È
- *              height: ISPÊäÈë´°¿Ú¸ß¶È
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éISPÊäÈë´°¿Ú³ß´ç³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ISPï¿½ï¿½ï¿½ë´°ï¿½Ú³ß´ï¿½
+ * @note        OV5640Ä£ï¿½ï¿½ISPï¿½ï¿½ï¿½ë´°ï¿½Úµï¿½ï¿½ï¿½ï¿½ß´ï¿½Îª0x0A3F*0x079F
+ * @param       x     : ISPï¿½ï¿½ï¿½ë´°ï¿½ï¿½ï¿½ï¿½Ê¼Xï¿½ï¿½ï¿½ï¿½
+ *              y     : ISPï¿½ï¿½ï¿½ë´°ï¿½ï¿½ï¿½ï¿½Ê¼Yï¿½ï¿½ï¿½ï¿½
+ *              width : ISPï¿½ï¿½ï¿½ë´°ï¿½Ú¿ï¿½ï¿½ï¿½
+ *              height: ISPï¿½ï¿½ï¿½ë´°ï¿½Ú¸ß¶ï¿½
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ISPï¿½ï¿½ï¿½ë´°ï¿½Ú³ß´ï¿½É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 uint8_t ov5640_set_isp_input_window(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
@@ -1500,9 +1500,9 @@ uint8_t ov5640_set_isp_input_window(uint16_t x, uint16_t y, uint16_t width, uint
     x_end = x + width;
     y_end = y + height;
     
-    if ((x_end > ov5640_ISP_INPUT_WIDTH_MAX) || (y_end > ov5640_ISP_INPUT_HEIGHT_MAX))
+    if ((x_end > OV5640_ISP_INPUT_WIDTH_MAX) || (y_end > OV5640_ISP_INPUT_HEIGHT_MAX))
     {
-        return ov5640_EINVAL;
+        return OV5640_EINVAL;
     }
     
     reg3800 = ov5640_read_reg(0x3800);
@@ -1537,15 +1537,15 @@ uint8_t ov5640_set_isp_input_window(uint16_t x, uint16_t y, uint16_t width, uint
     
     ov5640_get_isp_input_size();
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÔ¤Ëõ·Å´°¿ÚÆ«ÒÆ
- * @note        OV5640Ä£¿éÔ¤Ëõ·Å´°¿Ú³ß´ç±ØÐëÐ¡ÓÚISPÊäÈë´°¿Ú³ß´ç
- * @param       x_offset: Ô¤Ëõ·Å´°¿ÚXÆ«ÒÆ
- *              y_offset: Ô¤Ëõ·Å´°¿ÚYÆ«ÒÆ
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÔ¤Ëõ·Å´°¿ÚÆ«ÒÆ³É¹¦
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½ï¿½Æ«ï¿½ï¿½
+ * @note        OV5640Ä£ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½Ú³ß´ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ISPï¿½ï¿½ï¿½ë´°ï¿½Ú³ß´ï¿½
+ * @param       x_offset: Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½ï¿½XÆ«ï¿½ï¿½
+ *              y_offset: Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½ï¿½YÆ«ï¿½ï¿½
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Å´ï¿½ï¿½ï¿½Æ«ï¿½Æ³É¹ï¿½
  */
 uint8_t ov5640_set_pre_scaling_window(uint16_t x_offset, uint16_t y_offset)
 {
@@ -1569,14 +1569,14 @@ uint8_t ov5640_set_pre_scaling_window(uint16_t x_offset, uint16_t y_offset)
     
     ov5640_get_pre_scaling_size();
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       ÉèÖÃOV5640Ä£¿éÊä³öÍ¼Ïñ³ß´ç
- * @param       width : Êµ¼ÊÊä³öÍ¼ÏñµÄ¿í¶È£¨¿ÉÄÜ±»Ëõ·Å£©
- *              height: Êµ¼ÊÊä³öÍ¼ÏñµÄ¸ß¶È£¨¿ÉÄÜ±»Ëõ·Å£©
- * @retval      ov5640_EOK   : ÉèÖÃOV5640Ä£¿éÊä³öÍ¼Ïñ´°¿Ú³É¹¦
+ * @brief       ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ß´ï¿½
+ * @param       width : Êµï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½Ä¿ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ï¿½Å£ï¿½
+ *              height: Êµï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½Ä¸ß¶È£ï¿½ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ï¿½Å£ï¿½
+ * @retval      OV5640_EOK   : ï¿½ï¿½ï¿½ï¿½OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ñ´°¿Ú³É¹ï¿½
  */
 uint8_t ov5640_set_output_size(uint16_t width, uint16_t height)
 {
@@ -1605,22 +1605,22 @@ uint8_t ov5640_set_output_size(uint16_t width, uint16_t height)
     
     ov5640_get_output_size();
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
 
 /**
- * @brief       »ñÈ¡OV5640Ä£¿éÊä³öµÄÒ»Ö¡Í¼ÏñÊý¾Ý
- * @param       dts_addr : Ö¡Êý¾ÝµÄ½ÓÊÕ»º³åµÄÊ×µØÖ·
- *              type: ov5640_GET_TYPE_DTS_8B_NOINC : Í¼ÏñÊý¾ÝÒÔ×Ö½Ú·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·¹Ì¶¨²»±ä
- *                    ov5640_GET_TYPE_DTS_8B_INC   : Í¼ÏñÊý¾ÝÒÔ×Ö½Ú·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·×Ô¶¯Ôö¼Ó
- *                    ov5640_GET_TYPE_DTS_16B_NOINC: Í¼ÏñÊý¾ÝÒÔ°ë×Ö·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·¹Ì¶¨²»±ä
- *                    ov5640_GET_TYPE_DTS_16B_INC  : Í¼ÏñÊý¾ÝÒÔ°ë×Ö·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·×Ô¶¯Ôö¼Ó
- *                    ov5640_GET_TYPE_DTS_32B_NOINC: Í¼ÏñÊý¾ÝÒÔ×Ö·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·¹Ì¶¨²»±ä
- *                    ov5640_GET_TYPE_DTS_32B_INC  : Í¼ÏñÊý¾ÝÒÔ×Ö·½Ê½Ð´ÈëÄ¿µÄµØÖ·£¬Ä¿µÄµØÖ·×Ô¶¯Ôö¼Ó
- *              before_transfer: Ö¡Êý¾Ý´«ÊäÇ°£¬ÐèÒªÍê³ÉµÄÊÂÎñ£¬¿ÉÎªNULL
- * @retval      ov5640_EOK   : »ñÈ¡OV5640Ä£¿éÊä³öµÄÒ»Ö¡Í¼ÏñÊý¾Ý³É¹¦
- *              ov5640_EINVAL: ´«Èë²ÎÊý´íÎó
- *              ov5640_EEMPTY: Í¼ÏñÊý¾ÝÎª¿Õ
+ * @brief       ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ö¡Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param       dts_addr : Ö¡ï¿½ï¿½ï¿½ÝµÄ½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½×µï¿½Ö·
+ *              type: OV5640_GET_TYPE_DTS_8B_NOINC : Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½Ú·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ì¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *                    OV5640_GET_TYPE_DTS_8B_INC   : Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½Ú·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *                    OV5640_GET_TYPE_DTS_16B_NOINC: Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô°ï¿½ï¿½Ö·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ì¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *                    OV5640_GET_TYPE_DTS_16B_INC  : Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô°ï¿½ï¿½Ö·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *                    OV5640_GET_TYPE_DTS_32B_NOINC: Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ì¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *                    OV5640_GET_TYPE_DTS_32B_INC  : Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½Ê½Ð´ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½ï¿½Ä¿ï¿½Äµï¿½Ö·ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
+ *              before_transfer: Ö¡ï¿½ï¿½ï¿½Ý´ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Éµï¿½ï¿½ï¿½ï¿½ñ£¬¿ï¿½ÎªNULL
+ * @retval      OV5640_EOK   : ï¿½ï¿½È¡OV5640Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ö¡Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ý³É¹ï¿½
+ *              OV5640_EINVAL: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *              ov5640_EEMPTY: Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½
  */
 uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*before_transfer)(void))
 {
@@ -1630,42 +1630,42 @@ uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*befor
     
     switch (type)
     {
-        case ov5640_GET_TYPE_DTS_8B_NOINC:
+        case OV5640_GET_TYPE_DTS_8B_NOINC:
         {
             meminc = DMA_MINC_DISABLE;
             memdataalignment = DMA_MDATAALIGN_BYTE;
             len = (g_ov5640_sta.output.width * g_ov5640_sta.output.height) / sizeof(uint8_t);
             break;
         }
-        case ov5640_GET_TYPE_DTS_8B_INC:
+        case OV5640_GET_TYPE_DTS_8B_INC:
         {
             meminc = DMA_MINC_ENABLE;
             memdataalignment = DMA_MDATAALIGN_BYTE;
             len = (g_ov5640_sta.output.width * g_ov5640_sta.output.height) / sizeof(uint8_t);
             break;
         }
-        case ov5640_GET_TYPE_DTS_16B_NOINC:
+        case OV5640_GET_TYPE_DTS_16B_NOINC:
         {
             meminc = DMA_MINC_DISABLE;
             memdataalignment = DMA_MDATAALIGN_HALFWORD;
             len = (g_ov5640_sta.output.width * g_ov5640_sta.output.height) / sizeof(uint16_t);
             break;
         }
-        case ov5640_GET_TYPE_DTS_16B_INC:
+        case OV5640_GET_TYPE_DTS_16B_INC:
         {
             meminc = DMA_MINC_ENABLE;
             memdataalignment = DMA_MDATAALIGN_HALFWORD;
             len = (g_ov5640_sta.output.width * g_ov5640_sta.output.height) / sizeof(uint16_t);
             break;
         }
-        case ov5640_GET_TYPE_DTS_32B_NOINC:
+        case OV5640_GET_TYPE_DTS_32B_NOINC:
         {
             meminc = DMA_MINC_DISABLE;
             memdataalignment = DMA_MDATAALIGN_WORD;
             len = (g_ov5640_sta.output.width * g_ov5640_sta.output.height) / sizeof(uint32_t);
             break;
         }
-        case ov5640_GET_TYPE_DTS_32B_INC:
+        case OV5640_GET_TYPE_DTS_32B_INC:
         {
             meminc = DMA_MINC_ENABLE;
             memdataalignment = DMA_MDATAALIGN_WORD;
@@ -1674,7 +1674,7 @@ uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*befor
         }
         default:
         {
-            return ov5640_EINVAL;
+            return OV5640_EINVAL;
         }
     }
     
@@ -1687,5 +1687,5 @@ uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*befor
     
     ov5640_dcmi_start(dts_addr, meminc, memdataalignment, len);
     
-    return ov5640_EOK;
+    return OV5640_EOK;
 }
