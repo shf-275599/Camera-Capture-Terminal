@@ -53,7 +53,7 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOH, DCMI_RST_Pin|DCMI_PWDN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOH, OV5640_RST_Pin|OV5640_PWDN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin, GPIO_PIN_SET);
@@ -61,8 +61,8 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LTDC_BL_GPIO_Port, LTDC_BL_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : DCMI_RST_Pin DCMI_PWDN_Pin */
-  GPIO_InitStruct.Pin = DCMI_RST_Pin|DCMI_PWDN_Pin;
+  /*Configure GPIO pins : OV5640_RST_Pin OV5640_PWDN_Pin */
+  GPIO_InitStruct.Pin = OV5640_RST_Pin|OV5640_PWDN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
