@@ -185,32 +185,8 @@ static void atk_mc5640_get_output_size(void)
  */
 static void atk_mc5640_hw_init(void)
 {
-    GPIO_InitTypeDef gpio_init_struct = {0};
-    
-    /* 使能GPIO时钟 */
-    ATK_MC5640_RST_GPIO_CLK_ENABLE();
-    
-    /* 初始化RST引脚 */
-    gpio_init_struct.Pin    = ATK_MC5640_RST_GPIO_PIN;
-    gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
-    gpio_init_struct.Pull   = GPIO_PULLUP;
-    gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ATK_MC5640_RST_GPIO_PORT, &gpio_init_struct);
-    
-#if (ATK_MC5640_LED_CTL_BY_OV5640 == 0)
-    /* 初始化FLASH引脚 */
-    gpio_init_struct.Pin    = ATK_MC5640_FLASH_GPIO_PIN;
-    gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
-    gpio_init_struct.Pull   = GPIO_PULLUP;
-    gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ATK_MC5640_FLASH_GPIO_PORT, &gpio_init_struct);
-#endif
-    
     ATK_MC5640_RST(1);
     ATK_MC5640_PWDN(1);
-#if (ATK_MC5640_LED_CTL_BY_OV5640 == 0)
-    ATK_MC5640_FLASH(0);
-#endif
 }
 
 /**

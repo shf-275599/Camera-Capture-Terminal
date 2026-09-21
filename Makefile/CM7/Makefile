@@ -43,7 +43,6 @@ C_SOURCES =  \
 ../../BSP/LCD/lcd.c \
 ../../BSP/LCD/lcd_ltdc.c \
 ../../BSP/CAMERA/ov5640.c \
-../../BSP/CAMERA/ov5640_cfg.c \
 ../../BSP/CAMERA/ov5640_sccb.c \
 ../../Utilities/TJpgDec/tjpgd_utils.c \
 ../../CM7/APP/JPEG/app_sw_jpeg.c \

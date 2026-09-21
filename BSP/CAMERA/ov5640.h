@@ -27,14 +27,10 @@
 #define ATK_MC5640_LED_CTL_BY_OV5640            1
 
 /* 引脚定义 */
-#define ATK_MC5640_RST_GPIO_PORT                GPIOA
-#define ATK_MC5640_RST_GPIO_PIN                 GPIO_PIN_15
-#define ATK_MC5640_RST_GPIO_CLK_ENABLE()        do{ __HAL_RCC_GPIOA_CLK_ENABLE(); }while(0)
-#if (ATK_MC5640_LED_CTL_BY_OV5640 == 0)
-#define ATK_MC5640_FLASH_GPIO_PORT              GPIOA
-#define ATK_MC5640_FLASH_GPIO_PIN               GPIO_PIN_8
-#define ATK_MC5640_FLASH_GPIO_CLK_ENABLE()      do{ __HAL_RCC_GPIOA_CLK_ENABLE(); }while(0)
-#endif
+#define ATK_MC5640_RST_GPIO_PORT                OV5640_RST_GPIO_Port
+#define ATK_MC5640_RST_GPIO_PIN                 OV5640_RST_Pin
+#define ATK_MC5640_PWDN_GPIO_PORT               OV5640_PWDN_GPIO_Port
+#define ATK_MC5640_PWDN_GPIO_PIN                OV5640_PWDN_Pin
 
 /* IO操作 */
 #define ATK_MC5640_RST(x)                       do{ x ?                                                                                         \
@@ -42,15 +38,9 @@
                                                     HAL_GPIO_WritePin(ATK_MC5640_RST_GPIO_PORT, ATK_MC5640_RST_GPIO_PIN, GPIO_PIN_RESET);       \
                                                 }while(0)
 #define ATK_MC5640_PWDN(x)                      do{ x ?                                                                                         \
-                                                    pcf8574_write_bit(DCMI_PWDN_IO, 1) :                                                        \
-                                                    pcf8574_write_bit(DCMI_PWDN_IO, 0);                                                         \
+                                                    HAL_GPIO_WritePin(ATK_MC5640_PWDN_GPIO_PORT, ATK_MC5640_PWDN_GPIO_PIN, GPIO_PIN_SET) :                                                        \
+                                                    HAL_GPIO_WritePin(ATK_MC5640_PWDN_GPIO_PORT, ATK_MC5640_PWDN_GPIO_PIN, GPIO_PIN_RESET);                                                         \
                                                 }while(0)
-#if (ATK_MC5640_LED_CTL_BY_OV5640 == 0)
-#define ATK_MC5640_FLASH(x)                     do{ x ?                                                                                         \
-                                                    HAL_GPIO_WritePin(ATK_MC5640_FLASH_GPIO_PORT, ATK_MC5640_FLASH_GPIO_PIN, GPIO_PIN_SET) :    \
-                                                    HAL_GPIO_WritePin(ATK_MC5640_FLASH_GPIO_PORT, ATK_MC5640_FLASH_GPIO_PIN, GPIO_PIN_RESET);   \
-                                                }while(0)
-#endif
 
 /* ATK-MC5640 SCCB通讯地址 */
 #define ATK_MC5640_SCCB_ADDR                    0x3C
