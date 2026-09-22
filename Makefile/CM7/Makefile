@@ -45,7 +45,7 @@ C_SOURCES =  \
 ../../BSP/CAMERA/ov5640.c \
 ../../BSP/CAMERA/ov5640_sccb.c \
 ../../BSP/CAMERA/ov5640_dcmi.c \
-../../CM7/APP/CAMERA/camera_test.c \
+../../CM7/APP/CAMERA/app_ov5640.c \
 ../../Utilities/TJpgDec/tjpgd_utils.c \
 ../../CM7/APP/JPEG/app_sw_jpeg.c \
 ../../CM7/APP/JPEG/app_hw_jpeg.c \

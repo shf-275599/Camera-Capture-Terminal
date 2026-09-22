@@ -41,7 +41,7 @@
 #include "sdram.h"
 #include "lcd.h"
 #include "app_ipc_cm7.h"
-#include "camera_test.h"
+#include "app_ov5640.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -171,11 +171,11 @@ Error_Handler();
   MX_DMA2D_Init();
   MX_DCMI_Init();
   /* USER CODE BEGIN 2 */
-  app_ipc_cm7_init();
-  sdram_init();
-  lcd_init();
+  app_ipc_cm7_init(); // 初始化 IPC 模块
+  sdram_init();       // 初始化 SDRAM
+  lcd_init();         // 初始化 LCD
+  app_ov5640_init();  // 初始化 OV5640 摄像头
   printf("CM7: All configured peripherals have been initialized\n");
-  camera_init_test();
   /* USER CODE END 2 */
 
   /* Init scheduler */

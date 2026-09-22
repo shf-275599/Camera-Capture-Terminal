@@ -251,7 +251,7 @@ static uint16_t ov5640_get_chip_id(void)
 }
 
 /**
- * @brief       ʼOV5640寄存器序列
+ * @brief       OV5640寄存器序列初始化
  * @param       
  * @retval      
  */
@@ -266,10 +266,10 @@ static void ov5640_init_reg(void)
 }
 
 /**
- * @brief       ʼOV5640模块
+ * @brief       OV5640模块初始化
  * @param       
  * @retval      OV5640_EOK   : OV5640模块初始化成功
- *              OV5640_ERROR : ͨѶOV5640模块初始化失败
+ *              OV5640_ERROR : OV5640模块初始化失败
  *              OV5640_ENOMEM: 内存不足，OV5640模块初始化失败
  */
 uint8_t ov5640_init(void)
@@ -287,15 +287,15 @@ uint8_t ov5640_init(void)
     {
         return OV5640_ERROR;
     }
-    printf("CM7: chip ID=0x%04X\r\n", chip_id);
+    printf("CM7: OV5640 chip ID=0x%04X\r\n", chip_id);
     
-    ov5640_init_reg();              /* ʼOV5640寄存器序列 */
+    ov5640_init_reg();              /* OV5640寄存器序列 */
     
     return OV5640_EOK;
 }
 
 /**
- * @brief       ʼOV5640模块自动对焦
+ * @brief       OV5640模块自动对焦初始化
  * @param       
  * @retval      OV5640_EOK     : OV5640模块自动对焦初始化成功
  *              OV5640_ETIMEOUT: OV5640模块曝光过程超时

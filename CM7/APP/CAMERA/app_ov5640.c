@@ -1,16 +1,16 @@
 /**
- * @file    camera_test.c
+ * @file    app_ov5640.c
  * @brief   OV5640摄像头简单初始化测试
  */
-#include "camera_test.h"
+#include "app_ov5640.h"
 #include "ov5640.h"
 #include <stdio.h>
 
-void camera_init_test(void)
+void app_ov5640_init(void)
 {
     uint8_t ret;
 
-    printf("CM7: OV5640 camera init test start\r\n");
+    printf("CM7: OV5640 init start\r\n");
 
     ret = ov5640_init();
     if (ret == OV5640_EOK)
