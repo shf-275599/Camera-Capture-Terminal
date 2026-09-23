@@ -1,7 +1,7 @@
 #ifndef __BOOT_CONFIG_H__
 #define __BOOT_CONFIG_H__
 
-/* CM7 Flash 分区：Bootloader 128KB，APP 从 0x08020000 开始 */
+/* CM7 Flash 分区：Bootloader 128KB = 0x20000，APP 从 0x08020000 开始 */
 #define BOOTLOADER_FLASH_SIZE (128U * 1024U)
 #define CM7_APP_FLASH_BASE (0x08000000UL + BOOTLOADER_FLASH_SIZE)
 
