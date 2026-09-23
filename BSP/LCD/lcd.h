@@ -176,7 +176,7 @@ void lcd_draw_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint32_t 
 void lcd_draw_rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint32_t color);
 
 /** @brief 显示单个字符 */
-void lcd_show_char(uint16_t x, uint16_t y, char chr, uint8_t size, uint8_t mode, uint32_t color);
+void lcd_show_char(uint16_t x, uint16_t y, unsigned char chr, uint8_t size, uint8_t mode, uint32_t color);
 /** @brief 显示数字（高位零不显示） */
 void lcd_show_num(uint16_t x, uint16_t y, uint32_t num, uint8_t len, uint8_t size, uint32_t color);
 /** @brief 扩展显示数字（可显示前导零） */
