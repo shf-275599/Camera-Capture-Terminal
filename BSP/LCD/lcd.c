@@ -194,17 +194,16 @@ void lcd_init(void)
     lcddev.id = 0X8081;
 #endif
    
+    printf("CM7: LCD ID:%x\n", lcddev.id); /* 打印LCD ID */
     if (lcddev.id != 0)                 /* ID非零,说明有RGB屏接入 */
     {
         ltdc_init();                    /* 初始化LTDC */
+        printf("CM7: LCD have been initialized\r\n");
+    }
+    else {
+        printf("CM7: LCD no RGB screen connected, initialization failed\r\n");
     }
 
-    /* 特别注意, 如果在main函数里面屏蔽串口1初始化, 则会卡死在printf
-     * 里面(卡死在f_putc函数), 所以, 必须初始化串口1, 或者屏蔽掉下面
-     * 这行 printf 语句 !!!!!!!
-     */
-    printf("CM7: LCD ID:%x\n", lcddev.id); /* 打印LCD ID */
-    
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */
     {
         lcd_display_dir(1);             /* 默认为橫屏 */
@@ -212,7 +211,6 @@ void lcd_init(void)
     
     LCD_BL(1);                          /* 点亮背光 */
     lcd_clear(WHITE);                   /* 清屏 */
-    printf("CM7: LCD have been initialized\r\n");
 }
 
 /**
