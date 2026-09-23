@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+
+#include "boot_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,7 +97,24 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("\r\n========= STM32H7 Bootloader (CM7) =========\r\n");
+  printf("\n");
+  printf("\033[1;36m"); // 加粗；蓝色
+  printf(" ____   ___   ___  _____ _      ___    _    ____  _____ ____          \n");
+  printf("| __ ) / _ \\ / _ \\|_   _| |    / _ \\  / \\  |  _ \\| ____|  _ \\   \n");
+  printf("|  _ \\| | | | | | | | | | |   | | | |/ _ \\ | | | |  _| | |_) |      \n");
+  printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
+  printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
+  printf("\n");
+  printf("============= flash partition table ==============\r\n");
+  printf("|     name     |   offset   |    size    | value |\r\n");
+  printf("--------------------------------------------------\r\n");
+  printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", BOOT_SECTOR_ADDR, BOOT_SECTOR_SIZE, BOOT_SECTOR_SIZE / 1024U);
+  printf("| application1 | 0x%08lx | 0x%08x | %dKB |\r\n", APP_SECTOR_ADDR, APP_SECTOR_SIZE, APP_SECTOR_SIZE / 1024U);
+  printf("| application2 | 0x%08lx | 0x%08x | %dKB |\r\n", APP2_SECTOR_ADDR, APP2_SECTOR_SIZE, APP2_SECTOR_SIZE / 1024U);
+  printf("| setting      | 0x%08lx | 0x%08x | %dKB |\r\n", SETTING_SECTOR_ADDR, SETTING_SECTOR_SIZE, SETTING_SECTOR_SIZE / 1024U);
+  printf("==================================================\r\n");
+  printf("\033[1;36m"); // 加粗；蓝色
+  printf("\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
