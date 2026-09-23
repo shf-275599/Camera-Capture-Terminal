@@ -24,7 +24,7 @@
 /* OV5640模块DCMI接口数据结构体 */
 static struct
 {
-    uint8_t frame_sem;
+    volatile uint8_t frame_sem;
 } g_ov5640_dcmi_sta = {0};
 
 /**
@@ -34,6 +34,7 @@ static struct
  */
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
+    __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_IT_FRAME); // 清除帧中断标志位
     g_ov5640_dcmi_sta.frame_sem = 1;
 }
 
@@ -46,18 +47,39 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
  *                                DMA_MDATAALIGN_HALFWORD: 帧数据接收缓冲的位宽为16比特
  *                                DMA_MDATAALIGN_WORD    : 帧数据接收缓冲的位宽为32比特
  *              len             : 传输的帧数据大小
- * @retval      无
+ * @retval      OV5640_EOK: 成功
+ *              OV5640_DCMI_ERROR: 失败
+ *              OV5640_DCMI_EINVAL: 非法参数
+ *              OV5640_DCMI_ETIMEOUT: 超时
  */
-void ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len)
+uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len)
 {
+    uint32_t start_tick = HAL_GetTick();
     /* 清空帧接收完成标记
      * 使能DCMI帧接收中断
      */
     g_ov5640_dcmi_sta.frame_sem = 0;
     __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
-    HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len);
+    if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
+    {
+        printf("CM7: OV5640 start DMA failed\r\n");
+        HAL_DCMI_Stop(&hdcmi);
+        return OV5640_DCMI_ERROR;
+    }
     
     /* 等待传输完成 */
-    while (g_ov5640_dcmi_sta.frame_sem == 0);
+    while (g_ov5640_dcmi_sta.frame_sem == 0)
+    {
+        if ((HAL_GetTick() - start_tick) > 1000U)
+        {
+            printf("CM7: OV5640 transfer timeout\r\n");
+            HAL_DCMI_Stop(&hdcmi);
+            return OV5640_DCMI_ETIMEOUT;
+        }
+    }
+
+    printf("CM7: OV5640 transfer done\r\n");
     HAL_DCMI_Stop(&hdcmi);
+
+    return OV5640_EOK;
 }
