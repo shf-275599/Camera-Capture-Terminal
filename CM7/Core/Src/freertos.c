@@ -32,6 +32,7 @@
 #include "app_sw_jpeg.h"
 #include "app_hw_jpeg.h"
 #include "jpeg_utils.h"
+#include "app_ov5640.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,6 +65,7 @@ const osThreadAttr_t defaultTask_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void OpenAMP_Task(void *argument);
+void OV5640_Task(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -78,11 +80,11 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
   // jpeg_sw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
-  JPEG_InitColorTables();
-  if (jpeg_hw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0U, 0U) != 0)
-  {
-      printf("CM7: Hardware JPEG decode failed\n");
-  }
+  // JPEG_InitColorTables();
+  // if (jpeg_hw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0U, 0U) != 0)
+  // {
+  //     printf("CM7: Hardware JPEG decode failed\n");
+  // }
   printf("CM7: FreeRTOS have been initialized\n");
   /* USER CODE END Init */
 
@@ -112,6 +114,17 @@ void MX_FREERTOS_Init(void) {
   xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
                         (char *)"OpenAMP_Task",
                         (uint16_t)256,
+                        (void *)NULL,
+                        (uint8_t)1,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
+
+  xReturn = xTaskCreate((TaskFunction_t)OV5640_Task,
+                        (char *)"OV5640_Task",
+                        (uint16_t)256 * 4,
                         (void *)NULL,
                         (uint8_t)1,
                         (TaskHandle_t *)NULL);
@@ -151,14 +164,20 @@ void StartDefaultTask(void *argument)
 /* USER CODE BEGIN Application */
 void OpenAMP_Task(void *argument)
 {
-  /* USER CODE BEGIN OpenAMP_Task */
-  /* Infinite loop */
   for (;;)
   {
     OPENAMP_check_for_message();
     osDelay(1000);
   }
-  /* USER CODE END OpenAMP_Task */
+}
+void OV5640_Task(void *argument)
+{
+  for (;;)
+  {
+    app_ov5640_capture_colorbar();
+    osDelay(1000);
+    vTaskDelete(NULL);
+  }
 }
 /* USER CODE END Application */
 

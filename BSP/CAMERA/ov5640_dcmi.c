@@ -59,7 +59,7 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     /* 清空帧接收完成标记
      * 使能DCMI帧接收中断
      */
-    printf("CM7: ov5640_dcmi_start ====================\r\n");
+    printf("CM7: OV5640 begin start DCMI DMA\r\n");
     g_ov5640_dcmi_sta.frame_sem = 0;
     __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
     if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
@@ -82,7 +82,6 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     }
 
     printf("CM7: OV5640 DCMI DMA transfer done\r\n");
-    printf("CM7: ======================================\r\n");
     HAL_DCMI_Stop(&hdcmi);
 
     return OV5640_EOK;

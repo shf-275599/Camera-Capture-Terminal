@@ -6,5 +6,6 @@
 #define __APP_OV5640_H
 
 void app_ov5640_init(void);
+void app_ov5640_capture_colorbar(void);
 
 #endif /* __APP_OV5640_H */
