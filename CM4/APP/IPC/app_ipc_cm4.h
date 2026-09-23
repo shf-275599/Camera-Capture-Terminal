@@ -1,0 +1,8 @@
+#ifndef __APP_IPC_CM4_H__
+#define __APP_IPC_CM4_H__
+
+#define RPMSG_SERVICE_NAME "IPC"
+
+void app_ipc_cm4_init(void);
+
+#endif
