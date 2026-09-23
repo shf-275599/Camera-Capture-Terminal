@@ -43,9 +43,9 @@ int _write(int file, char *ptr, int len)
      * RPMsg 单次发送长度不能无限大。
      * 使用 128 字节可以避免超过当前 OpenAMP buffer 的有效载荷大小。
      */
-    if (send_len > 128)
+    if (send_len > 256)
     {
-      send_len = 128;
+      send_len = 256;
     }
 
     if (rpmsg_send(&s_ept, ptr, (size_t)send_len) != 0)

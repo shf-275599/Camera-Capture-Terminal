@@ -173,11 +173,12 @@ Error_Handler();
   MX_DCMI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  printf("CM7: main() user init start\r\n");
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
   lcd_init();         // 初始化 LCD
   app_ov5640_init();  // 初始化 OV5640 摄像头
-  printf("CM7: All configured peripherals have been initialized\n");
+  printf("CM7: main() user init have been initialized\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */

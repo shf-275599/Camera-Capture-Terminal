@@ -212,6 +212,7 @@ void lcd_init(void)
     
     LCD_BL(1);                          /* 点亮背光 */
     lcd_clear(WHITE);                   /* 清屏 */
+    printf("CM7: LCD have been initialized\r\n");
 }
 
 /**

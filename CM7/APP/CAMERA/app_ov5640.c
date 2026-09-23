@@ -14,17 +14,16 @@ void app_ov5640_init(void)
     printf("CM7: OV5640 init start\r\n");
 
     ret = ov5640_init();
-    if (ret == OV5640_EOK)
-    {
-        printf("CM7: OV5640 init OK, chip ID verified\r\n");
-    }
-    else
+    if (ret != OV5640_EOK)
     {
         printf("CM7: OV5640 init FAILED (err=%d)\r\n", ret);
+        
     }
 
     ov5640_led_on();
     ov5640_led_off();
+    
+    printf("CM7: OV5640 have been initialized, chip ID verified\r\n");
 }
 
 void app_ov5640_capture_colorbar(void)
