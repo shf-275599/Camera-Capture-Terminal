@@ -18,12 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "FreeRTOS.h"
-#include "cmsis_os2.h"
 #include "dma.h"
-#include "mdma.h"
-#include "openamp.h"
-#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -71,7 +66,6 @@
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
 
@@ -125,22 +119,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_MDMA_Init();
   MX_DMA_Init();
-  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init();
   printf("CM4: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

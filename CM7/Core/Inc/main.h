@@ -57,18 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define OV5640_SCL_Pin GPIO_PIN_6
-#define OV5640_SCL_GPIO_Port GPIOB
-#define OV5640_SDA_Pin GPIO_PIN_7
-#define OV5640_SDA_GPIO_Port GPIOB
-#define OV5640_RST_Pin GPIO_PIN_2
-#define OV5640_RST_GPIO_Port GPIOH
-#define OV5640_PWDN_Pin GPIO_PIN_3
-#define OV5640_PWDN_GPIO_Port GPIOH
 #define LED0_GREEN_Pin GPIO_PIN_3
 #define LED0_GREEN_GPIO_Port GPIOA
-#define LTDC_BL_Pin GPIO_PIN_0
-#define LTDC_BL_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

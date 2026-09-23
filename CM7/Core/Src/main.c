@@ -18,17 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "FreeRTOS.h"
-#include "cmsis_os2.h"
-#include "dcmi.h"
 #include "dma.h"
-#include "dma2d.h"
-#include "jpeg.h"
-#include "ltdc.h"
-#include "mdma.h"
-#include "openamp.h"
+#include "usart.h"
 #include "gpio.h"
-#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -83,7 +75,6 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private Function Prototypes 私有函数原型 */
 static void ipc_share_region_clear(void)
@@ -163,13 +154,8 @@ Error_Handler();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_MDMA_Init();
   MX_DMA_Init();
-  MX_FMC_Init();
-  MX_LTDC_Init();
-  MX_JPEG_Init();
-  MX_DMA2D_Init();
-  MX_DCMI_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
@@ -177,15 +163,6 @@ Error_Handler();
   app_ov5640_init();  // 初始化 OV5640 摄像头
   printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

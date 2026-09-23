@@ -55,11 +55,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_dcmi;
-extern DCMI_HandleTypeDef hdcmi;
-extern MDMA_HandleTypeDef hmdma_jpeg_infifo_th;
-extern MDMA_HandleTypeDef hmdma_jpeg_outfifo_th;
-extern JPEG_HandleTypeDef hjpeg;
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
+extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN EV */
@@ -145,6 +143,19 @@ void UsageFault_Handler(void)
 }
 
 /**
+  * @brief This function handles System service call via SWI instruction.
+  */
+void SVC_Handler(void)
+{
+  /* USER CODE BEGIN SVCall_IRQn 0 */
+
+  /* USER CODE END SVCall_IRQn 0 */
+  /* USER CODE BEGIN SVCall_IRQn 1 */
+
+  /* USER CODE END SVCall_IRQn 1 */
+}
+
+/**
   * @brief This function handles Debug monitor.
   */
 void DebugMon_Handler(void)
@@ -155,6 +166,33 @@ void DebugMon_Handler(void)
   /* USER CODE BEGIN DebugMonitor_IRQn 1 */
 
   /* USER CODE END DebugMonitor_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Pendable request for system service.
+  */
+void PendSV_Handler(void)
+{
+  /* USER CODE BEGIN PendSV_IRQn 0 */
+
+  /* USER CODE END PendSV_IRQn 0 */
+  /* USER CODE BEGIN PendSV_IRQn 1 */
+
+  /* USER CODE END PendSV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles System tick timer.
+  */
+void SysTick_Handler(void)
+{
+  /* USER CODE BEGIN SysTick_IRQn 0 */
+
+  /* USER CODE END SysTick_IRQn 0 */
+
+  /* USER CODE BEGIN SysTick_IRQn 1 */
+
+  /* USER CODE END SysTick_IRQn 1 */
 }
 
 /******************************************************************************/
@@ -172,10 +210,24 @@ void DMA1_Stream0_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
 
   /* USER CODE END DMA1_Stream0_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_dcmi);
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
   /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
 
   /* USER CODE END DMA1_Stream0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream1 global interrupt.
+  */
+void DMA1_Stream1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream1_IRQn 1 */
 }
 
 /**
@@ -193,31 +245,17 @@ void TIM2_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DCMI global interrupt.
+  * @brief This function handles USART1 global interrupt.
   */
-void DCMI_IRQHandler(void)
+void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN DCMI_IRQn 0 */
+  /* USER CODE BEGIN USART1_IRQn 0 */
 
-  /* USER CODE END DCMI_IRQn 0 */
-  HAL_DCMI_IRQHandler(&hdcmi);
-  /* USER CODE BEGIN DCMI_IRQn 1 */
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
 
-  /* USER CODE END DCMI_IRQn 1 */
-}
-
-/**
-  * @brief This function handles JPEG global interrupt.
-  */
-void JPEG_IRQHandler(void)
-{
-  /* USER CODE BEGIN JPEG_IRQn 0 */
-
-  /* USER CODE END JPEG_IRQn 0 */
-  HAL_JPEG_IRQHandler(&hjpeg);
-  /* USER CODE BEGIN JPEG_IRQn 1 */
-
-  /* USER CODE END JPEG_IRQn 1 */
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /**
@@ -228,25 +266,9 @@ void MDMA_IRQHandler(void)
   /* USER CODE BEGIN MDMA_IRQn 0 */
 
   /* USER CODE END MDMA_IRQn 0 */
-  HAL_MDMA_IRQHandler(&hmdma_jpeg_infifo_th);
-  HAL_MDMA_IRQHandler(&hmdma_jpeg_outfifo_th);
   /* USER CODE BEGIN MDMA_IRQn 1 */
 
   /* USER CODE END MDMA_IRQn 1 */
-}
-
-/**
-  * @brief This function handles HSEM1 global interrupt.
-  */
-void HSEM1_IRQHandler(void)
-{
-  /* USER CODE BEGIN HSEM1_IRQn 0 */
-
-  /* USER CODE END HSEM1_IRQn 0 */
-  HAL_HSEM_IRQHandler();
-  /* USER CODE BEGIN HSEM1_IRQn 1 */
-
-  /* USER CODE END HSEM1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
