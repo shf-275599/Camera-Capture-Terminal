@@ -147,7 +147,7 @@ void OpenAMP_Task(void *argument)
   for (;;)
   {
     OPENAMP_check_for_message();
-    osDelay(1000);
+    osDelay(100);
   }
 }
 /* USER CODE END Application */
