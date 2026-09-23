@@ -98,7 +98,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  HAL_UART_Receive_IT(&huart1, &Rx_Data, 1);
   /* USER CODE END USART1_Init 2 */
 
 }

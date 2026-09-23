@@ -173,7 +173,6 @@ Error_Handler();
   MX_DCMI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("CM7: main() user init start\r\n");
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
   lcd_init();         // 初始化 LCD

@@ -115,7 +115,7 @@ void MX_FREERTOS_Init(void) {
                         (char *)"OpenAMP_Task",
                         (uint16_t)256,
                         (void *)NULL,
-                        (uint8_t)1,
+                        (uint8_t)5,
                         (TaskHandle_t *)NULL);
   if (xReturn != pdPASS)
   {
