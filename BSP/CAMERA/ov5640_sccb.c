@@ -14,21 +14,21 @@
 static void ov5640_sccb_set_sda_output(void)
 {
     GPIO_InitTypeDef gpio_init_struct = {0};
-    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
+    gpio_init_struct.Pin    = OV5640_SDA_Pin;
     gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SDA_GPIO_Port, &gpio_init_struct);
 }
 
 static void ov5640_sccb_set_sda_input(void)
 {
     GPIO_InitTypeDef gpio_init_struct = {0};
-    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
+    gpio_init_struct.Pin    = OV5640_SDA_Pin;
     gpio_init_struct.Mode   = GPIO_MODE_INPUT;
     gpio_init_struct.Pull   = GPIO_PULLUP;
     gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
+    HAL_GPIO_Init(OV5640_SDA_GPIO_Port, &gpio_init_struct);
 }
 
 static inline void ov5640_sccb_delay(void)
@@ -109,23 +109,6 @@ static void ov5640_sccb_read_byte(uint8_t *dat)
 
 void ov5640_sccb_init(void)
 {
-    GPIO_InitTypeDef gpio_init_struct = {0};
-
-    OV5640_SCCB_SCL_GPIO_CLK_ENABLE();
-    OV5640_SCCB_SDA_GPIO_CLK_ENABLE();
-
-    gpio_init_struct.Pin    = OV5640_SCCB_SCL_GPIO_PIN;
-    gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
-    gpio_init_struct.Pull   = GPIO_PULLUP;
-    gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(OV5640_SCCB_SCL_GPIO_PORT, &gpio_init_struct);
-
-    gpio_init_struct.Pin    = OV5640_SCCB_SDA_GPIO_PIN;
-    gpio_init_struct.Mode   = GPIO_MODE_OUTPUT_PP;
-    gpio_init_struct.Pull   = GPIO_PULLUP;
-    gpio_init_struct.Speed  = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(OV5640_SCCB_SDA_GPIO_PORT, &gpio_init_struct);
-
     ov5640_sccb_stop();
 }
 

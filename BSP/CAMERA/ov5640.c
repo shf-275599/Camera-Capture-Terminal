@@ -414,27 +414,6 @@ uint8_t ov5640_auto_focus_continuance(void)
     return OV5640_EOK;
 }
 
-#if (ov5640_LED_CTL_BY_OV5640 == 0)
-/**
- * @brief       OV5640模块补光灯
- * @param       
- * @retval      
- */
-void ov5640_led_on(void)
-{
-    // ov5640_FLASH(1);
-}
-
-/**
- * @brief       关闭OV5640模块补光灯
- * @param       
- * @retval      
- */
-void ov5640_led_off(void)
-{
-    // ov5640_FLASH(0);
-}
-#else
 /**
  * @brief       OV5640模块补光灯
  * @param       
@@ -458,7 +437,6 @@ void ov5640_led_off(void)
     ov5640_write_reg(0x301C, 0x02);
     ov5640_write_reg(0x3019, 0x00);
 }
-#endif
 
 /**
  * @brief       OV5640模块光线模式
