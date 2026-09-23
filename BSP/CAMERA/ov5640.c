@@ -1664,9 +1664,17 @@ uint8_t ov5640_get_frame(uint32_t dts_addr, ov5640_get_type_t type, void (*befor
         before_transfer();
     }
     
-    SCB_InvalidateDCache();
+    /* 1. DMA开始前：清空接收缓冲区可能存在的D-Cache脏行 */
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)dts_addr, len * 4);
+
+    int ret = 0;
+    if ((ret = ov5640_dcmi_start(dts_addr, meminc, memdataalignment, len)) != OV5640_EOK)
+    {
+        return ret;
+    }
     
-    ov5640_dcmi_start(dts_addr, meminc, memdataalignment, len);
+    /* 2. DMA完成后：使接收缓冲区D-Cache失效，让CPU/LTDC看到DMA写入的新数据 */
+    SCB_InvalidateDCache_by_Addr((uint32_t *)dts_addr, len * 4);
     
     return OV5640_EOK;
 }

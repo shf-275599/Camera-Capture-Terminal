@@ -20,6 +20,7 @@
 
 #include "ov5640_dcmi.h"
 #include "dcmi.h"
+#include <stdio.h>
 
 /* OV5640模块DCMI接口数据结构体 */
 static struct
@@ -58,27 +59,30 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     /* 清空帧接收完成标记
      * 使能DCMI帧接收中断
      */
+    printf("CM7: ov5640_dcmi_start ====================\r\n");
     g_ov5640_dcmi_sta.frame_sem = 0;
     __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
     if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
     {
-        printf("CM7: OV5640 start DMA failed\r\n");
+        printf("CM7: OV5640 start DCMI DMA failed\r\n");
         HAL_DCMI_Stop(&hdcmi);
         return OV5640_DCMI_ERROR;
     }
+    printf("CM7: OV5640 start DCMI DMA OK\r\n");
     
     /* 等待传输完成 */
     while (g_ov5640_dcmi_sta.frame_sem == 0)
     {
         if ((HAL_GetTick() - start_tick) > 1000U)
         {
-            printf("CM7: OV5640 transfer timeout\r\n");
+            printf("CM7: OV5640 DCMI DMA transfer timeout\r\n");
             HAL_DCMI_Stop(&hdcmi);
             return OV5640_DCMI_ETIMEOUT;
         }
     }
 
-    printf("CM7: OV5640 transfer done\r\n");
+    printf("CM7: OV5640 DCMI DMA transfer done\r\n");
+    printf("CM7: ======================================\r\n");
     HAL_DCMI_Stop(&hdcmi);
 
     return OV5640_EOK;
