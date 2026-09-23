@@ -149,7 +149,7 @@ Error_Handler();
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("CM7: All configured peripherals have been initialized\n");
+  printf("\r\n========= STM32H7 Bootloader (CM7) =========\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */

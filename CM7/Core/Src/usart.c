@@ -21,7 +21,39 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
+#include <stdio.h>
+/****************************************************************************/
+// 重定向printf到串口
+#ifdef __GNUC__
+// GCC编译器
+int _write(int file, char *ptr, int len)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
+    return len;
+}
+#else
+// Keil MDK编译器
+int fputc(int ch, FILE *f)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+    return ch;
+}
+#endif
+/****************************************************************************/
+/**
+ * @brief  串口接收完成回调函数
+ * @param  huart 串口句柄
+ * @retval 无
+ * */
+uint8_t Rx_Data = 0;
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if(huart->Instance == USART1)
+    {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
+        HAL_UART_Receive_IT(&huart1, &Rx_Data, 1);
+    }
+}
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
