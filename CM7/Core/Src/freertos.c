@@ -167,7 +167,7 @@ void OpenAMP_Task(void *argument)
   for (;;)
   {
     OPENAMP_check_for_message();
-    osDelay(1000);
+    osDelay(1);
   }
 }
 void OV5640_Task(void *argument)

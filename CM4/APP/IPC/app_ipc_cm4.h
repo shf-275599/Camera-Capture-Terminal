@@ -4,5 +4,6 @@
 #define RPMSG_SERVICE_NAME "IPC"
 
 void app_ipc_cm4_init(void);
+void app_ipc_cm4_send(void);
 
 #endif

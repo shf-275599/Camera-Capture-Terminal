@@ -65,7 +65,6 @@ C_SOURCES =  \
 ../../CM4/Core/Src/sysmem.c \
 ../../CM4/Core/Src/syscalls.c \
 ../../CM4/Core/Src/gpio.c \
-../../CM4/Core/Src/usart.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
 ../../CM4/Core/Src/freertos.c \
