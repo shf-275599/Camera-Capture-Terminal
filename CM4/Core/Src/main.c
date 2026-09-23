@@ -23,7 +23,6 @@
 #include "dma.h"
 #include "mdma.h"
 #include "openamp.h"
-#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -127,7 +126,6 @@ int main(void)
   MX_GPIO_Init();
   MX_MDMA_Init();
   MX_DMA_Init();
-  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init();
   printf("CM4: All configured peripherals have been initialized\n");

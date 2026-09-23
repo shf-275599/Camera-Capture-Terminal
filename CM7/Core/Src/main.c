@@ -27,6 +27,7 @@
 #include "ltdc.h"
 #include "mdma.h"
 #include "openamp.h"
+#include "usart.h"
 #include "gpio.h"
 #include "fmc.h"
 
@@ -170,6 +171,7 @@ Error_Handler();
   MX_JPEG_Init();
   MX_DMA2D_Init();
   MX_DCMI_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
