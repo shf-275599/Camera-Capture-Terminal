@@ -63,7 +63,7 @@ int _write(int file, char *ptr, int len)
 void app_ipc_cm4_init(void)
 {
   OPENAMP_init_ept(&s_ept);
-  if (MX_OPENAMP_Init(RPMSG_MASTER, NULL) != 0)
+  if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
   {
     Error_Handler();
   }

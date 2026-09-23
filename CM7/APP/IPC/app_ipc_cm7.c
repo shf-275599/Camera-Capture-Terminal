@@ -33,7 +33,7 @@ static int cm7_rx_callback(struct rpmsg_endpoint *rp_chnl,
 void app_ipc_cm7_init(void)
 {
   OPENAMP_init_ept(&s_ept);
-  if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != 0)
+  if (MX_OPENAMP_Init(RPMSG_MASTER, NULL) != 0)
   {
     Error_Handler();
   }
