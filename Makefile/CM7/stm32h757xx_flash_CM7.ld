@@ -37,7 +37,7 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
+FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 128K
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 63K
