@@ -28,12 +28,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include "mpu.h"
-#include "bsp_sys.h"
-#include "sdram.h"
-#include "lcd.h"
-#include "app_ipc_cm7.h"
-#include "app_ov5640.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,8 +115,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  memory_protection_unit_init();  // 初始化内存保护单元
-  scb_cache_init();               // 初始化缓存
   ipc_share_region_clear();       // 清除 IPC 共享区域
   /* USER CODE END Init */
 
@@ -157,10 +149,6 @@ Error_Handler();
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  app_ipc_cm7_init(); // 初始化 IPC 模块
-  sdram_init();       // 初始化 SDRAM
-  lcd_init();         // 初始化 LCD
-  app_ov5640_init();  // 初始化 OV5640 摄像头
   printf("CM7: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 

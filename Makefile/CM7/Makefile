@@ -36,20 +36,6 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-../../BSP/bsp_delay.c \
-../../BSP/bsp_sys.c \
-../../BSP/MPU/mpu.c \
-../../BSP/SDRAM/sdram.c \
-../../BSP/LCD/lcd.c \
-../../BSP/LCD/lcd_ltdc.c \
-../../BSP/CAMERA/ov5640.c \
-../../BSP/CAMERA/ov5640_sccb.c \
-../../BSP/CAMERA/ov5640_dcmi.c \
-../../CM7/APP/CAMERA/app_ov5640.c \
-../../Utilities/TJpgDec/tjpgd_utils.c \
-../../CM7/APP/JPEG/app_sw_jpeg.c \
-../../CM7/APP/JPEG/app_hw_jpeg.c \
-../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
@@ -74,58 +60,9 @@ C_SOURCES =  \
 ../../Common/Src/system_stm32h7xx_dualcore_boot_cm4_cm7.c \
 ../../CM7/Core/Src/sysmem.c \
 ../../CM7/Core/Src/syscalls.c \
-../../CM7/Core/Src/freertos.c \
 ../../CM7/Core/Src/stm32h7xx_hal_timebase_tim.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/Common/mpu_wrappers_v2.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/list.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
-../../CM7/OPENAMP/mbox_hsem.c \
-../../CM7/OPENAMP/openamp.c \
-../../CM7/OPENAMP/rsc_table.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/device.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/io.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/log.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/shmem.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/condition.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_device.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_init.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_io.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_shmem.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/time.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/remoteproc/remoteproc_virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg_virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtqueue.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c \
 ../../CM7/Core/Src/gpio.c \
-../../CM7/Core/Src/fmc.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_fmc.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_nor.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sram.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_nand.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sdram.c \
-../../CM7/Core/Src/ltdc.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ltdc.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ltdc_ex.c \
-../../CM7/Core/Src/dma2d.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma2d.c \
-../../CM7/Core/Src/jpeg.c \
-../../CM7/Core/Src/mdma.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_jpeg.c \
-../../Utilities/JPEG/jpeg_utils.c \
-../../CM7/Core/Src/dcmi.c \
 ../../CM7/Core/Src/dma.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dcmi.c \
 ../../CM7/Core/Src/usart.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
@@ -191,31 +128,11 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I../../BSP \
--I../../BSP/MPU \
--I../../BSP/SDRAM \
--I../../BSP/LCD \
--I../../BSP/CAMERA \
--I../../CM7/APP/JPEG \
--I../../CM7/APP/IPC \
--I../../CM7/APP/CAMERA \
 -I../../CM7/Core/Inc \
--I../../Utilities/TJpgDec\ \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
 -I../../Drivers/CMSIS/Include \
--I../../Middlewares/Third_Party/FreeRTOS/Source/include \
--I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
--I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--I../../Drivers/CMSIS/RTOS2/Include \
--I../../CM7/OPENAMP \
--I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/include \
--I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include \
--I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include/metal/compiler/gcc \
--I../../Middlewares/Third_Party/OpenAMP/virtual_driver \
--I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg \
--I../../Utilities/JPEG
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections

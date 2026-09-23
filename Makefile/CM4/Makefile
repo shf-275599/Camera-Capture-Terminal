@@ -36,10 +36,6 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-../../BSP/bsp_delay.c \
-../../BSP/bsp_sys.c \
-../../BSP/MPU/mpu.c \
-../../CM4/APP/IPC/app_ipc_cm4.c \
 ../../CM4/Core/Src/main.c \
 ../../CM4/Core/Src/stm32h7xx_it.c \
 ../../CM4/Core/Src/stm32h7xx_hal_msp.c \
@@ -65,43 +61,7 @@ C_SOURCES =  \
 ../../CM4/Core/Src/sysmem.c \
 ../../CM4/Core/Src/syscalls.c \
 ../../CM4/Core/Src/gpio.c \
-../../CM4/Core/Src/usart.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
-../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
-../../CM4/Core/Src/freertos.c \
 ../../CM4/Core/Src/stm32h7xx_hal_timebase_tim.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/Common/mpu_wrappers_v2.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/list.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
-../../CM4/OPENAMP/mbox_hsem.c \
-../../CM4/OPENAMP/openamp.c \
-../../CM4/OPENAMP/rsc_table.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/device.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/io.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/log.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/shmem.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/condition.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_device.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_init.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_io.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_shmem.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/time.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/remoteproc/remoteproc_virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg_virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtio.c \
-../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtqueue.c \
-../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c \
-../../CM4/Core/Src/mdma.c \
 ../../CM4/Core/Src/dma.c
 
 # ASM sources
@@ -165,24 +125,11 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I../../BSP \
--I../../BSP/MPU \
--I../../CM4/APP/IPC \
 -I../../CM4/Core/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
--I../../Drivers/CMSIS/Include \
--I../../Middlewares/Third_Party/FreeRTOS/Source/include \
--I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
--I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--I../../Drivers/CMSIS/RTOS2/Include \
--I../../CM4/OPENAMP \
--I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/include \
--I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include \
--I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include/metal/compiler/gcc \
--I../../Middlewares/Third_Party/OpenAMP/virtual_driver \
--I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg
+-I../../Drivers/CMSIS/Include
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections

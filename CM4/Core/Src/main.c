@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-#include "app_ipc_cm4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,7 +120,6 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   /* USER CODE BEGIN 2 */
-  app_ipc_cm4_init();
   printf("CM4: All configured peripherals have been initialized\n");
   /* USER CODE END 2 */
 
