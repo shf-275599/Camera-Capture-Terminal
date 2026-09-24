@@ -19,7 +19,7 @@ bool boot_app_is_valid(uint32_t app_base)
         return false;
     }
 
-    return true;
+    return (boot_slot_is_valid(slot) != 0) ? true : false;
 }
 
 /**
