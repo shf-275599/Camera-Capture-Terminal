@@ -68,8 +68,8 @@
 #define CM4_APP_SLOT_A_SIZE (384U * 1024U)
 #define CM4_APP_SLOT_B_SIZE (384U * 1024U)
 /* CM4 APP A、B 扇区索引 */
-#define CM4_APP_SLOT_A_INDEX (0U)
-#define CM4_APP_SLOT_B_INDEX (1U)
+#define CM4_APP_SLOT_A_INDEX (2U)
+#define CM4_APP_SLOT_B_INDEX (3U)
 
 /**
  * @brief   CM7 / CM4 出厂默认烧录 / 启动分区 (slot A)

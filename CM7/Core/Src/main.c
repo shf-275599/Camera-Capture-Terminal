@@ -111,7 +111,7 @@ int main(void)
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
   printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
-  printf("USART1: 115200, PA9/PA10\r\n");  // 打印USART1配置
+  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印USART1配置
   printf("\n");
   printf("============= flash partition table ==============\r\n");
   printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
