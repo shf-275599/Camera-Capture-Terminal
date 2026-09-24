@@ -73,16 +73,6 @@
 #define CM4_APP_SLOT_A_INDEX (2U)
 #define CM4_APP_SLOT_B_INDEX (3U)
 
-/**
- * @brief   CM7 / CM4 出厂默认烧录 / 启动分区 (slot A)
- */
-/* CM7 出厂默认烧录 / 启动分区 (slot A) */
-#define CM7_APP_SLOT_A_DEFAULT_BASE (CM7_APP_SLOT_A_BASE)
-#define CM7_APP_SLOT_A_DEFAULT_SIZE (CM7_APP_SLOT_A_SIZE)
-/* 出厂默认 CM4 应用分区 (slot A) */
-#define CM4_APP_SLOT_A_DEFAULT_BASE (CM4_APP_SLOT_A_BASE)
-#define CM4_APP_SLOT_A_DEFAULT_SIZE (CM4_APP_SLOT_A_SIZE)
-
 int boot_slot_is_valid(uint8_t slot_index);
 uint8_t boot_slot_index_is_valid(uint8_t slot_index);
 uint32_t boot_slot_base_get(uint8_t slot_index);
