@@ -44,8 +44,6 @@
 /* CM7 APP A、B 扇区 Flash 地址范围 */
 #define CM7_APP_SLOT_A_BASE (0x08020000UL)
 #define CM7_APP_SLOT_B_BASE (0x080A0000UL)
-/* CM7 Boot 跳转目标（当前 slot A），等价于 CM7_APP_SLOT_A_BASE */
-#define CM7_APP_FLASH_BASE (CM7_APP_SLOT_A_BASE)
 /* CM7 APP 扇区数量 */
 #define CM7_APP_SLOT_COUNT (2U)
 /* CM7 APP A、B 扇区大小 */
