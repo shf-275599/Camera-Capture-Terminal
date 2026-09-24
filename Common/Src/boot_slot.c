@@ -78,7 +78,7 @@ uint8_t boot_get_slot_index_from_address(uint32_t address)
  * @param   slot_index  slot_index
  * @return  uint8_t     0：无效；1：有效
  */
-static uint8_t boot_slot_index_is_valid(uint8_t slot_index)
+uint8_t boot_slot_index_is_valid(uint8_t slot_index)
 {
     /* 检查 slot_index 是否有效 */
     if (slot_index != CM7_APP_SLOT_A_INDEX &&
@@ -96,7 +96,7 @@ static uint8_t boot_slot_index_is_valid(uint8_t slot_index)
  * @param   slot_index  slot_index
  * @return  uint32_t    slot_base 地址
  */
-static uint32_t boot_slot_base_get(uint8_t slot_index)
+uint32_t boot_slot_base_get(uint8_t slot_index)
 {
     /* 根据 slot_index 获取对应的 Flash 地址 */
     switch (slot_index)
@@ -123,7 +123,7 @@ static uint32_t boot_slot_base_get(uint8_t slot_index)
  * @param   slot_index  slot_index
  * @return  uint32_t    slot_end 地址
  */
-static uint32_t boot_slot_end_get(uint8_t slot_index)
+uint32_t boot_slot_end_get(uint8_t slot_index)
 {
     switch (slot_index)
     {
@@ -150,7 +150,7 @@ static uint32_t boot_slot_end_get(uint8_t slot_index)
  * @param   stack       stack 地址
  * @return  uint32_t    0：无效；1：有效
  */
-static uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
+uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
 {
     if (slot_index == CM7_APP_SLOT_A_INDEX ||
         slot_index == CM7_APP_SLOT_B_INDEX)
