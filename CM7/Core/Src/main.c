@@ -46,6 +46,10 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* Private Variables 私有变量 */
+static uint8_t boot_slot;          // 启动槽位
+static uint32_t app_base;          // 应用基地址
+static volatile uint8_t slot_a_ok; // 检查槽位 A 是否有效
+static volatile uint8_t slot_b_ok; // 检查槽位 B 是否有效
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -110,8 +114,8 @@ int main(void)
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
-  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
-  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印USART1配置
+  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG);               // 打印固件标签
+  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n"); // 打印USART1配置
   printf("\n");
   printf("============= flash partition table ==============\r\n");
   printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
@@ -131,13 +135,10 @@ int main(void)
   printf("==================================================\r\n");
   printf("\n");
 
-  // if (Boot_IsAppValid() != true)
-  // {
-  //   printf("application1 is invalid\r\n");
-  //   return 0;
-  // }
-  // printf("application1 is valid\r\n");
-  // Boot_JumpToAPP();
+  slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
+  slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+
+  printf("slot_a_ok: %d, slot_b_ok: %d\r\n", slot_a_ok, slot_b_ok);
 
   /* USER CODE END 2 */
 

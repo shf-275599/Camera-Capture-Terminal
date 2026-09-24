@@ -33,6 +33,8 @@
 #ifndef __BOOT_SLOT_H__
 #define __BOOT_SLOT_H__
 
+#include <stdint.h>
+
 /**
  * @brief   Bank1 地址范围
  */
@@ -80,5 +82,7 @@
 /* 出厂默认 CM4 应用分区 (slot A) */
 #define CM4_APP_SLOT_A_DEFAULT_BASE (CM4_APP_SLOT_A_BASE)
 #define CM4_APP_SLOT_A_DEFAULT_SIZE (CM4_APP_SLOT_A_SIZE)
+
+int boot_slot_is_valid(uint8_t slot_index);
 
 #endif

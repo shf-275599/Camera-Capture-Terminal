@@ -1,5 +1,6 @@
 #include "boot_slot.h"
 #include <stdint.h>
+#include <stdio.h>
 #include "stm32h7xx.h"
 
 static uint8_t boot_slot_index_is_valid(uint8_t slot_index);
@@ -22,6 +23,7 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 slot_index 是否有效 */
     if (!boot_slot_index_is_valid(slot_index))
     {
+        printf("slot_index: %d is not valid\r\n", slot_index);
         return 0;
     }
     /* 获取 slot_base 地址 */
@@ -34,11 +36,13 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 stack_region 是否有效 */
     if (!boot_slot_stack_region_is_valid(slot_index, stack))
     {
+        printf("slot_index: %d stack_region is not valid\r\n", slot_index);
         return 0;
     }
     /* 校验复位向量：地址必须在slot范围内，且最低位为1（Cortex-M Thumb模式） */
     if ((reset < slot_base) || (reset >= slot_end) || ((reset & 1U) == 0U))
     {
+        printf("slot_index: %d reset is not valid\r\n", slot_index);
         return 0;
     }
 
