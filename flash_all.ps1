@@ -28,39 +28,43 @@ if (-not $make) {
     throw 'make was not found. Install GNU Make or add it to PATH.'
 }
 
-$makeArgs = @('-C', (Join-Path $PSScriptRoot 'Makefile'))
-if ($Jobs -gt 0) {
-    $makeArgs += "-j$Jobs"
-}
-
-& $make.Source @makeArgs
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-}
-
-$firmwares = @()
-foreach ($core in @('CM7', 'CM4')) {
+$firmwares = @{}
+foreach ($core in @('CM4', 'CM7')) {
     $makeDirectory = Join-Path $PSScriptRoot "Makefile\$core"
     $makefile = Join-Path $makeDirectory 'Makefile'
     if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "$core Makefile was not found: $makefile" }
-    $target = Get-MakefileVariable -Path $makefile -Name 'TARGET'
-    $buildDirectory = Get-MakefileVariable -Path $makefile -Name 'BUILD_DIR'
-    $firmwares += Join-Path (Join-Path $makeDirectory $buildDirectory) "$target.elf"
+    $targetBase = Get-MakefileVariable -Path $makefile -Name 'TARGET_BASE'
+
+    $makeArgs = @('-C', $makeDirectory, 'all-slots')
+    if ($Jobs -gt 0) {
+        $makeArgs += "-j$Jobs"
+    }
+    & $make.Source @makeArgs
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+
+    foreach ($slot in @('A', 'B')) {
+        $firmwares["$core-$slot"] = Join-Path (Join-Path $makeDirectory "build_$slot") "${targetBase}_$slot.elf"
+    }
 }
 
-foreach ($firmware in $firmwares) {
+$flashOrder = @('CM7-A', 'CM4-A', 'CM7-B', 'CM4-B')
+foreach ($name in $flashOrder) {
+    $firmware = $firmwares[$name]
     if (-not (Test-Path -LiteralPath $firmware -PathType Leaf)) {
-        throw "Firmware was not found: $firmware`nBuild both cores first with make -C Makefile/CM7 and make -C Makefile/CM4."
+        throw "Firmware was not found: $firmware"
     }
 }
 
 $cli = Resolve-ProgrammerCli
-& $cli -c port=SWD mode=UR -w $firmwares[0] -v
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-}
-
-& $cli -c port=SWD mode=UR -w $firmwares[1] -v -rst
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+foreach ($name in $flashOrder) {
+    $programmerArgs = @('-c', 'port=SWD', 'mode=UR', '-w', $firmwares[$name], '-v')
+    if ($name -eq 'CM4-B') {
+        $programmerArgs += '-rst'
+    }
+    & $cli @programmerArgs
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
