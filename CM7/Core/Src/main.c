@@ -110,16 +110,18 @@ int main(void)
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
-
+  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
+  printf("USART1: 115200, PA9/PA10\r\n");  // 打印USART1配置
+  printf("\n");
   printf("============= flash partition table ==============\r\n");
-  printf("---------- CM7 (Bank1, 1MB) ----------\r\n");
+  printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
   printf("|     name     |   offset   |    size    | value |\r\n");
   printf("--------------------------------------------------\r\n");
   printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_BOOT_FLASH_BASE, CM7_BOOT_FLASH_SIZE, CM7_BOOT_FLASH_SIZE / 1024U);
   printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE, CM7_APP_SLOT_A_SIZE / 1024U);
   printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE), (unsigned int)cm7_reserve_size, (int)(cm7_reserve_size / 1024U));
   printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE, CM7_APP_SLOT_B_SIZE / 1024U);
-  printf("---------- CM4 (Bank2, 1MB) ----------\r\n");
+  printf("---------------- CM4 (Bank2, 1MB) ----------------\r\n");
   printf("|     name     |   offset   |    size    | value |\r\n");
   printf("--------------------------------------------------\r\n");
   printf("| stub         | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_BOOT_STUB_BASE, CM4_BOOT_STUB_SIZE, CM4_BOOT_STUB_SIZE / 1024U);
