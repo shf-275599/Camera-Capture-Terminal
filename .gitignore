@@ -1,5 +1,7 @@
 # CMake build directories
 build/
+build_A/
+build_B/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt

@@ -14,22 +14,22 @@
 # target
 ######################################
 # Slot A @ 0x08120000，Reserve @ 0x08180000，Slot B @ 0x081A0000（Stub @ 0x08100000 由 Bootloader 侧占用）
-# 默认 make = Slot A（兼容 build/BaseProject_CM4.elf）
+# 默认 make = Slot A（烧录脚本读取 build_A/BaseProject_CM4_A.elf）
 # 一键双槽：make all-slots → build_A/BaseProject_CM4_A.bin + build_B/BaseProject_CM4_B.bin
 TARGET_BASE = BaseProject_CM4
+TARGET = BaseProject_CM4_A
+BUILD_DIR = build_A
 APP_SLOT ?= A
 APP_SLOT_NAME := $(patsubst a,A,$(patsubst b,B,$(APP_SLOT)))
 
 ifeq ($(APP_SLOT_NAME),A)
 APP_FLASH_ORIGIN = 0x08120000
 LDSCRIPT = stm32h757xx_flash_CM4_slot_A.ld
-TARGET ?= $(TARGET_BASE)
-BUILD_DIR ?= build
 else ifeq ($(APP_SLOT_NAME),B)
 APP_FLASH_ORIGIN = 0x081A0000
 LDSCRIPT = stm32h757xx_flash_CM4_slot_B.ld
-TARGET ?= $(TARGET_BASE)_B
-BUILD_DIR ?= build_B
+TARGET := BaseProject_CM4_B
+BUILD_DIR := build_B
 else
 $(error APP_SLOT must be A or B)
 endif
@@ -47,7 +47,7 @@ OPT = -Og
 #######################################
 # paths
 #######################################
-# Build path（由上方 APP_SLOT 分支决定：A=build / B=build_B）
+# Build path（由上方 APP_SLOT 分支决定：A=build_A / B=build_B）
 
 ######################################
 # source
@@ -240,10 +240,10 @@ all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET
 #   build_A/BaseProject_CM4_A.bin @ 0x08120000
 #   build_B/BaseProject_CM4_B.bin @ 0x081A0000
 slot-a:
-	$(MAKE) all APP_SLOT=A TARGET=$(TARGET_BASE)_A BUILD_DIR=build_A
+	$(MAKE) all APP_SLOT=A
 
 slot-b:
-	$(MAKE) all APP_SLOT=B TARGET=$(TARGET_BASE)_B BUILD_DIR=build_B
+	$(MAKE) all APP_SLOT=B
 
 all-slots: slot-a slot-b
 	@echo.
@@ -272,7 +272,7 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 $(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile $(LDSCRIPT)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 
