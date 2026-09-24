@@ -13,7 +13,26 @@
 ######################################
 # target
 ######################################
-TARGET = BaseProject_CM7
+# Slot A @ 0x08020000，Reserve S4 @ 0x08080000，Slot B @ 0x080A0000
+# 默认 make = Slot A（出厂烧录兼容 build/GPIO_CM7.elf）
+# 一键双槽：make all-slots → build_A/GPIO_CM7_A.bin + build_B/GPIO_CM7_B.bin
+TARGET_BASE = GPIO_CM7
+APP_SLOT ?= A
+APP_SLOT_NAME := $(patsubst a,A,$(patsubst b,B,$(APP_SLOT)))
+
+ifeq ($(APP_SLOT_NAME),A)
+APP_FLASH_ORIGIN = 0x08020000
+LDSCRIPT = stm32h757xx_flash_CM7_slot_A.ld
+TARGET ?= $(TARGET_BASE)
+BUILD_DIR ?= build
+else ifeq ($(APP_SLOT_NAME),B)
+APP_FLASH_ORIGIN = 0x080A0000
+LDSCRIPT = stm32h757xx_flash_CM7_slot_B.ld
+TARGET ?= $(TARGET_BASE)_B
+BUILD_DIR ?= build_B
+else
+$(error APP_SLOT must be A or B)
+endif
 
 
 ######################################
@@ -28,8 +47,7 @@ OPT = -Og
 #######################################
 # paths
 #######################################
-# Build path
-BUILD_DIR = build
+# Build path（由上方 APP_SLOT 分支决定：A=build / B=build_B）
 
 ######################################
 # source
@@ -240,7 +258,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = stm32h757xx_flash_CM7.ld
+# LDSCRIPT selected by APP_SLOT above (A: 0x08020000 / B: 0x080A0000)
 
 # libraries
 LIBS = -lc -lm -lnosys 
@@ -250,6 +268,23 @@ LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BU
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
 
+.PHONY: all slot-a slot-b all-slots clean clean-slots
+
+# 双槽产物（链接地址分别对齐 A/B）
+#   build_A/GPIO_CM7_A.bin @ 0x08020000
+#   build_B/GPIO_CM7_B.bin @ 0x080A0000
+slot-a:
+	$(MAKE) all APP_SLOT=A TARGET=$(TARGET_BASE)_A BUILD_DIR=build_A
+
+slot-b:
+	$(MAKE) all APP_SLOT=B TARGET=$(TARGET_BASE)_B BUILD_DIR=build_B
+
+all-slots: slot-a slot-b
+	@echo.
+	@echo === CM7 dual-slot bins ready ===
+	@echo   Slot A : build_A/$(TARGET_BASE)_A.bin  @ 0x08020000
+	@echo   Slot B : build_B/$(TARGET_BASE)_B.bin  @ 0x080A0000
+	@echo.
 
 #######################################
 # build the application
@@ -289,7 +324,9 @@ $(BUILD_DIR):
 #######################################
 clean:
 	-rm -fR $(BUILD_DIR)
-  
+
+clean-slots:
+	-rm -fR build_A build_B
 #######################################
 # dependencies
 #######################################

@@ -37,9 +37,13 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
+/* Slot B：0x080A0000..0x080FFFFF */
+FLASH (rx)      : ORIGIN = 0x080A0000, LENGTH = 384K
+/* AXI SRAM — ETH DMA can access this; DTCM (0x20000000) cannot */
+RAM (xrw)       : ORIGIN = 0x24000000, LENGTH = 512K
+RAM_D2 (xrw)    : ORIGIN = 0x30000000, LENGTH = 288K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
+OPENAMP_RSC_TAB (xrw)  : ORIGIN = 0x38000000, LENGTH = 1K
 OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 63K
 }
 /* Highest address of the user mode stack */
