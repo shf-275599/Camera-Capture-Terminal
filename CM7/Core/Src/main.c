@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include "boot_slot.h"
 #include "boot_config.h"
 #include "boot_jump.h"
 /* USER CODE END Includes */
@@ -64,19 +64,19 @@ void SystemClock_Config(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
-/* USER CODE BEGIN Boot_Mode_Sequence_0 */
-/* USER CODE END Boot_Mode_Sequence_0 */
+  /* USER CODE BEGIN Boot_Mode_Sequence_0 */
+  /* USER CODE END Boot_Mode_Sequence_0 */
 
-/* USER CODE BEGIN Boot_Mode_Sequence_1 */
-/* USER CODE END Boot_Mode_Sequence_1 */
+  /* USER CODE BEGIN Boot_Mode_Sequence_1 */
+  /* USER CODE END Boot_Mode_Sequence_1 */
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -87,8 +87,8 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-/* USER CODE BEGIN Boot_Mode_Sequence_2 */
-/* USER CODE END Boot_Mode_Sequence_2 */
+  /* USER CODE BEGIN Boot_Mode_Sequence_2 */
+  /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
   /* USER CODE END SysInit */
@@ -106,23 +106,36 @@ int main(void)
   printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
   printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
   printf("\n");
+  const uint32_t cm7_reserve_size =
+      CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
+  const uint32_t cm4_reserve_size =
+      CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
+
   printf("============= flash partition table ==============\r\n");
+  printf("---------- CM7 (Bank1, 1MB) ----------\r\n");
   printf("|     name     |   offset   |    size    | value |\r\n");
   printf("--------------------------------------------------\r\n");
-  printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", BOOT_SECTOR_ADDR, BOOT_SECTOR_SIZE, BOOT_SECTOR_SIZE / 1024U);
-  printf("| application1 | 0x%08lx | 0x%08x | %dKB |\r\n", APP_SECTOR_ADDR, APP_SECTOR_SIZE, APP_SECTOR_SIZE / 1024U);
-  printf("| application2 | 0x%08lx | 0x%08x | %dKB |\r\n", APP2_SECTOR_ADDR, APP2_SECTOR_SIZE, APP2_SECTOR_SIZE / 1024U);
-  printf("| setting      | 0x%08lx | 0x%08x | %dKB |\r\n", SETTING_SECTOR_ADDR, SETTING_SECTOR_SIZE, SETTING_SECTOR_SIZE / 1024U);
+  printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_BOOT_FLASH_BASE, CM7_BOOT_FLASH_SIZE, CM7_BOOT_FLASH_SIZE / 1024U);
+  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE, CM7_APP_SLOT_A_SIZE / 1024U);
+  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE), (unsigned int)cm7_reserve_size, (int)(cm7_reserve_size / 1024U));
+  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE, CM7_APP_SLOT_B_SIZE / 1024U);
+  printf("---------- CM4 (Bank2, 1MB) ----------\r\n");
+  printf("|     name     |   offset   |    size    | value |\r\n");
+  printf("--------------------------------------------------\r\n");
+  printf("| stub         | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_BOOT_STUB_BASE, CM4_BOOT_STUB_SIZE, CM4_BOOT_STUB_SIZE / 1024U);
+  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_A_SIZE, CM4_APP_SLOT_A_SIZE / 1024U);
+  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE), (unsigned int)cm4_reserve_size, (int)(cm4_reserve_size / 1024U));
+  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE, CM4_APP_SLOT_B_SIZE / 1024U);
   printf("==================================================\r\n");
   printf("\n");
 
-  if (Boot_IsAppValid() != true)
-  {
-    printf("application1 is invalid\r\n");
-    return 0;
-  }
-  printf("application1 is valid\r\n");
-  Boot_JumpToAPP();
+  // if (Boot_IsAppValid() != true)
+  // {
+  //   printf("application1 is invalid\r\n");
+  //   return 0;
+  // }
+  // printf("application1 is valid\r\n");
+  // Boot_JumpToAPP();
 
   /* USER CODE END 2 */
 
@@ -138,27 +151,29 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Supply configuration update enable
-  */
+   */
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
-  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY))
+  {
+  }
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -177,10 +192,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
@@ -199,13 +212,13 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM2 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
@@ -219,9 +232,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -229,12 +242,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

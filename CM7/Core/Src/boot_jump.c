@@ -1,5 +1,6 @@
 #include "boot_jump.h"
 #include "boot_config.h"
+#include "boot_slot.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
