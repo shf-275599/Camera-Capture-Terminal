@@ -137,8 +137,25 @@ int main(void)
 
   slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  if (slot_a_ok)
+    printf("[BOOT] CM7 slot A is valid\r\n");
+  else
+    printf("[BOOT] CM7 slot A is not valid\r\n");
+  if (slot_b_ok)
+    printf("[BOOT] CM7 slot B is valid\r\n");
+  else
+    printf("[BOOT] CM7 slot B is not valid\r\n");
 
-  printf("slot_a_ok: %d, slot_b_ok: %d\r\n", slot_a_ok, slot_b_ok);
+  slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
+  slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  if (slot_a_ok)
+    printf("[BOOT] CM4 slot A is valid\r\n");
+  else
+    printf("[BOOT] CM4 slot A is not valid\r\n");
+  if (slot_b_ok)
+    printf("[BOOT] CM4 slot B is valid\r\n");
+  else
+    printf("[BOOT] CM4 slot B is not valid\r\n");
 
   /* USER CODE END 2 */
 
