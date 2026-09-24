@@ -30,6 +30,7 @@
 #include <stdbool.h>
 
 #include "boot_config.h"
+#include "boot_jump.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -113,8 +114,16 @@ int main(void)
   printf("| application2 | 0x%08lx | 0x%08x | %dKB |\r\n", APP2_SECTOR_ADDR, APP2_SECTOR_SIZE, APP2_SECTOR_SIZE / 1024U);
   printf("| setting      | 0x%08lx | 0x%08x | %dKB |\r\n", SETTING_SECTOR_ADDR, SETTING_SECTOR_SIZE, SETTING_SECTOR_SIZE / 1024U);
   printf("==================================================\r\n");
-  printf("\033[1;36m"); // 加粗；蓝色
   printf("\n");
+
+  if (Boot_IsAppValid() != true)
+  {
+    printf("application1 is invalid\r\n");
+    return 0;
+  }
+  printf("application1 is valid\r\n");
+  Boot_JumpToAPP();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

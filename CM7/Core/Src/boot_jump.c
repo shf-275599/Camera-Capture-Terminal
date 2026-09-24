@@ -2,7 +2,9 @@
 #include "boot_config.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <core_cm7.h>
+#include <stdio.h>
+#include "stm32h7xx.h"
+#include "stm32h7xx_hal_rcc_ex.h"
 
 /**
  * @brief 校验 APP 是否有效
@@ -19,13 +21,14 @@ bool Boot_IsAppValid(void)
     /**
      * 校验逻辑：
      * 1. stack 必须是合法 RAM 地址（在 H7 的 SRAM 范围内）
-     * [0x08020000, 0x08100000)
+     * [0x20020000, 0x2003FFFF]
      * 2. reset 最低位必须等于 1（Thumb 模式）
      */
 
     /* 掩码提取内存块基地址，校验 stack 是否落在 SRAM 0x20020000~0x2003FFFF，非法返回false */
     if ((stack & 0x2FFE0000UL) != 0x20020000UL)
     {
+        printf ("stack: 0x%08lx\r\n", stack);
         return false;
     }
 
@@ -34,6 +37,7 @@ bool Boot_IsAppValid(void)
         (reset >= 0x8100000U) ||
         ((reset & 1U) == 0U))
     {
+        printf ("reset: 0x%08lx\r\n", reset);
         return false;
     }
 
