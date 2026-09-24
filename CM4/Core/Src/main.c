@@ -23,8 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
+#include "cm4_boot_handoff.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,6 +93,9 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   /* USER CODE BEGIN 2 */
+  /* 不进 STOP：CM7 已在 EnableBootCore 前写好 handoff；
+   * App 自己会再进 STOP 等 HSEM。 */
+  (void)cm4_boot_handoff_jump_from_d3();
   /* 跳转失败：停在此，便于调试 */
   __disable_irq();
   /* USER CODE END 2 */
