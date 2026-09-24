@@ -3,11 +3,6 @@
 #include <stdio.h>
 #include "stm32h7xx.h"
 
-static uint8_t boot_slot_index_is_valid(uint8_t slot_index);
-static uint32_t boot_slot_base_get(uint8_t slot_index);
-static uint32_t boot_slot_end_get(uint8_t slot_index);
-static uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack);
-
 /**
  * @brief   检查 slot_index 是否有效
  * @param   slot_index  slot_index
@@ -47,6 +42,35 @@ int boot_slot_is_valid(uint8_t slot_index)
     }
 
     return 1;
+}
+
+/**
+ * @brief  根据地址获取对应的 slot_index
+ * @param  address 地址
+ * @retval slot_index
+ */
+uint8_t boot_get_slot_index_from_address(uint32_t address)
+{
+    /* 检查地址是否在 CM7_APP_SLOT_A 范围内 */
+    if ((address >= CM7_APP_SLOT_A_BASE) &&
+        (address < (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE))) {
+        return CM7_APP_SLOT_A_INDEX;
+    }
+    /* 检查地址是否在 CM7_APP_SLOT_B 范围内 */
+    else if ((address >= CM7_APP_SLOT_B_BASE) &&
+        (address < (CM7_APP_SLOT_B_BASE + CM7_APP_SLOT_B_SIZE))) {
+        return CM7_APP_SLOT_B_INDEX;
+    }
+    /* 检查地址是否在 CM4_APP_SLOT_A 范围内 */
+    else if ((address >= CM4_APP_SLOT_A_BASE) &&
+        (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE))) {
+        return CM4_APP_SLOT_A_INDEX;
+    }
+    /* 检查地址是否在 CM4_APP_SLOT_B 范围内 */
+    else if ((address >= CM4_APP_SLOT_B_BASE) &&
+        (address < (CM4_APP_SLOT_B_BASE + CM4_APP_SLOT_B_SIZE))) {
+        return CM4_APP_SLOT_B_INDEX;
+    }
 }
 
 /**

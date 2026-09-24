@@ -84,5 +84,10 @@
 #define CM4_APP_SLOT_A_DEFAULT_SIZE (CM4_APP_SLOT_A_SIZE)
 
 int boot_slot_is_valid(uint8_t slot_index);
+uint8_t boot_slot_index_is_valid(uint8_t slot_index);
+uint32_t boot_slot_base_get(uint8_t slot_index);
+uint32_t boot_slot_end_get(uint8_t slot_index);
+uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack);
+uint8_t boot_get_slot_index_from_address(uint32_t address);
 
 #endif

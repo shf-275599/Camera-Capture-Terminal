@@ -3,4 +3,6 @@
 
 #include <stdbool.h>
 
+bool boot_app_is_valid(uint32_t app_base);
+
 #endif
