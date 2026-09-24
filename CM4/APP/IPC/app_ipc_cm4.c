@@ -10,8 +10,7 @@ static int cm4_rx_callback(struct rpmsg_endpoint *ept,
                            uint32_t src,
                            void *priv)
 {
-  char message[64];
-
+  // char message[64];
   (void)ept;
   (void)src;
   (void)priv;
@@ -76,7 +75,7 @@ void app_ipc_cm4_init(void)
     Error_Handler();
   }
   OPENAMP_Wait_EndPointready(&s_ept);
-  printf("CM4: OpenAMP have been initialized\r\n");
+  printf("CM4: OpenAMP init OK\r\n");
 }
 
 void app_ipc_cm4_send(void)

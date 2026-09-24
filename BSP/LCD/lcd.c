@@ -198,10 +198,10 @@ void lcd_init(void)
     if (lcddev.id != 0)                 /* ID非零,说明有RGB屏接入 */
     {
         ltdc_init();                    /* 初始化LTDC */
-        printf("CM7: LCD have been initialized\r\n");
+        printf("CM7: LCD init OK\r\n");
     }
     else {
-        printf("CM7: LCD no RGB screen connected, initialization failed\r\n");
+        printf("CM7: LCD init Failed, no RGB screen connected\r\n");
     }
 
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */

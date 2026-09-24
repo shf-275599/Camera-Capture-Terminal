@@ -23,7 +23,7 @@ void app_ov5640_init(void)
     ov5640_led_on();
     ov5640_led_off();
     
-    printf("CM7: OV5640 have been initialized, chip ID verified\r\n");
+    printf("CM7: OV5640 init OK, chip ID verified\r\n");
 }
 
 void app_ov5640_capture_colorbar(void)

@@ -13,7 +13,7 @@ void sdram_init(void)
 {
     sdram_initialization_sequence();
     HAL_SDRAM_ProgramRefreshRate(&hsdram1, SDRAM_REFRESH_COUNT);
-    printf("CM7: SDRAM have been initialized\r\n");
+    printf("CM7: SDRAM init OK\r\n");
 }
 
 /**

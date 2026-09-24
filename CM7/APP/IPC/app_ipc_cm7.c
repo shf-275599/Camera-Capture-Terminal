@@ -45,7 +45,7 @@ void app_ipc_cm7_init(void)
   {
     Error_Handler();
   }
-  printf("CM7: OpenAMP have been initialized\r\n");
+  printf("CM7: OpenAMP init OK\r\n");
 }
 
 

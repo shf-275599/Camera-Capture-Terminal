@@ -85,7 +85,7 @@ void MX_FREERTOS_Init(void) {
   // {
   //     printf("CM7: Hardware JPEG decode failed\n");
   // }
-  printf("CM7: FreeRTOS have been initialized\n");
+  printf("CM7: FreeRTOS init OK\r\n");
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */

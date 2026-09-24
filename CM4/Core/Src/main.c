@@ -128,7 +128,7 @@ int main(void)
   MX_DMA_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init(); // 初始化 IPC 模块
-  printf("CM4: main() user init have been initialized\n");
+  printf("CM4: main() user init OK\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
