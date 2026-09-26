@@ -6,7 +6,7 @@
 
 static uint8_t cm4_boot_handoff_read(uint32_t *app_base);
 static uint8_t cm4_boot_handoff_jump(uint32_t app_base);
-static int cm4_boot_vector_ok(uint32_t app_base);
+static uint8_t cm4_boot_vector_ok(uint32_t app_base);
 
 /**
  * @brief  从 SRAM D3 跳转 CM4 应用
@@ -57,7 +57,7 @@ static uint8_t cm4_boot_handoff_jump(uint32_t app_base)
     void (*app_reset)(void);
 
     if (cm4_boot_vector_ok(app_base) == 0) {
-        return -1;
+        return 0;
     }
 
     app_stack = *(__IO uint32_t *)app_base;
@@ -75,15 +75,15 @@ static uint8_t cm4_boot_handoff_jump(uint32_t app_base)
     __ISB();
     app_reset();
 
-    return 0;
+    return 1;
 }
 
 /**
  * @brief  检查 CM4 应用基地址是否有效
  * @param  app_base  CM4 应用基地址
- * @return int  0：无效；1：有效
+ * @return uint8_t  0：失败；1：成功
  */
-static int cm4_boot_vector_ok(uint32_t app_base)
+static uint8_t cm4_boot_vector_ok(uint32_t app_base)
 {
     uint32_t stack;
     uint32_t reset;
