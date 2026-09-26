@@ -77,9 +77,18 @@ int main(void)
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
   /* USER CODE BEGIN Boot_Mode_Sequence_0 */
+  int32_t timeout;
   /* USER CODE END Boot_Mode_Sequence_0 */
 
   /* USER CODE BEGIN Boot_Mode_Sequence_1 */
+  /* 等待 CM4 进入 STOP；超时仍继续，避免未烧 CM4 时 Bootloader 卡死 */
+  timeout = 0xFFFF;
+  while ((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET) && (timeout-- > 0))
+    ;
+  if (timeout < 0)
+  {
+    /* CM4 未进 STOP，IAP 跳转前由 Boot_HoldCm4() 拉住 CM4 */
+  }
   /* USER CODE END Boot_Mode_Sequence_1 */
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -157,6 +166,23 @@ int main(void)
   else
     printf("[BOOT] CM4 slot B is not valid\r\n");
 
+  /* 选槽 */
+  if (slot_a_ok)
+    boot_slot = CM7_APP_SLOT_A_INDEX;
+  else if (slot_b_ok)
+    boot_slot = CM7_APP_SLOT_B_INDEX;
+
+  app_base = boot_slot_base_get(boot_slot);
+
+  if (boot_app_is_valid(app_base))
+  {
+    printf("[BOOT] CM7 app is valid, jump to 0x%08lx\r\n", app_base);
+    boot_jump_to_app(app_base);
+  }
+  else
+  {
+    printf("[BOOT] CM7 app is not valid\r\n");
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -164,7 +190,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
