@@ -75,7 +75,7 @@ static uint8_t cm4_boot_handoff_jump(uint32_t app_base)
     __ISB();
     app_reset();
 
-    return -1;
+    return 0;
 }
 
 /**
