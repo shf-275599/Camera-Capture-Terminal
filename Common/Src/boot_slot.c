@@ -70,6 +70,8 @@ uint8_t boot_get_slot_index_from_address(uint32_t address)
     else if ((address >= CM4_APP_SLOT_B_BASE) &&
         (address < (CM4_APP_SLOT_B_BASE + CM4_APP_SLOT_B_SIZE))) {
         return CM4_APP_SLOT_B_INDEX;
+    } else {
+        return 255U;
     }
 }
 
