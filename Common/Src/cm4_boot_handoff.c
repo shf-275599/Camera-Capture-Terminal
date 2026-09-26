@@ -7,7 +7,6 @@
 static uint8_t cm4_boot_handoff_read(uint32_t *app_base);
 static uint8_t cm4_boot_handoff_jump(uint32_t app_base);
 static int cm4_boot_vector_ok(uint32_t app_base);
-static void cm4_boot_handoff_write(uint32_t app_base);
 
 /**
  * @brief  从 SRAM D3 跳转 CM4 应用
@@ -116,7 +115,7 @@ static int cm4_boot_vector_ok(uint32_t app_base)
  * @brief  写入 CM4 手握数据
  * @param  app_base  CM4 应用基地址
  */
-static void cm4_boot_handoff_write(uint32_t app_base)
+void cm4_boot_handoff_write(uint32_t app_base)
 {
     volatile uint32_t *magic = (volatile uint32_t *)CM4_BOOT_HANDOFF_MAGIC_ADDR;
     volatile uint32_t *base = (volatile uint32_t *)CM4_BOOT_HANDOFF_BASE_ADDR;

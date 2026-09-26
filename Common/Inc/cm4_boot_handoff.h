@@ -11,6 +11,7 @@
 #define CM4_BOOT_HANDOFF_BASE_ADDR  (0x3800F014UL)
 
 uint8_t cm4_boot_handoff_jump_from_d3(void);
+void cm4_boot_handoff_write(uint32_t app_base);
 
 #endif
 
