@@ -48,8 +48,10 @@
 /* Private Variables 私有变量 */
 static uint8_t boot_slot;          // 启动槽位
 static uint32_t app_base;          // 应用基地址
-static volatile uint8_t slot_a_ok; // 检查槽位 A 是否有效
-static volatile uint8_t slot_b_ok; // 检查槽位 B 是否有效
+static volatile uint8_t cm7_slot_a_ok; // 检查 CM7 槽位 A 是否有效
+static volatile uint8_t cm7_slot_b_ok; // 检查 CM7 槽位 B 是否有效
+static volatile uint8_t cm4_slot_a_ok; // 检查 CM4 槽位 A 是否有效
+static volatile uint8_t cm4_slot_b_ok; // 检查 CM4 槽位 B 是否有效
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -144,32 +146,32 @@ int main(void)
   printf("==================================================\r\n");
   printf("\n");
 
-  slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
-  slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
-  if (slot_a_ok)
+  cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
+  cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  if (cm7_slot_a_ok)
     printf("[BOOT] CM7 slot A is valid\r\n");
   else
     printf("[BOOT] CM7 slot A is not valid\r\n");
-  if (slot_b_ok)
+  if (cm7_slot_b_ok)
     printf("[BOOT] CM7 slot B is valid\r\n");
   else
     printf("[BOOT] CM7 slot B is not valid\r\n");
 
-  slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
-  slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
-  if (slot_a_ok)
+  cm4_slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
+  cm4_slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  if (cm4_slot_a_ok)
     printf("[BOOT] CM4 slot A is valid\r\n");
   else
     printf("[BOOT] CM4 slot A is not valid\r\n");
-  if (slot_b_ok)
+  if (cm4_slot_b_ok)
     printf("[BOOT] CM4 slot B is valid\r\n");
   else
     printf("[BOOT] CM4 slot B is not valid\r\n");
 
   /* 选槽 */
-  if (slot_a_ok)
+  if (cm7_slot_a_ok)
     boot_slot = CM7_APP_SLOT_A_INDEX;
-  else if (slot_b_ok)
+  else if (cm7_slot_b_ok)
     boot_slot = CM7_APP_SLOT_B_INDEX;
 
   app_base = boot_slot_base_get(boot_slot);
