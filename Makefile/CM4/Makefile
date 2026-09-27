@@ -58,6 +58,8 @@ C_SOURCES =  \
 ../../BSP/bsp_sys.c \
 ../../BSP/MPU/mpu.c \
 ../../CM4/APP/IPC/app_ipc_cm4.c \
+../../Common/Src/boot_slot.c \
+../../Common/Src/cm4_boot_handoff.c \
 ../../CM4/Core/Src/main.c \
 ../../CM4/Core/Src/stm32h7xx_it.c \
 ../../CM4/Core/Src/stm32h7xx_hal_msp.c \
@@ -191,6 +193,7 @@ C_INCLUDES =  \
 -I../../BSP/MPU \
 -I../../CM4/APP/IPC \
 -I../../CM4/Core/Inc \
+-I../../Common/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
