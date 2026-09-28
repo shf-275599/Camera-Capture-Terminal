@@ -184,9 +184,13 @@ if ( timeout < 0 )
     cm4_boot_handoff_write(cm4_base);
     /* Stub @ Bank2 入口读 handoff 后跳 Slot；App 再 STOP 等 HSEM */
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
-    printf("[APP] CM7 application started\r\n");
-    printf("[APP] app base address: 0x%08X\r\n", cm4_base);
-    printf("\r\n");
+    printf("\033[1;36m"); // 加粗；青色
+    printf("    _     ____   ____   _      ___   ____     _     _____  ___   ___   _   _ \n");
+    printf("   / \\   |  _ \\ |  _ \\ | |    |_ _| / ___|   / \\   |_   _||_ _| / _ \\ | \\ | |\n");
+    printf("  / _ \\  | |_) || |_) || |     | | | |      / _ \\    | |   | | | | | ||  \\| |\n");
+    printf(" / ___ \\ |  __/ |  __/ | |___  | | | |___  / ___ \\   | |   | | | |_| || |\\  |\n");
+    printf("/_/   \\_\\|_|    |_|    |_____||___| \\____|/_/   \\_\\  |_|  |___| \\___/ |_| \\_|\n");
+    printf("\n");
   }
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
