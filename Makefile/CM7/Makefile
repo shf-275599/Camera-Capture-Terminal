@@ -39,6 +39,7 @@ C_SOURCES =  \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
 ../../CM7/Core/Src/boot_jump.c \
+../../CM7/Log/log.c \
 ../../BSP/EEPROM/bl24c16f.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
@@ -136,6 +137,7 @@ C_INCLUDES =  \
 -I../../Common/Inc \
 -I../../BSP/EEPROM/Inc \
 -I../../CM7/Core/Inc \
+-I../../CM7/Log \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
