@@ -32,6 +32,7 @@
 #include "boot_slot.h"
 #include "boot_config.h"
 #include "boot_jump.h"
+#include "log.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -127,8 +128,7 @@ int main(void)
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
-  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG);               // 打印固件标签
-  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n"); // 打印USART1配置
+  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG);                // 打印固件标签
   printf("\n");
   printf("============= flash partition table ==============\r\n");
   printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
@@ -146,30 +146,32 @@ int main(void)
   printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE), (unsigned int)cm4_reserve_size, (int)(cm4_reserve_size / 1024U));
   printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE, CM4_APP_SLOT_B_SIZE / 1024U);
   printf("==================================================\r\n");
+  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印 USART1 配置
+  printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
   if (cm7_slot_a_ok)
-    printf("[BOOT] CM7 slot A is valid\r\n");
+    LOG_INFO("BOOT", "CM7 slot A: valid");
   else
-    printf("[BOOT] CM7 slot A is not valid\r\n");
+    LOG_WARN("BOOT", "CM7 slot A: invalid");
   if (cm7_slot_b_ok)
-    printf("[BOOT] CM7 slot B is valid\r\n");
+    LOG_INFO("BOOT", "CM7 slot B: valid");
   else
-    printf("[BOOT] CM7 slot B is not valid\r\n");
+    LOG_WARN("BOOT", "CM7 slot B: invalid");
 
   cm4_slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm4_slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
   if (cm4_slot_a_ok)
-    printf("[BOOT] CM4 slot A is valid\r\n");
+    LOG_INFO("BOOT", "CM4 slot A: valid");
   else
-    printf("[BOOT] CM4 slot A is not valid\r\n");
+    LOG_WARN("BOOT", "CM4 slot A: invalid");
   if (cm4_slot_b_ok)
-    printf("[BOOT] CM4 slot B is valid\r\n");
+    LOG_INFO("BOOT", "CM4 slot B: valid");
   else
-    printf("[BOOT] CM4 slot B is not valid\r\n");
-  
+    LOG_WARN("BOOT", "CM4 slot B: invalid");
+
   /* 选择槽位 */
   if (cm7_slot_a_ok)
     boot_slot = CM7_APP_SLOT_A_INDEX;
@@ -180,13 +182,13 @@ int main(void)
   /* 校验应用程序是否有效*/
   if (boot_app_is_valid(app_base))
   {
-    printf("[BOOT] jump to app base 0x%08lx\r\n", app_base);
+    LOG_INFO("BOOT", "Bootloader Start Jump to App...");
     boot_jump_to_app(app_base);
-    printf("[BOOT] ERROR: Jump returned (should never happen)\r\n"); // 打印跳转错误提示
+    LOG_ERROR("BOOT", "Bootloader Jump to App returned unexpectedly"); // 打印跳转错误提示
   }
   else
   {
-    printf("[BOOT] CM7 app is not valid\r\n");
+    LOG_ERROR("BOOT", "CM7 app at 0x%08lx is invalid", (unsigned long)app_base);
   }
   /* USER CODE END 2 */
 
