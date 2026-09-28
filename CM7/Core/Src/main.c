@@ -177,6 +177,27 @@ int main(void)
   else
     LOG_WARN("BOOT", "CM4 slot B: invalid");
 
+  LOG_INFO("BOOT", "CM7 EE: active=%u pending=%u trial=%u flags=0x%02X seq=%lu", // 打印 CM7 EEPROM 元数据
+           (unsigned int)ee.active_slot,                                         // 激活槽位索引
+           (unsigned int)ee.pending_slot,                                        // 待处理槽位索引
+           (unsigned int)ee.boot_trial,                                          // 启动试用次数
+           (unsigned int)ee.flags,                                               // 标志位
+           (unsigned long)ee.seq);                                               // 序列号
+
+  LOG_INFO("BOOT", "CM7 EE ver A=%lu B=%lu | slotA valid=%u slotB valid=%u", // 打印 EEPROM 应用版本
+           (unsigned long)ee.app_version[CM7_APP_SLOT_A_INDEX],              // 应用槽位 A 版本号
+           (unsigned long)ee.app_version[CM7_APP_SLOT_B_INDEX],              // 应用槽位 B 版本号
+           (unsigned int)cm7_slot_a_ok,                                      // 检查槽位 A 是否有效
+           (unsigned int)cm7_slot_b_ok);                                     // 检查槽位 B 是否有效
+
+  LOG_INFO("BOOT", "CM4 EE: active=%u pending=%u trial=%u flags=0x%02X | ver A=%lu B=%lu", // 打印 CM4 EEPROM 元数据
+           (unsigned int)ee.cm4_active_slot,                                               // 激活槽位索引
+           (unsigned int)ee.cm4_pending_slot,                                              // 待处理槽位索引
+           (unsigned int)ee.cm4_boot_trial,                                                // 启动试用次数
+           (unsigned int)ee.cm4_flags,                                                     // 标志位
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX],                        // 应用槽位 A 版本号
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX]);                       // 应用槽位 B 版本号
+
   /* ping-pong：按 EEPROM 选择槽，直接跳转（不再 B→A 拷贝） */
   boot_slot = boot_eeprom_prepare_boot(&ee); // 从 EEPROM 准备启动槽位
   app_base = boot_slot_base_get(boot_slot);  // 获取启动槽位的基地址
