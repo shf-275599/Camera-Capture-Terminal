@@ -46,7 +46,7 @@ OPENAMP_RSC_TAB (xrw)  : ORIGIN = 0x38000000, LENGTH = 1K
 OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 63K
 }
 /* Highest address of the user mode stack */
-_estack = 0x10048000;    /* end of RAM */
+_estack = 0x10048000;    /* end of RAM = start RAM + LENGTH */
 __OPENAMP_region_start__  = ORIGIN(OPEN_AMP_SHMEM);
 __OPENAMP_region_end__    = ORIGIN(OPEN_AMP_SHMEM) + LENGTH(OPEN_AMP_SHMEM);
 /* Generate a link error if heap and stack don't fit into RAM */
