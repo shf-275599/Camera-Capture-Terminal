@@ -39,7 +39,7 @@ C_SOURCES =  \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
 ../../CM7/Core/Src/boot_jump.c \
-../../Common/Src/boot_eeprom.c \
+../../CM7/Core/Src/boot_eeprom.c \
 ../../CM7/Log/log.c \
 ../../BSP/EEPROM/bl24c16f.c \
 ../../CM7/Core/Src/main.c \

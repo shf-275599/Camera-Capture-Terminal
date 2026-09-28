@@ -8,9 +8,7 @@
 #include <stdio.h>
 
 #include "bl24c16f.h"
-#include "main.h"
-
-extern I2C_HandleTypeDef hi2c4;
+#include "i2c.h"
 
 #define BOOT_EE_TRIAL_MAX  (3U)
 

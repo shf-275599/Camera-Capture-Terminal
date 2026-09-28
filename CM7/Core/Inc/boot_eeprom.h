@@ -10,8 +10,8 @@
  * struct_ver=2：在 CM7 槽信息之外增加 CM4 A/B 槽元数据。
  * 读到 ver=1 旧记录时自动升级为 ver=2（CM4 默认 Slot A）。
  */
-#ifndef __BOOT_EEPROM_H__
-#define __BOOT_EEPROM_H__
+#ifndef BOOT_EEPROM_H
+#define BOOT_EEPROM_H
 
 #include <stdint.h>
 #include "boot_slot.h"
@@ -114,4 +114,4 @@ void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
                                  uint32_t version);
 
-#endif /* __BOOT_EEPROM_H__ */
+#endif /* BOOT_EEPROM_H */
