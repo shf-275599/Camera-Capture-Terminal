@@ -115,7 +115,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  /* D2 STOP 唤醒后刷新 CM4 侧 SystemCoreClock，并重建 SysTick */
+  SystemCoreClockUpdate();
+  (void)HAL_InitTick(TICK_INT_PRIORITY);
   /* USER CODE END Init */
 
   /* USER CODE BEGIN SysInit */

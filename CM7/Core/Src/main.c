@@ -43,6 +43,8 @@
 #include "lcd.h"
 #include "app_ipc_cm7.h"
 #include "app_ov5640.h"
+#include "boot_slot.h"
+#include "cm4_boot_handoff.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,7 +123,7 @@ int main(void)
   while((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET) && (timeout-- > 0));
   if ( timeout < 0 )
   {
-  Error_Handler();
+    // Error_Handler();
   }
 #endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
 /* USER CODE END Boot_Mode_Sequence_1 */
@@ -131,6 +133,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  __enable_irq();
   memory_protection_unit_init();  // 初始化内存保护单元
   scb_cache_init();               // 初始化缓存
   ipc_share_region_clear();       // 清除 IPC 共享区域
@@ -153,7 +156,7 @@ timeout = 0xFFFF;
 while((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) == RESET) && (timeout-- > 0));
 if ( timeout < 0 )
 {
-Error_Handler();
+  // Error_Handler();
 }
 #endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
 /* USER CODE END Boot_Mode_Sequence_2 */
@@ -173,6 +176,17 @@ Error_Handler();
   MX_DCMI_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  {
+    uint32_t g_pfnVectors[] = {0};
+    uint8_t running = boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
+    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;
+    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;
+    cm4_boot_handoff_write(cm4_base);
+    /* Stub @ Bank2 入口读 handoff 后跳 Slot；App 再 STOP 等 HSEM */
+    HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
+    printf("[APP] CM7 application started\r\n");
+    printf("[APP] image base: 0x%08X\r\n", cm4_base);
+  }
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
   lcd_init();         // 初始化 LCD
