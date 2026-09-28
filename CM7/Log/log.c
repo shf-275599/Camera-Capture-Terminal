@@ -7,7 +7,6 @@
 void log_write(int level, const char *module, const char *format, ...)
 {
     const char *color;
-    const char *name;
     va_list args;
 
     if (level > LOG_LEVEL || level < LOG_LEVEL_ERROR)
@@ -16,24 +15,20 @@ void log_write(int level, const char *module, const char *format, ...)
     switch (level)
     {
     case LOG_LEVEL_ERROR:
-        name = "ERROR";
         color = "\033[1;31m";
         break;
     case LOG_LEVEL_WARN:
-        name = "WARN";
         color = "\033[1;33m";
         break;
     case LOG_LEVEL_DEBUG:
-        name = "DEBUG";
         color = "\033[0;36m";
         break;
     default:
-        name = "INFO";
         color = "\033[0;32m";
         break;
     }
 
-    printf("\033[0m%s[%s][%s] ", color, name, module);
+    printf("\033[0m%s[%s] ", color, module);
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
