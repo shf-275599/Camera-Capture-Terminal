@@ -186,6 +186,7 @@ if ( timeout < 0 )
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     printf("[APP] CM7 application started\r\n");
     printf("[APP] app base address: 0x%08X\r\n", cm4_base);
+    printf("\r\n");
   }
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
