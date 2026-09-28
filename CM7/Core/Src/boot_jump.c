@@ -40,11 +40,11 @@ void boot_jump_to_app(uint32_t app_base)
 
     /* 向量表偏移 0：初始 MSP；偏移 4：Reset_Handler 入口（须 Thumb 态，LSB=1） */
     CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2); // 清除 BOOT_C2 位，使能Thumb 态，阻止 CM4 核从 Flash 启动
-    LOG_DEBUG("BOOT", "CM4 boot selection disabled");
+    LOG_INFO("BOOT", "CM4 boot selection disabled");
 
     /* 禁用所有中断，确保应用程序在跳转后不会被中断 */
     __disable_irq();
-    LOG_DEBUG("BOOT", "IRQs disabled");
+    LOG_INFO("BOOT", "IRQs disabled");
 
     /* 跳转前关闭 SysTick 并清 NVIC，避免 Boot 残留中断影响 APP */
     SysTick->CTRL = 0U;
@@ -57,7 +57,7 @@ void boot_jump_to_app(uint32_t app_base)
         NVIC->ICER[i] = 0xFFFFFFFFU;
         NVIC->ICPR[i] = 0xFFFFFFFFU;
     }
-    LOG_DEBUG("BOOT", "SysTick stopped and NVIC cleared");
+    LOG_INFO("BOOT", "SysTick stopped and NVIC cleared");
 
     /* 写入 DTCM 尾魔数，APP 侧 SystemInit 可区分「Boot 跳转」与「冷启动」 */
     *(__IO uint32_t *)BOOT_JUMP_FLAG_ADDR = BOOT_JUMP_MAGIC;
