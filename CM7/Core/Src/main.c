@@ -33,6 +33,7 @@
 #include "boot_config.h"
 #include "boot_jump.h"
 #include "log.h"
+#include "boot_eeprom.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +49,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* Private Variables 私有变量 */
+static boot_eeprom_meta_t ee; // EEPROM 元数据
 static uint8_t boot_slot;              // 启动槽位
 static uint32_t app_base;              // 应用基地址
 static volatile uint8_t cm7_slot_a_ok; // 检查 CM7 槽位 A 是否有效
@@ -128,7 +130,7 @@ int main(void)
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
-  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG);                // 打印固件标签
+  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
   printf("\n");
   printf("============= flash partition table ==============\r\n");
   printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
@@ -149,6 +151,9 @@ int main(void)
   printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印 USART1 配置
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
+
+  boot_eeprom_init();    // 初始化 EEPROM
+  boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
 
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效

@@ -9,6 +9,7 @@
 
 #include "bl24c16f.h"
 #include "i2c.h"
+#include "log.h"
 
 #define BOOT_EE_TRIAL_MAX  (3U)
 
@@ -206,12 +207,12 @@ int boot_eeprom_init(void)
     BL24C16F_Init(&s_ee_dev, &hi2c4);
 
     if (BL24C16F_IsReady(&s_ee_dev) != HAL_OK) {
-        printf("[BOOT] EEPROM not ready\r\n");
+        LOG_ERROR("BOOT","EEPROM not ready");
         return -1;
     }
 
     s_ee_ready = 1U;
-    printf("[BOOT] EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)\r\n",
+    LOG_INFO("BOOT","EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
            (unsigned int)BOOT_EE_COPY0_ADDR,
            (unsigned int)BOOT_EE_COPY1_ADDR,
            (unsigned int)BOOT_EE_STRUCT_VER);
@@ -251,7 +252,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
         return 0;
     }
 
-    printf("[BOOT] EEPROM meta empty/invalid, use defaults (CM7/CM4 active=A)\r\n");
+    LOG_INFO("BOOT","EEPROM meta empty/invalid, use defaults (CM7/CM4 active=A)");
     return 1;
 }
 
@@ -268,7 +269,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
     }
 
     if (sizeof(boot_eeprom_meta_t) > BOOT_EE_COPY_SIZE) {
-        printf("[BOOT] EEPROM meta too large (%u > %u)\r\n",
+        LOG_ERROR("BOOT","EEPROM meta too large (%u > %u)",
                (unsigned int)sizeof(boot_eeprom_meta_t),
                (unsigned int)BOOT_EE_COPY_SIZE);
         return -1;
@@ -293,7 +294,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
     }
 
     if (BL24C16F_Write(&s_ee_dev, target, (const uint8_t *)meta, sizeof(*meta)) != HAL_OK) {
-        printf("[BOOT] EEPROM save failed @ 0x%04X\r\n", (unsigned int)target);
+        LOG_ERROR("BOOT","EEPROM save failed @ 0x%04X", (unsigned int)target);
         return -1;
     }
 
@@ -345,7 +346,7 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
         }
 
         if (meta->boot_trial == 0U) {
-            printf("[BOOT] CM7 pending trial exhausted, fallback active=%u\r\n",
+            LOG_INFO("BOOT","CM7 pending trial exhausted, fallback active=%u",
                    (unsigned int)meta->active_slot);
             meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
             meta->pending_slot = meta->active_slot;
@@ -435,7 +436,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
         }
 
         if (meta->cm4_boot_trial == 0U) {
-            printf("[BOOT] CM4 pending trial exhausted, fallback active=%u\r\n",
+            LOG_INFO("BOOT","CM4 pending trial exhausted, fallback active=%u",
                    (unsigned int)meta->cm4_active_slot);
             meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
             meta->cm4_pending_slot = meta->cm4_active_slot;
