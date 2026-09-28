@@ -54,15 +54,15 @@ OPT = -Og
 ######################################
 # C sources
 C_SOURCES =  \
-../../BSP/bsp_delay.c \
-../../BSP/bsp_sys.c \
-../../BSP/MPU/mpu.c \
-../../BSP/SDRAM/sdram.c \
-../../BSP/LCD/lcd.c \
-../../BSP/LCD/lcd_ltdc.c \
-../../BSP/CAMERA/ov5640.c \
-../../BSP/CAMERA/ov5640_sccb.c \
-../../BSP/CAMERA/ov5640_dcmi.c \
+../../CM7/BSP/bsp_delay.c \
+../../CM7/BSP/bsp_sys.c \
+../../CM7/BSP/MPU/mpu.c \
+../../CM7/BSP/SDRAM/sdram.c \
+../../CM7/BSP/LCD/lcd.c \
+../../CM7/BSP/LCD/lcd_ltdc.c \
+../../CM7/BSP/CAMERA/ov5640.c \
+../../CM7/BSP/CAMERA/ov5640_sccb.c \
+../../CM7/BSP/CAMERA/ov5640_dcmi.c \
 ../../CM7/APP/CAMERA/app_ov5640.c \
 ../../Utilities/TJpgDec/tjpgd_utils.c \
 ../../CM7/APP/JPEG/app_sw_jpeg.c \
@@ -216,11 +216,11 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I../../BSP \
--I../../BSP/MPU \
--I../../BSP/SDRAM \
--I../../BSP/LCD \
--I../../BSP/CAMERA \
+-I../../CM7/BSP \
+-I../../CM7/BSP/MPU \
+-I../../CM7/BSP/SDRAM \
+-I../../CM7/BSP/LCD \
+-I../../CM7/BSP/CAMERA \
 -I../../CM7/APP/JPEG \
 -I../../CM7/APP/IPC \
 -I../../CM7/APP/CAMERA \

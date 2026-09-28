@@ -54,9 +54,6 @@ OPT = -Og
 ######################################
 # C sources
 C_SOURCES =  \
-../../BSP/bsp_delay.c \
-../../BSP/bsp_sys.c \
-../../BSP/MPU/mpu.c \
 ../../CM4/APP/IPC/app_ipc_cm4.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
@@ -189,8 +186,6 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I../../BSP \
--I../../BSP/MPU \
 -I../../CM4/APP/IPC \
 -I../../CM4/Core/Inc \
 -I../../Common/Inc \
