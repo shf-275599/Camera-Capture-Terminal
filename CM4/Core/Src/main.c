@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "app_ipc_cm4.h"
+#include "mylog.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -130,7 +131,7 @@ int main(void)
   MX_DMA_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init(); // 初始化 IPC 模块
-  printf("CM4: main() user init OK\n");
+  LOG_INFO("CM4", "main() user init OK");
   /* USER CODE END 2 */
 
   /* Init scheduler */

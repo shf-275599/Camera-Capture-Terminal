@@ -1,6 +1,7 @@
 #include "app_ipc_cm4.h"
 #include "openamp.h"
 #include "main.h"
+#include "mylog.h"
 
 static struct rpmsg_endpoint s_ept;
 
@@ -75,7 +76,7 @@ void app_ipc_cm4_init(void)
     Error_Handler();
   }
   OPENAMP_Wait_EndPointready(&s_ept);
-  printf("CM4: OpenAMP init OK\r\n");
+  LOG_INFO("CM4", "OpenAMP init OK");
 }
 
 void app_ipc_cm4_send(void)
