@@ -49,7 +49,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* Private Variables 私有变量 */
-static boot_eeprom_meta_t ee; // EEPROM 元数据
+static boot_eeprom_meta_t ee;          // EEPROM 元数据
 static uint8_t boot_slot;              // 启动槽位
 static uint32_t app_base;              // 应用基地址
 static volatile uint8_t cm7_slot_a_ok; // 检查 CM7 槽位 A 是否有效
@@ -177,23 +177,35 @@ int main(void)
   else
     LOG_WARN("BOOT", "CM4 slot B: invalid");
 
-  /* 选择槽位 */
-  if (cm7_slot_a_ok)
-    boot_slot = CM7_APP_SLOT_A_INDEX;
-  else if (!cm7_slot_a_ok && cm7_slot_b_ok)
-    boot_slot = CM7_APP_SLOT_B_INDEX;
-  /* 获取启动槽位的基地址 */
-  app_base = boot_slot_base_get(boot_slot);
-  /* 校验应用程序是否有效*/
-  if (boot_app_is_valid(app_base))
-  {
-    LOG_INFO("BOOT", "Bootloader Start Jump to App...");
-    boot_jump_to_app(app_base);
-    LOG_ERROR("BOOT", "Bootloader Jump to App returned unexpectedly"); // 打印跳转错误提示
+  /* ping-pong：按 EEPROM 选择槽，直接跳转（不再 B→A 拷贝） */
+  boot_slot = boot_eeprom_prepare_boot(&ee); // 从 EEPROM 准备启动槽位
+  app_base = boot_slot_base_get(boot_slot);  // 获取启动槽位的基地址
+
+  if (boot_app_is_valid(app_base))                   // 校验应用程序是否有效
+  {                                                  // 有效
+    uint32_t sp = *(__IO uint32_t *)app_base;        // 获取初始 MSP
+    uint32_t pc = *(__IO uint32_t *)(app_base + 4U); // 获取 Reset_Handler 入口
+
+    LOG_INFO("BOOT", "jump slot %u @ 0x%08lX",                       // 打印跳转槽位
+             (unsigned int)boot_slot, (unsigned long)app_base);      // boot 基地址和 app 基地址
+    LOG_INFO("BOOT", "vec SP=0x%08lX Reset=0x%08lX",                 // 打印向量表
+             (unsigned long)sp, (unsigned long)pc);                  // 初始 MSP 和 Reset_Handler 入口
+    LOG_INFO("BOOT", "hold CM4 reset, then jump...");                // 打印 CM4 重置提示
+    boot_jump_to_app(app_base);                                      // 跳转应用程序应用程序
+    LOG_ERROR("BOOT", "ERROR: Jump returned (should never happen)"); // 打印跳转错误提示
   }
   else
-  {
-    LOG_ERROR("BOOT", "CM7 app at 0x%08lx is invalid", (unsigned long)app_base);
+  {                                                                            // 无效
+    LOG_ERROR("BOOT", "no valid APP (tried slot %u @ 0x%08lX), stay in Boot.", // 打印无效应用程序提示
+              (unsigned int)boot_slot, (unsigned long)app_base);               // boot 基地址和 app 基地址
+    LOG_INFO("BOOT", "  A: SP=0x%08lX Reset=0x%08lX valid=%u",                 // 打印槽位 A 向量表
+             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_A_BASE),           // 初始 MSP
+             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_A_BASE + 4U)),    // Reset_Handler 入口
+             (unsigned int)cm7_slot_a_ok);                                     // 槽位 A 是否有效
+    LOG_INFO("BOOT", "  B: SP=0x%08lX Reset=0x%08lX valid=%u",                 // 打印槽位 B 向量表
+             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_B_BASE),           // 初始 MSP
+             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_B_BASE + 4U)),    // Reset_Handler 入口
+             (unsigned int)cm7_slot_b_ok);                                     // 槽位 B 是否有效
   }
   /* USER CODE END 2 */
 
