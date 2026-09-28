@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-/* 同步输出到 printf 已重定向的 USART1；仅在主循环上下文调用。 */
+/* 同步输出到各核 printf 已重定向的通道；仅在非中断上下文调用。 */
 void log_write(int level, const char *module, const char *format, ...)
 {
     const char *color;

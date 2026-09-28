@@ -54,7 +54,7 @@ OPT = -Og
 ######################################
 # C sources
 C_SOURCES =  \
-../../CM4/Log/mylog.c \
+../../Common/Src/mylog.c \
 ../../CM4/APP/IPC/app_ipc_cm4.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
@@ -187,7 +187,6 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I../../CM4/Log \
 -I../../CM4/APP/IPC \
 -I../../CM4/Core/Inc \
 -I../../Common/Inc \
