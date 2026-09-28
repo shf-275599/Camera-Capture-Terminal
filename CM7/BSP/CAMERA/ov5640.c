@@ -23,8 +23,7 @@
 #include "ov5640_sccb.h"
 #include "ov5640_dcmi.h"
 #include "bsp_delay.h"
-#include <stdio.h>
-
+#include "mylog.h"
 
 /* OV5640模块芯片ID */
 #define ov5640_CHIP_ID  0x5640
@@ -287,7 +286,7 @@ uint8_t ov5640_init(void)
     {
         return OV5640_ERROR;
     }
-    printf("CM7: OV5640 chip ID=0x%04X\r\n", chip_id);
+    LOG_INFO("CM7","OV5640 chip ID=0x%04X", chip_id);
     
     ov5640_init_reg();              /* OV5640寄存器序列 */
     

@@ -6,7 +6,7 @@
 #include "stdlib.h"
 #include "lcd.h"
 #include "lcdfont.h"
-#include <stdio.h>
+#include "mylog.h"
 #include "bsp_delay.h"
 #include "lcd_ltdc.h"
 
@@ -194,14 +194,14 @@ void lcd_init(void)
     lcddev.id = 0X8081;
 #endif
    
-    printf("CM7: LCD ID:%x\n", lcddev.id); /* 打印LCD ID */
+    LOG_INFO("CM7","LCD ID:%x", lcddev.id); /* 打印LCD ID */
     if (lcddev.id != 0)                 /* ID非零,说明有RGB屏接入 */
     {
         ltdc_init();                    /* 初始化LTDC */
-        printf("CM7: LCD init OK\r\n");
+        LOG_INFO("CM7","LCD init OK");
     }
     else {
-        printf("CM7: LCD init Failed, no RGB screen connected\r\n");
+        LOG_INFO("CM7","LCD init Failed, no RGB screen connected");
     }
 
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */

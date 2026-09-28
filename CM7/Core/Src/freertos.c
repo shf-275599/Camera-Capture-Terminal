@@ -33,6 +33,7 @@
 #include "app_hw_jpeg.h"
 #include "jpeg_utils.h"
 #include "app_ov5640.h"
+#include "mylog.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,7 +86,7 @@ void MX_FREERTOS_Init(void) {
   // {
   //     printf("CM7: Hardware JPEG decode failed\n");
   // }
-  printf("CM7: FreeRTOS init OK\r\n");
+  LOG_INFO("CM7","FreeRTOS init OK");
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */

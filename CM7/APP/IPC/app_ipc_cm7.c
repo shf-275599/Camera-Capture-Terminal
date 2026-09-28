@@ -1,5 +1,6 @@
 #include "app_ipc_cm7.h"
 #include "openamp.h"
+#include "mylog.h"
 #include "main.h"
 
 static struct rpmsg_endpoint s_ept;
@@ -45,7 +46,7 @@ void app_ipc_cm7_init(void)
   {
     Error_Handler();
   }
-  printf("CM7: OpenAMP init OK\r\n");
+  LOG_INFO("CM7","OpenAMP init OK");
 }
 
 

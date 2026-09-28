@@ -4,7 +4,7 @@
  */
 #include "sdram.h"
 #include "fmc.h"
-#include <stdio.h>
+#include "mylog.h"
 
 /**
  * @brief  SDRAM 初始化（上电时序 + 刷新率配置，在 MX_FMC_Init 之后调用）
@@ -13,7 +13,7 @@ void sdram_init(void)
 {
     sdram_initialization_sequence();
     HAL_SDRAM_ProgramRefreshRate(&hsdram1, SDRAM_REFRESH_COUNT);
-    printf("CM7: SDRAM init OK\r\n");
+    LOG_INFO("CM7","SDRAM init OK");
 }
 
 /**
@@ -101,6 +101,6 @@ void sdram_test(void)
             break;
         }
 
-        printf("SDRAM Capacity: %lu KB\r\n", (unsigned long)((temp - sval + 1U) * 16U));
+        LOG_INFO("CM7","SDRAM Capacity: %lu KB", (unsigned long)((temp - sval + 1U) * 16U));
     }
 }
