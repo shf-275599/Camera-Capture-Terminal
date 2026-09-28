@@ -125,7 +125,7 @@ int main(void)
   printf("|  _ \\| | | | | | | | | | |   | | | |/ _ \\ | | | |  _| | |_) |      \n");
   printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
   printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
-  printf("\n");
+  printf("\r\n");
   const uint32_t cm7_reserve_size =
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
