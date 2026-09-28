@@ -38,6 +38,7 @@ BUILD_DIR = build
 C_SOURCES =  \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
+../../Common/Src/boot_eeprom.c \
 ../../BSP/EEPROM/bl24c16f.c \
 ../../CM4/Core/Src/main.c \
 ../../CM4/Core/Src/stm32h7xx_it.c \
@@ -129,7 +130,7 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -I../../Common/Inc \
--I../../BSP/EEPROM/Inc \
+-I../../BSP/EEPROM \
 -I../../CM4/Core/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
