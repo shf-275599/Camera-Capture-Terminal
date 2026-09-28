@@ -271,7 +271,8 @@ void OPENAMP_Wait_EndPointready(struct rpmsg_endpoint *rp_ept)
   while(!is_rpmsg_ept_ready(rp_ept))
   {
     /* USER CODE BEGIN 0 */
-
+      /* 启动阶段即使 HSEM 通知丢失，也主动处理已到达的消息。 */
+      rproc_virtio_notified(rvdev.vdev, VRING1_ID);
     /* USER CODE END 0 */
       MAILBOX_Poll(rvdev.vdev);
 
