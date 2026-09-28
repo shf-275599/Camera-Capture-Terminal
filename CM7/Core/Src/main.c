@@ -32,7 +32,7 @@
 #include "boot_slot.h"
 #include "boot_config.h"
 #include "boot_jump.h"
-#include "log.h"
+#include "mylog.h"
 #include "boot_eeprom.h"
 /* USER CODE END Includes */
 

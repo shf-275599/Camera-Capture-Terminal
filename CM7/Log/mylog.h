@@ -1,5 +1,5 @@
-#ifndef BOOT_LOG_H
-#define BOOT_LOG_H
+#ifndef __MY_LOG_H__
+#define __MY_LOG_H__
 
 /* 编译期日志级别：设为 LOG_LEVEL_NONE 可关闭全部日志。 */
 #define LOG_LEVEL_NONE  0
@@ -38,4 +38,4 @@ void log_write(int level, const char *module, const char *format, ...);
 #define LOG_DEBUG(module, ...) ((void)0)
 #endif
 
-#endif /* BOOT_LOG_H */
+#endif /* __MY_LOG_H__ */

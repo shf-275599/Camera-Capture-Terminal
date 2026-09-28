@@ -1,7 +1,7 @@
 #include "boot_jump.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include "log.h"
+#include "mylog.h"
 #include <stdio.h>
 #include "boot_slot.h"
 #include "stm32h7xx.h"

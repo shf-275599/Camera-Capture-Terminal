@@ -9,7 +9,7 @@
 
 #include "bl24c16f.h"
 #include "i2c.h"
-#include "log.h"
+#include "mylog.h"
 
 #define BOOT_EE_TRIAL_MAX  (3U)
 
