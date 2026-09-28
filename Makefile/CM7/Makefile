@@ -54,6 +54,7 @@ OPT = -Og
 ######################################
 # C sources
 C_SOURCES =  \
+../../CM7/Log/mylog.c \
 ../../CM7/BSP/bsp_delay.c \
 ../../CM7/BSP/bsp_sys.c \
 ../../CM7/BSP/MPU/mpu.c \
@@ -216,6 +217,7 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
+-I../../CM7/Log \
 -I../../CM7/BSP \
 -I../../CM7/BSP/MPU \
 -I../../CM7/BSP/SDRAM \
