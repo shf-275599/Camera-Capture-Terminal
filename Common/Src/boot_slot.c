@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "stm32h7xx.h"
 
-static uint32_t g_pfnVectors[] = {0};
+extern uint32_t g_pfnVectors[];
 
 /**
  * @brief   检查 slot_index 是否有效
