@@ -153,8 +153,12 @@ int main(void)
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
-  bsp_eeprom_init();     // 初始化 EEPROM
-  boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
+  if (bsp_eeprom_init() == 0)     // 初始化 EEPROM
+  {
+    boot_eeprom_init();
+    boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
+  }
+  
 
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
