@@ -5,6 +5,7 @@
 #include "boot_eeprom.h"
 #include <string.h>
 #include "bl24c16f.h"
+#include "bsp_eeprom.h"
 #include "mylog.h"
 
 #define BOOT_EE_TRIAL_MAX (3U)
@@ -165,11 +166,13 @@ static int boot_ee_copy_valid_v2(const boot_eeprom_meta_t *meta)
     {
         return 0;
     }
-    if (meta->cm4_active_slot >= CM4_APP_SLOT_COUNT)
+    if ((meta->cm4_active_slot != CM4_APP_SLOT_A_INDEX) &&
+        (meta->cm4_active_slot != CM4_APP_SLOT_B_INDEX))
     {
         return 0;
     }
-    if (meta->cm4_pending_slot >= CM4_APP_SLOT_COUNT)
+    if ((meta->cm4_pending_slot != CM4_APP_SLOT_A_INDEX) &&
+        (meta->cm4_pending_slot != CM4_APP_SLOT_B_INDEX))
     {
         return 0;
     }
@@ -276,6 +279,7 @@ static int boot_ee_read_copy_as_v2(uint16_t addr, boot_eeprom_meta_t *out)
  */
 int boot_eeprom_init(void)
 {
+    s_ee_dev = *bsp_eeprom_handle();
     s_ee_ready = 1U;
     LOG_INFO("APP", "EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
              (unsigned int)BOOT_EE_COPY0_ADDR,
@@ -540,13 +544,15 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
 
     /* pending 需同时满足：标志置位、索引在边界内、槽内镜像校验有效 */
     if (((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) &&
-        (meta->cm4_pending_slot < CM4_APP_SLOT_COUNT) &&
+        ((meta->cm4_pending_slot == CM4_APP_SLOT_A_INDEX) ||
+         (meta->cm4_pending_slot == CM4_APP_SLOT_B_INDEX)) &&
         (boot_slot_is_valid(meta->cm4_pending_slot) != 0))
     {
         return meta->cm4_pending_slot;
     }
 
-    if ((meta->cm4_active_slot < CM4_APP_SLOT_COUNT) &&
+    if (((meta->cm4_active_slot == CM4_APP_SLOT_A_INDEX) ||
+         (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
         (boot_slot_is_valid(meta->cm4_active_slot) != 0))
     {
         return meta->cm4_active_slot;
@@ -643,15 +649,16 @@ void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
                                  uint32_t version)
 {
-    if ((meta == NULL) || (slot_index >= CM4_APP_SLOT_COUNT))
+    if ((meta == NULL) ||
+        ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX)))
     {
         return;
     }
 
     meta->cm4_pending_slot = slot_index;
-    meta->cm4_app_size[slot_index] = image_size;
-    meta->cm4_app_crc[slot_index] = image_crc32;
-    meta->cm4_app_version[slot_index] = version;
+    meta->cm4_app_size[slot_index - CM4_APP_SLOT_A_INDEX] = image_size;
+    meta->cm4_app_crc[slot_index - CM4_APP_SLOT_A_INDEX] = image_crc32;
+    meta->cm4_app_version[slot_index - CM4_APP_SLOT_A_INDEX] = version;
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;

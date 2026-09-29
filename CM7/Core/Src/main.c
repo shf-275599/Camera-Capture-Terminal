@@ -204,8 +204,8 @@ int main(void)
                (unsigned int)ee.cm4_active_slot,
                (unsigned int)ee.cm4_pending_slot,
                (unsigned int)ee.cm4_flags,
-               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX],
-               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX]);
+               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],
+               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);
 
       /* 试启动成功：把 pending 提交为 active，避免 Boot 继续倒计时回滚 */
       if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) &&
