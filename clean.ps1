@@ -27,7 +27,7 @@ function Get-SafeBuildDirectory {
 }
 
 $cores = @('CM4', 'CM7')
-$buildDirectories = @('build', 'build_A', 'build_B')
+$buildDirectories = @('build', 'build_B')
 
 foreach ($core in $cores) {
     $coreDirectory = Join-Path $PSScriptRoot "Makefile\$core"

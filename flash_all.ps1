@@ -45,7 +45,9 @@ foreach ($core in @('CM4', 'CM7')) {
     }
 
     foreach ($slot in @('A', 'B')) {
-        $firmwares["$core-$slot"] = Join-Path (Join-Path $makeDirectory "build_$slot") "${targetBase}_$slot.elf"
+        $buildDirectory = if ($slot -eq 'A') { 'build' } else { 'build_B' }
+        $targetName = if ($slot -eq 'A') { $targetBase } else { "${targetBase}_$slot" }
+        $firmwares["$core-$slot"] = Join-Path (Join-Path $makeDirectory $buildDirectory) "$targetName.elf"
     }
 }
 
