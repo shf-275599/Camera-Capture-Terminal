@@ -38,9 +38,9 @@ BUILD_DIR = build
 C_SOURCES =  \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
-../../CM7/Core/Src/boot_jump.c \
-../../CM7/Core/Src/boot_eeprom.c \
 ../../CM7/Log/mylog.c \
+../../CM7/APP/BOOT/boot_jump.c \
+../../CM7/APP/BOOT/boot_eeprom.c \
 ../../CM7/BSP/EEPROM/bl24c16f.c \
 ../../CM7/BSP/EEPROM/bsp_eeprom.c \
 ../../CM7/Core/Src/main.c \
@@ -137,6 +137,7 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -I../../Common/Inc \
+-I../../CM7/APP/BOOT \
 -I../../CM7/BSP/EEPROM \
 -I../../CM7/Core/Inc \
 -I../../CM7/Log \
