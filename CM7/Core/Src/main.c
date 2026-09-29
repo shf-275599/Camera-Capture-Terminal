@@ -153,12 +153,12 @@ int main(void)
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
-  if (bsp_eeprom_init() == 0)     // 初始化 EEPROM
+  if (bsp_eeprom_init() == 0) // 初始化 EEPROM
   {
     boot_eeprom_init();
     boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
   }
-  
+
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
   if (cm7_slot_a_ok)
@@ -194,13 +194,13 @@ int main(void)
            (unsigned int)cm7_slot_a_ok,                                      // 检查槽位 A 是否有效
            (unsigned int)cm7_slot_b_ok);                                     // 检查槽位 B 是否有效
 
-  LOG_INFO("BOOT", "CM4 EE: active=%u pending=%u trial=%u flags=0x%02X | ver A=%lu B=%lu", // 打印 CM4 EEPROM 元数据
-           (unsigned int)ee.cm4_active_slot,                                               // 激活槽位索引
-           (unsigned int)ee.cm4_pending_slot,                                              // 待处理槽位索引
-           (unsigned int)ee.cm4_boot_trial,                                                // 启动试用次数
-           (unsigned int)ee.cm4_flags,                                                     // 标志位
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX],                        // 应用槽位 A 版本号
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX]);                       // 应用槽位 B 版本号
+  LOG_INFO("BOOT", "CM4 EE: active=%u pending=%u trial=%u flags=0x%02X | ver A=%lu B=%lu",  // 打印 CM4 EEPROM 元数据
+           (unsigned int)ee.cm4_active_slot,                                                // 激活槽位索引
+           (unsigned int)ee.cm4_pending_slot,                                               // 待处理槽位索引
+           (unsigned int)ee.cm4_boot_trial,                                                 // 启动试用次数
+           (unsigned int)ee.cm4_flags,                                                      // 标志位
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],  // 应用槽位 A 版本号
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]); // 应用槽位 B 版本号
 
   /* ping-pong：按 EEPROM 选择槽，直接跳转（不再 B→A 拷贝） */
   boot_slot = boot_eeprom_prepare_boot(&ee); // 从 EEPROM 准备启动槽位
