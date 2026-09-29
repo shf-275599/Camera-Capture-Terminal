@@ -64,7 +64,7 @@ C_SOURCES =  \
 ../../CM7/BSP/CAMERA/ov5640.c \
 ../../CM7/BSP/CAMERA/ov5640_sccb.c \
 ../../CM7/BSP/CAMERA/ov5640_dcmi.c \
-../../CM7/BSP/EEPROM/Src/bl24c16f.c \
+../../CM7/BSP/EEPROM/bl24c16f.c \
 ../../CM7/BSP/EEPROM/bsp_eeprom.c \
 ../../CM7/APP/CAMERA/app_ov5640.c \
 ../../Utilities/TJpgDec/tjpgd_utils.c \
@@ -227,7 +227,6 @@ C_INCLUDES =  \
 -I../../CM7/BSP/LCD \
 -I../../CM7/BSP/CAMERA \
 -I../../CM7/BSP/EEPROM \
--I../../CM7/BSP/EEPROM/Inc \
 -I../../CM7/APP/JPEG \
 -I../../CM7/APP/IPC \
 -I../../CM7/APP/CAMERA \
