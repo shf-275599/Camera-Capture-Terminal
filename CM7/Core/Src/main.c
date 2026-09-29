@@ -153,10 +153,26 @@ int main(void)
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
+  int ee_load_ret;
+
   if (bsp_eeprom_init() == 0) // 初始化 EEPROM
   {
     boot_eeprom_init();
-    boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
+    ee_load_ret = boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
+
+    if (ee_load_ret == 1) // EEPROM 空
+    {
+      LOG_INFO("BOOT", "EEPROM empty, saving default metadata");
+
+      if (boot_eeprom_save(&ee) == 0) // 保存默认元数据
+      {
+        LOG_INFO("BOOT", "EEPROM default metadata saved");
+      }
+      else
+      {
+        LOG_ERROR("BOOT", "EEPROM default metadata save failed");
+      }
+    }
   }
 
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
