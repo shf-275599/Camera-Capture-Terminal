@@ -159,7 +159,6 @@ int main(void)
     boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
   }
   
-
   cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
   cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
   if (cm7_slot_a_ok)
