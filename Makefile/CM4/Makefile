@@ -36,8 +36,8 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
+../../CM4/APP/BOOT/cm4_boot_handoff.c \
 ../../Common/Src/boot_slot.c \
-../../Common/Src/cm4_boot_handoff.c \
 ../../CM4/Core/Src/main.c \
 ../../CM4/Core/Src/stm32h7xx_it.c \
 ../../CM4/Core/Src/stm32h7xx_hal_msp.c \
@@ -127,6 +127,7 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
+-I../../CM4/APP/BOOT \
 -I../../Common/Inc \
 -I../../CM4/Core/Inc \
 -I../../Drivers/STM32H7xx_HAL_Driver/Inc \
