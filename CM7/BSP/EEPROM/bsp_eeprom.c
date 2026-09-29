@@ -26,11 +26,11 @@ int bsp_eeprom_init(void)
   status = BL24C16F_IsReady(&s_eeprom);
   if (status != HAL_OK)
   {
-    LOG_ERROR("APP", "EEPROM not ready, status=%d", (int)status);
+    LOG_ERROR("BOOT", "EEPROM not ready, status=%d", (int)status);
     return -1;
   }
 
-  LOG_INFO("APP", "EEPROM ready (BL24C16F @ I2C4)");
+  LOG_INFO("BOOT", "EEPROM ready (BL24C16F @ I2C4)");
   return 0;
 }
 
@@ -47,30 +47,30 @@ int bsp_eeprom_selftest(void)
 
   if (s_eeprom.hi2c == NULL)
   {
-    LOG_ERROR("APP", "EEPROM selftest: not inited");
+    LOG_ERROR("BOOT", "EEPROM selftest: not inited");
     return -1;
   }
 
   status = BL24C16F_Write(&s_eeprom, BSP_EEPROM_USER_BASE, write_buf, sizeof(write_buf));
   if (status != HAL_OK)
   {
-    LOG_ERROR("APP", "EEPROM write failed, status=%d", (int)status);
+    LOG_ERROR("BOOT", "EEPROM write failed, status=%d", (int)status);
     return -1;
   }
 
   status = BL24C16F_Read(&s_eeprom, BSP_EEPROM_USER_BASE, read_buf, sizeof(read_buf));
   if (status != HAL_OK)
   {
-    LOG_ERROR("APP", "EEPROM read failed, status=%d", (int)status);
+    LOG_ERROR("BOOT", "EEPROM read failed, status=%d", (int)status);
     return -1;
   }
 
   if (memcmp(write_buf, read_buf, sizeof(read_buf)) != 0)
   {
-    LOG_ERROR("APP", "EEPROM data mismatch");
+    LOG_ERROR("BOOT", "EEPROM data mismatch");
     return -1;
   }
 
-  LOG_INFO("APP", "EEPROM read/write OK @ 0x%04X", (unsigned int)BSP_EEPROM_USER_BASE);
+  LOG_INFO("BOOT", "EEPROM read/write OK @ 0x%04X", (unsigned int)BSP_EEPROM_USER_BASE);
   return 0;
 }
