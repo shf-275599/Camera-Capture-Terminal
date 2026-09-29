@@ -42,6 +42,7 @@ C_SOURCES =  \
 ../../CM7/Core/Src/boot_eeprom.c \
 ../../CM7/Log/mylog.c \
 ../../CM7/BSP/EEPROM/bl24c16f.c \
+../../CM7/BSP/EEPROM/bsp_eeprom.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
