@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "stm32h7xx.h"
 
+static uint32_t g_pfnVectors[] = {0};
+
 /**
  * @brief   检查 slot_index 是否有效
  * @param   slot_index  slot_index
@@ -180,4 +182,13 @@ uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
         }
     }
     return 1; 
+}
+
+/**
+ * @brief   检测当前运行的 slot_index
+ * @return  uint8_t     slot_index
+ */
+uint8_t boot_detect_slot_running(void)
+{
+    return boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
 }
