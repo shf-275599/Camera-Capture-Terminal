@@ -7,6 +7,8 @@
 #include "stm32h7xx.h"
 #include "boot_config.h"
 
+static void Boot_HoldCm4(void);
+
 /**
  * @brief  校验指定基地址处应用程序是否有效
  * @param  app_base 应用程序向量表基地址
@@ -39,7 +41,7 @@ void boot_jump_to_app(uint32_t app_base)
              (unsigned long)app_stack, (unsigned long)app_entry);
 
     /* 向量表偏移 0：初始 MSP；偏移 4：Reset_Handler 入口（须 Thumb 态，LSB=1） */
-    CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2); // 清除 BOOT_C2 位，使能Thumb 态，阻止 CM4 核从 Flash 启动
+    Boot_HoldCm4();
     LOG_INFO("BOOT", "CM4 boot selection disabled");
 
     /* 禁用所有中断，确保应用程序在跳转后不会被中断 */
@@ -86,4 +88,13 @@ void boot_jump_to_app(uint32_t app_base)
         :
         : "r"(app_entry)
         : "memory");
+}
+
+/**
+ * @brief  阻止 CM4 核从 Flash 启动
+ * @retval 无
+ */
+static void Boot_HoldCm4(void)
+{
+    CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2); // 清除 BOOT_C2 位，使能Thumb 态
 }
