@@ -5,7 +5,6 @@
 #include "boot_eeprom.h"
 #include <string.h>
 #include "bl24c16f.h"
-#include "i2c.h"
 #include "mylog.h"
 
 #define BOOT_EE_TRIAL_MAX  (3U)
@@ -200,14 +199,6 @@ static int boot_ee_read_copy_as_v2(uint16_t addr, boot_eeprom_meta_t *out)
 
 int boot_eeprom_init(void)
 {
-    s_ee_ready = 0U;
-    BL24C16F_Init(&s_ee_dev, &hi2c4);
-
-    if (BL24C16F_IsReady(&s_ee_dev) != HAL_OK) {
-        LOG_ERROR("APP", "EEPROM not ready");
-        return -1;
-    }
-
     s_ee_ready = 1U;
     LOG_INFO("APP", "EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
            (unsigned int)BOOT_EE_COPY0_ADDR,
