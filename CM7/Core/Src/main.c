@@ -95,7 +95,7 @@ void MX_FREERTOS_Init(void);
 /* Private Function Prototypes 私有函数原型 */
 static void ipc_share_region_clear(void)
 {
-  memset((void *)0x38000000, 0, 0x00010000); // 清除 SRAM4（D3）区域，64KB 大小
+  memset((void *)0x38000000, 0, 0x00010000); // 启动前清空 64KB SRAM4；后续会在这里写 CM4 handoff
 }
 /* USER CODE END PFP */
 
@@ -141,7 +141,7 @@ int main(void)
   __enable_irq();
   memory_protection_unit_init(); // 初始化内存保护单元
   scb_cache_init();              // 初始化缓存
-  ipc_share_region_clear();      // 清除 IPC 共享区域
+  ipc_share_region_clear();      // 先清共享内存，再写入 CM4 启动地址
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -175,31 +175,33 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C4_Init();
   /* USER CODE BEGIN 2 */
-  { /* 板载 BL24C16F：Boot 双备份 meta + 用户区自检 */
-    boot_eeprom_meta_t ee;
-    uint8_t running = boot_detect_slot_running();
-    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;
-    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;
-    int ee_ok = 0;
-    printf("\033[1;36m"); // 加粗；青色
+  {                                               /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
+    boot_eeprom_meta_t ee;                        // 保存 EEPROM 中的 active、pending 等启动记录
+    uint8_t running = boot_detect_slot_running(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
+    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;      // EEPROM 不可用时，CM4 默认从 A 槽启动
+    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;      // CM4 默认应用的 Flash 起始地址
+    int ee_ok = 0;                                // 记录本次是否成功初始化 EEPROM
+    printf("\033[1;36m");                         // 加粗；青色
     printf("    _     ____   ____   _      ___   ____     _     _____  ___   ___   _   _ \n");
     printf("   / \\   |  _ \\ |  _ \\ | |    |_ _| / ___|   / \\   |_   _||_ _| / _ \\ | \\ | |\n");
     printf("  / _ \\  | |_) || |_) || |     | | | |      / _ \\    | |   | | | | | ||  \\| |\n");
     printf(" / ___ \\ |  __/ |  __/ | |___  | | | |___  / ___ \\   | |   | | | |_| || |\\  |\n");
     printf("/_/   \\_\\|_|    |_|    |_____||___| \\____|/_/   \\_\\  |_|  |___| \\___/ |_| \\_|\n");
     printf("\n");
-    if (bsp_eeprom_init() == 0)
+    if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM，成功时返回 0
     {
-      (void)boot_eeprom_init();
-      (void)boot_eeprom_load(&ee);
-      ee_ok = 1;
+      (void)boot_eeprom_init();    // 准备 Boot 元数据的 EEPROM 访问
+      (void)boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
+      ee_ok = 1;                   // EEPROM 可访问，后续按启动记录选择 CM4 槽
 
+      /* 打印当前 CM7 槽和 EEPROM 记录，便于核对启动状态 */
       LOG_INFO("APP", "CM7 running slot=%u base=0x%08lX | EE active=%u pending=%u flags=0x%02X",
                (unsigned int)running,
                (unsigned long)boot_slot_base_get(running),
                (unsigned int)ee.active_slot,
                (unsigned int)ee.pending_slot,
                (unsigned int)ee.flags);
+      /* 打印 CM4 的启动槽和两个应用版本 */
       LOG_INFO("APP", "CM4 EE active=%u pending=%u flags=0x%02X verA=%lu verB=%lu",
                (unsigned int)ee.cm4_active_slot,
                (unsigned int)ee.cm4_pending_slot,
@@ -207,31 +209,31 @@ int main(void)
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);
 
-      /* 试启动成功：把 pending 提交为 active，避免 Boot 继续倒计时回滚 */
+      /* 本次确实运行在待确认槽时，将其设为正式启动槽，停止试启动回退 */
       if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) &&
           (ee.pending_slot == running))
       {
-        boot_eeprom_commit_pending(&ee);
+        boot_eeprom_commit_pending(&ee); // 更新 active 并清除 pending，写回 EEPROM
         LOG_INFO("APP", "CM7 OTA pending committed -> active=%u",
                  (unsigned int)ee.active_slot);
       }
 
-      cm4_slot = boot_eeprom_prepare_cm4_boot(&ee);
-      cm4_base = boot_slot_base_get(cm4_slot);
+      cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、active、兜底顺序选择 CM4 槽，并处理试启动次数
+      cm4_base = boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
 
-      (void)bsp_eeprom_selftest();
+      (void)bsp_eeprom_selftest(); // 检查 EEPROM 用户区读写，不参与本次槽位选择
     }
     else
     {
-      LOG_ERROR("APP", "CM7 EEPROM init fail, CM4 default Slot A");
+      LOG_ERROR("APP", "CM7 EEPROM init fail, CM4 default Slot A"); // 初始化失败时沿用前面设置的 CM4 A 槽默认值
     }
 
-    cm4_boot_handoff_write(cm4_base);
+    cm4_boot_handoff_write(cm4_base); // 将 CM4 应用地址写入 SRAM4，供固定 Stub 读取
     LOG_INFO("APP", "CM4 handoff slot=%u base=0x%08lX ee=%d",
              (unsigned int)cm4_slot,
              (unsigned long)cm4_base,
              ee_ok);
-    /* Stub @ Bank2 入口读 handoff 后跳 Slot；App 再 STOP 等 HSEM */
+    /* 使能 CM4 后，Bank2 固定 Stub 读取 handoff 并跳转到所选应用槽 */
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     LOG_INFO("APP", "CM4 boot core enabled");
   }
