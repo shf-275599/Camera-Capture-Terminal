@@ -50,13 +50,13 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* Private Variables 私有变量 */
-static boot_eeprom_meta_t ee;          // EEPROM 元数据
-static uint8_t boot_slot;              // 启动槽位
-static uint32_t app_base;              // 应用基地址
-static volatile uint8_t cm7_slot_a_ok; // 检查 CM7 槽位 A 是否有效
-static volatile uint8_t cm7_slot_b_ok; // 检查 CM7 槽位 B 是否有效
-static volatile uint8_t cm4_slot_a_ok; // 检查 CM4 槽位 A 是否有效
-static volatile uint8_t cm4_slot_b_ok; // 检查 CM4 槽位 B 是否有效
+static boot_eeprom_meta_t ee;          // EEPROM 中的 active、pending、试启动次数等记录
+static uint8_t boot_slot;              // 本次选中的 CM7 槽号
+static uint32_t app_base;              // 本次选中的 CM7 应用 Flash 起始地址
+static volatile uint8_t cm7_slot_a_ok; // CM7 A 槽向量表检查结果
+static volatile uint8_t cm7_slot_b_ok; // CM7 B 槽向量表检查结果
+static volatile uint8_t cm4_slot_a_ok; // CM4 A 槽向量表检查结果
+static volatile uint8_t cm4_slot_b_ok; // CM4 B 槽向量表检查结果
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -88,13 +88,13 @@ int main(void)
   /* USER CODE END Boot_Mode_Sequence_0 */
 
   /* USER CODE BEGIN Boot_Mode_Sequence_1 */
-  /* 等待 CM4 进入 STOP；超时仍继续，避免未烧 CM4 时 Bootloader 卡死 */
-  timeout = 0xFFFF;
+  /* 等待 CM4 进入 STOP，超时后继续启动，避免 CM4 未烧录时卡住 */
+  timeout = 0xFFFF; // 限制等待次数
   while ((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET) && (timeout-- > 0))
-    ;
+    ; // D2 时钟仍就绪说明 CM4 尚未进入 STOP
   if (timeout < 0)
   {
-    /* CM4 未进 STOP，IAP 跳转前由 Boot_HoldCm4() 拉住 CM4 */
+    /* CM4 未进 STOP；跳转函数随后会禁止 CM4 从固定入口启动 */
   }
   /* USER CODE END Boot_Mode_Sequence_1 */
   /* MCU Configuration--------------------------------------------------------*/
@@ -127,12 +127,14 @@ int main(void)
   printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
   printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
   printf("\r\n");
+  /* 两段预留区大小由相邻应用槽地址算出，仅用于打印分区表 */
   const uint32_t cm7_reserve_size =
       CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
   const uint32_t cm4_reserve_size =
       CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
   printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
   printf("\n");
+  /* 打印双核 Flash 分区，便于对照实际烧录位置 */
   printf("============= flash partition table ==============\r\n");
   printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
   printf("|     name     |   offset   |    size    | value |\r\n");
@@ -153,18 +155,18 @@ int main(void)
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
-  int ee_load_ret;
+  int ee_load_ret; // 区分 EEPROM 已有启动记录与首次使用
 
-  if (bsp_eeprom_init() == 0) // 初始化 EEPROM
+  if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM；成功返回 0
   {
-    boot_eeprom_init();
-    ee_load_ret = boot_eeprom_load(&ee); // 从 EEPROM 加载元数据
+    boot_eeprom_init();                  // 准备 Boot 元数据的 EEPROM 访问
+    ee_load_ret = boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时填入默认值
 
-    if (ee_load_ret == 1) // EEPROM 空
+    if (ee_load_ret == 1) // 无有效启动记录，首次写入默认值
     {
       LOG_INFO("BOOT", "EEPROM empty, saving default metadata");
 
-      if (boot_eeprom_save(&ee) == 0) // 保存默认元数据
+      if (boot_eeprom_save(&ee) == 0) // 将默认启动记录写入 EEPROM
       {
         LOG_INFO("BOOT", "EEPROM default metadata saved");
       }
@@ -175,8 +177,9 @@ int main(void)
     }
   }
 
-  cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
-  cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  /* 仅检查栈指针和复位入口等向量表条件，不计算整个镜像的 CRC */
+  cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查 CM7 A 槽向量表
+  cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查 CM7 B 槽向量表
   if (cm7_slot_a_ok)
     LOG_INFO("BOOT", "CM7 slot A: valid");
   else
@@ -186,8 +189,8 @@ int main(void)
   else
     LOG_WARN("BOOT", "CM7 slot B: invalid");
 
-  cm4_slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查槽位 A 是否有效
-  cm4_slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查槽位 B 是否有效
+  cm4_slot_a_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查 CM4 A 槽向量表，仅用于打印
+  cm4_slot_b_ok = (uint8_t)boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查 CM4 B 槽向量表，仅用于打印
   if (cm4_slot_a_ok)
     LOG_INFO("BOOT", "CM4 slot A: valid");
   else
@@ -218,35 +221,36 @@ int main(void)
            (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],  // 应用槽位 A 版本号
            (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]); // 应用槽位 B 版本号
 
-  /* ping-pong：按 EEPROM 选择槽，直接跳转（不再 B→A 拷贝） */
-  boot_slot = boot_eeprom_prepare_boot(&ee); // 从 EEPROM 准备启动槽位
-  app_base = boot_slot_base_get(boot_slot);  // 获取启动槽位的基地址
+  /* 按 pending、active、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
+  boot_slot = boot_eeprom_prepare_boot(&ee); // 选择启动槽，并在需要时更新 EEPROM 试启动状态
+  app_base = boot_slot_base_get(boot_slot);  // 将槽号换算为应用向量表的 Flash 地址
 
-  if (boot_app_is_valid(app_base))                   // 校验应用程序是否有效
-  {                                                  // 有效
-    uint32_t sp = *(__IO uint32_t *)app_base;        // 获取初始 MSP
-    uint32_t pc = *(__IO uint32_t *)(app_base + 4U); // 获取 Reset_Handler 入口
+  if (boot_app_is_valid(app_base)) // 再次确认目标槽地址及向量表符合启动条件
+  {
+    uint32_t sp = *(__IO uint32_t *)app_base;        // 向量表第 1 项：应用启动时的栈顶 MSP
+    uint32_t pc = *(__IO uint32_t *)(app_base + 4U); // 向量表第 2 项：应用的 Reset_Handler 地址
 
-    LOG_INFO("BOOT", "jump slot %u @ 0x%08lX",                       // 打印跳转槽位
-             (unsigned int)boot_slot, (unsigned long)app_base);      // boot 基地址和 app 基地址
-    LOG_INFO("BOOT", "vec SP=0x%08lX Reset=0x%08lX",                 // 打印向量表
-             (unsigned long)sp, (unsigned long)pc);                  // 初始 MSP 和 Reset_Handler 入口
-    LOG_INFO("BOOT", "hold CM4 reset, then jump...");                // 打印 CM4 重置提示
-    boot_jump_to_app(app_base);                                      // 跳转应用程序应用程序
-    LOG_ERROR("BOOT", "ERROR: Jump returned (should never happen)"); // 打印跳转错误提示
+    LOG_INFO("BOOT", "jump slot %u @ 0x%08lX", // 打印要启动的槽号和地址
+             (unsigned int)boot_slot, (unsigned long)app_base);
+    LOG_INFO("BOOT", "vec SP=0x%08lX Reset=0x%08lX", // 打印应用栈顶和复位入口
+             (unsigned long)sp, (unsigned long)pc);
+    LOG_INFO("BOOT", "hold CM4 reset, then jump...");                // 提示跳转时将禁止 CM4 从固定入口启动
+    boot_jump_to_app(app_base);                                      // 清理 Boot 中断、切换栈和向量表，跳到应用
+    LOG_ERROR("BOOT", "ERROR: Jump returned (should never happen)"); // 正常跳转不返回；返回说明跳转异常
   }
   else
-  {                                                                            // 无效
-    LOG_ERROR("BOOT", "no valid APP (tried slot %u @ 0x%08lX), stay in Boot.", // 打印无效应用程序提示
-              (unsigned int)boot_slot, (unsigned long)app_base);               // boot 基地址和 app 基地址
-    LOG_INFO("BOOT", "  A: SP=0x%08lX Reset=0x%08lX valid=%u",                 // 打印槽位 A 向量表
-             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_A_BASE),           // 初始 MSP
-             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_A_BASE + 4U)),    // Reset_Handler 入口
-             (unsigned int)cm7_slot_a_ok);                                     // 槽位 A 是否有效
-    LOG_INFO("BOOT", "  B: SP=0x%08lX Reset=0x%08lX valid=%u",                 // 打印槽位 B 向量表
-             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_B_BASE),           // 初始 MSP
-             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_B_BASE + 4U)),    // Reset_Handler 入口
-             (unsigned int)cm7_slot_b_ok);                                     // 槽位 B 是否有效
+  {
+    /* 无法启动所选 CM7 槽：打印 A/B 向量表帮助定位，随后留在 Bootloader */
+    LOG_ERROR("BOOT", "no valid APP (tried slot %u @ 0x%08lX), stay in Boot.", // 报告失败槽号及地址
+              (unsigned int)boot_slot, (unsigned long)app_base);
+    LOG_INFO("BOOT", "  A: SP=0x%08lX Reset=0x%08lX valid=%u",              // A 槽栈顶、复位入口及检查结果
+             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_A_BASE),        // A 槽向量表第 1 项
+             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_A_BASE + 4U)), // A 槽向量表第 2 项
+             (unsigned int)cm7_slot_a_ok);
+    LOG_INFO("BOOT", "  B: SP=0x%08lX Reset=0x%08lX valid=%u",              // B 槽栈顶、复位入口及检查结果
+             (unsigned long)(*(__IO uint32_t *)CM7_APP_SLOT_B_BASE),        // B 槽向量表第 1 项
+             (unsigned long)(*(__IO uint32_t *)(CM7_APP_SLOT_B_BASE + 4U)), // B 槽向量表第 2 项
+             (unsigned int)cm7_slot_b_ok);
   }
   /* USER CODE END 2 */
 
