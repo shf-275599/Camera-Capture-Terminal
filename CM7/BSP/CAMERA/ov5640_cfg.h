@@ -23,16 +23,16 @@
 
 #include "ov5640.h"
 
-/* OV5640模块固件下载起始地址 */
+/* OV5640自动对焦固件在传感器内部存储器中的下载起始地址。 */
 #define OV5640_FW_DOWNLOAD_ADDR 0x8000
 
 typedef struct
 {
-    uint16_t reg;
-    uint8_t dat;
+    uint16_t reg; /* 寄存器地址 */
+    uint8_t dat;  /* 写入值 */
 } ov5640_reg_cfg_t;
 
-/* OV5640模块寄存器初始化配置表 */
+/* OV5640模块上电后的寄存器初始化配置表。 */
 const ov5640_reg_cfg_t ov5640_init_cfg[] = {
     {0x3008, 0x42},
     {0x3103, 0x03},
@@ -243,10 +243,7 @@ const ov5640_reg_cfg_t ov5640_init_cfg[] = {
     {0x4740, 0x21},
 };
 
-/* OV5640模块输出RGB565寄存器配置表
- * 15FPS
- * 最大支持1280*800的RGB565图像输出
- */
+/* OV5640模块输出RGB565寄存器配置表：15 FPS，最大支持1280*800。 */
 const ov5640_reg_cfg_t ov5640_rgb565_cfg[] = {
     {0x4300, 0x6F},
     {0x501F, 0x01},
@@ -295,10 +292,7 @@ const ov5640_reg_cfg_t ov5640_rgb565_cfg[] = {
     {0x3503, 0x00},
 };
 
-/* OV5640模块输出JPEG寄存器配置表
- * 7.5FPS
- * 最大支持2592*1944的JPEG图像输出
- */
+/* OV5640模块输出JPEG寄存器配置表：7.5 FPS，最大支持2592*1944。 */
 const ov5640_reg_cfg_t ov5640_jpeg_cfg[] = {
     {0x4300, 0x30},
     {0x501F, 0x00},
@@ -343,7 +337,7 @@ const ov5640_reg_cfg_t ov5640_jpeg_cfg[] = {
     {0x3503, 0x00},
 };
 
-/* OV5640自动对焦固件 */
+/* OV5640自动对焦固件二进制数据。 */
 const uint8_t ov5640_auto_focus_firmware[] = {
     0x02, 0x0F, 0xD6, 0x02, 0x0A, 0x39, 0xC2, 0x01, 0x22, 0x22, 0x00, 0x02, 0x0F, 0xB2, 0xE5, 0x1F,
     0x70, 0x72, 0xF5, 0x1E, 0xD2, 0x35, 0xFF, 0xEF, 0x25, 0xE0, 0x24, 0x4E, 0xF8, 0xE4, 0xF6, 0x08,

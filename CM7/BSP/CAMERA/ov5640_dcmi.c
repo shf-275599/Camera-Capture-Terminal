@@ -30,7 +30,7 @@ static struct
 
 /**
  * @brief       OV5640模块DCMI接口帧中断回调函数
- * @param       无
+ * @param       hdcmi: DCMI句柄
  * @retval      无
  */
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
@@ -42,23 +42,20 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 /**
  * @brief       开始OV5640模块DCMI接口DMA传输
  * @param       dts_addr        : 帧数据的接收目的地址
- *              meminc          : DMA_MINC_DISABLE: 帧数据接收的目的地址自动增加
- *                                DMA_MINC_ENABLE : 帧数据接收的目的地址不自动增加
+ *              meminc          : DMA_MINC_DISABLE: 帧数据接收的目的地址不自动增加
+ *                                DMA_MINC_ENABLE : 帧数据接收的目的地址自动增加
  *              memdataalignment: DMA_MDATAALIGN_BYTE    : 帧数据接收缓冲的位宽为8比特
  *                                DMA_MDATAALIGN_HALFWORD: 帧数据接收缓冲的位宽为16比特
  *                                DMA_MDATAALIGN_WORD    : 帧数据接收缓冲的位宽为32比特
- *              len             : 传输的帧数据大小
+ *              len             : DMA传输的数据单元数量
  * @retval      OV5640_EOK: 成功
  *              OV5640_DCMI_ERROR: 失败
- *              OV5640_DCMI_EINVAL: 非法参数
  *              OV5640_DCMI_ETIMEOUT: 超时
  */
 uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len)
 {
     uint32_t start_tick = HAL_GetTick();
-    /* 清空帧接收完成标记
-     * 使能DCMI帧接收中断
-     */
+    /* 清空帧接收完成标记，并使能DCMI帧接收中断。 */
     LOG_INFO("CM7","OV5640 begin start DCMI DMA");
     g_ov5640_dcmi_sta.frame_sem = 0;
     __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);

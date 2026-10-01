@@ -42,7 +42,7 @@
 /* OV5640 SCCB通讯地址 */
 #define OV5640_SCCB_ADDR                    0x3C
 
-/* OV5640模块ISP输入窗口最大尺寸 */
+/* OV5640模块ISP输入窗口最大坐标值 */
 #define OV5640_ISP_INPUT_WIDTH_MAX          0x0A3F
 #define OV5640_ISP_INPUT_HEIGHT_MAX         0x06A9
 
