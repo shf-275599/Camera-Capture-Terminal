@@ -17,7 +17,7 @@ void app_ov5640_init(void)
     if (ret != OV5640_EOK)
     {
         LOG_INFO("CM7","OV5640 init FAILED (err=%d)", ret);
-        
+        return;
     }
 
     ov5640_led_on();
