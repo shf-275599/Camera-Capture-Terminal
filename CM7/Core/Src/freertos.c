@@ -66,7 +66,6 @@ const osThreadAttr_t defaultTask_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void OpenAMP_Task(void *argument);
-void OV5640_Task(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -122,17 +121,6 @@ void MX_FREERTOS_Init(void) {
   {
     return;
   }
-
-  xReturn = xTaskCreate((TaskFunction_t)OV5640_Task,
-                        (char *)"OV5640_Task",
-                        (uint16_t)256 * 4,
-                        (void *)NULL,
-                        (uint8_t)1,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -169,15 +157,6 @@ void OpenAMP_Task(void *argument)
   {
     OPENAMP_check_for_message();
     osDelay(100);
-  }
-}
-void OV5640_Task(void *argument)
-{
-  for (;;)
-  {
-    app_ov5640_capture_colorbar();
-    osDelay(1000);
-    vTaskDelete(NULL);
   }
 }
 /* USER CODE END Application */

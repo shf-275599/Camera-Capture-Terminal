@@ -201,7 +201,7 @@ void lcd_init(void)
         LOG_INFO("CM7","LCD init OK");
     }
     else {
-        LOG_INFO("CM7","LCD init Failed, no RGB screen connected");
+        LOG_ERROR("CM7","LCD init Failed, no RGB screen connected");
     }
 
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */
