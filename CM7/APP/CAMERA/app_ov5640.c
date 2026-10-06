@@ -6,6 +6,7 @@
 #include "ov5640.h"
 #include "lcd_ltdc.h"
 #include "dcmi.h"
+#include "cmsis_os2.h"
 #include "mylog.h"
 
 void app_ov5640_init(void)
@@ -104,6 +105,7 @@ uint8_t app_ov5640_run_test(void)
         LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL pattern=%u", ret);
         return ret;
     }
+    osDelay(2000);
     ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
     if (ret != OV5640_EOK)
     {
