@@ -62,10 +62,16 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+const osThreadAttr_t cameraTestTask_attributes = {
+  .name = "CameraTestTask",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void OpenAMP_Task(void *argument);
+void CameraTestTask(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -107,6 +113,10 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  if (osThreadNew(CameraTestTask, NULL, &cameraTestTask_attributes) == NULL)
+  {
+    LOG_ERROR("CM7", "CameraTestTask create failed");
+  }
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -158,6 +168,18 @@ void OpenAMP_Task(void *argument)
     OPENAMP_check_for_message();
     osDelay(100);
   }
+}
+
+void CameraTestTask(void *argument)
+{
+  (void)argument;
+
+  if (app_ov5640_run_test() != 0U)
+  {
+    LOG_ERROR("CM7", "CAMERA_TEST_FAIL");
+  }
+
+  vTaskDelete(NULL);
 }
 /* USER CODE END Application */
 

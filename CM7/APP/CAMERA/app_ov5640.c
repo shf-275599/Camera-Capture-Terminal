@@ -59,3 +59,53 @@ void app_ov5640_capture_colorbar(void)
     }
     LOG_INFO("CM7","Colorbar frame captured to 0x%08X", LTDC_FRAME_BUF_ADDR);
 }
+
+uint8_t app_ov5640_run_test(void)
+{
+    uint8_t ret;
+
+    LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_START");
+    ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL format=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_output_size(800, 480);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL size=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_COLOR_BAR);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL pattern=%u", ret);
+        return ret;
+    }
+    ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL capture=%u", ret);
+        return ret;
+    }
+    LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_PASS");
+
+    LOG_INFO("CM7", "CAMERA_TEST_REAL_START");
+    ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL pattern=%u", ret);
+        return ret;
+    }
+    ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
+        return ret;
+    }
+    LOG_INFO("CM7", "CAMERA_TEST_REAL_PASS");
+    LOG_INFO("CM7", "CAMERA_TEST_PASS");
+
+    return OV5640_EOK;
+}

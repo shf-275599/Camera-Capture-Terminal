@@ -5,7 +5,10 @@
 #ifndef __APP_OV5640_H
 #define __APP_OV5640_H
 
+#include <stdint.h>
+
 void app_ov5640_init(void);
 void app_ov5640_capture_colorbar(void);
+uint8_t app_ov5640_run_test(void);
 
 #endif /* __APP_OV5640_H */
