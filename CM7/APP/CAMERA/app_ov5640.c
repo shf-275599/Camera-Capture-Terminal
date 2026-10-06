@@ -90,6 +90,11 @@ uint8_t app_ov5640_run_test(void)
         return ret;
     }
     LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_PASS");
+    LOG_INFO("CM7", "COLORBAR pixels: %04X %04X %04X %04X",
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[0],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[400],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
 
     LOG_INFO("CM7", "CAMERA_TEST_REAL_START");
     ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
@@ -105,6 +110,11 @@ uint8_t app_ov5640_run_test(void)
         return ret;
     }
     LOG_INFO("CM7", "CAMERA_TEST_REAL_PASS");
+    LOG_INFO("CM7", "REAL pixels: %04X %04X %04X %04X",
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[0],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[400],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240],
+             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
     LOG_INFO("CM7", "CAMERA_TEST_PASS");
 
     return OV5640_EOK;

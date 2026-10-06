@@ -79,6 +79,12 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     }
 
     LOG_INFO("CM7","OV5640 DCMI DMA transfer done");
+    if (hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE || hdcmi.DMA_Handle->ErrorCode != HAL_DMA_ERROR_NONE)
+    {
+        LOG_ERROR("CM7", "OV5640 DCMI error=0x%lX DMA error=0x%lX", (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode);
+        HAL_DCMI_Stop(&hdcmi);
+        return OV5640_DCMI_ERROR;
+    }
     HAL_DCMI_Stop(&hdcmi);
 
     return OV5640_EOK;
