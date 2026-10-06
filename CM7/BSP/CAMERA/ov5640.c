@@ -1588,6 +1588,11 @@ uint8_t ov5640_set_output_size(uint16_t width, uint16_t height)
     ov5640_write_reg(0x3212, 0xA3);
 
     ov5640_get_output_size();
+    LOG_INFO("CM7", "OV5640 output readback=%ux%u expected=%ux%u", g_ov5640_sta.output.width, g_ov5640_sta.output.height, width, height);
+    if (g_ov5640_sta.output.width != width || g_ov5640_sta.output.height != height)
+    {
+        return OV5640_ERROR;
+    }
 
     return OV5640_EOK;
 }
