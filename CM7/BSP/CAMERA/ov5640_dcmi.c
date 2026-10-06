@@ -26,7 +26,15 @@
 static struct
 {
     volatile uint8_t frame_sem;
+    volatile uint16_t lines;
+    volatile uint16_t frame_lines;
 } g_ov5640_dcmi_sta = {0};
+
+void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+    (void)hdcmi;
+    g_ov5640_dcmi_sta.lines++;
+}
 
 /**
  * @brief       OV5640模块DCMI接口帧中断回调函数
@@ -36,6 +44,7 @@ static struct
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_IT_FRAME); // 清除帧中断标志位
+    g_ov5640_dcmi_sta.frame_lines = g_ov5640_dcmi_sta.lines;
     g_ov5640_dcmi_sta.frame_sem = 1;
 }
 
@@ -58,7 +67,9 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     /* 清空帧接收完成标记，并使能DCMI帧接收中断。 */
     LOG_INFO("CM7","OV5640 begin start DCMI DMA");
     g_ov5640_dcmi_sta.frame_sem = 0;
-    __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
+    g_ov5640_dcmi_sta.lines = 0;
+    g_ov5640_dcmi_sta.frame_lines = 0;
+    __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME | DCMI_IT_LINE);
     if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
     {
         LOG_ERROR("CM7","OV5640 start DCMI DMA failed");
@@ -79,6 +90,11 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     }
 
     LOG_INFO("CM7","OV5640 DCMI DMA transfer done");
+    LOG_INFO("CM7", "DCMI lines=%u DMA size=%lu remaining=%lu count=%lu dma_state=%lu dcmi_state=%lu",
+             g_ov5640_dcmi_sta.frame_lines,
+             (unsigned long)hdcmi.XferSize, (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->NDTR,
+             (unsigned long)hdcmi.XferCount, (unsigned long)hdcmi.DMA_Handle->State,
+             (unsigned long)hdcmi.State);
     if (hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE || hdcmi.DMA_Handle->ErrorCode != HAL_DMA_ERROR_NONE)
     {
         LOG_ERROR("CM7", "OV5640 DCMI error=0x%lX DMA error=0x%lX", (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode);
