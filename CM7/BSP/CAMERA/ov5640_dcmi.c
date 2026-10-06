@@ -65,7 +65,6 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
 {
     uint32_t start_tick = HAL_GetTick();
     /* 清空帧接收完成标记，并使能DCMI帧接收中断。 */
-    LOG_INFO("CM7","OV5640 begin start DCMI DMA");
     g_ov5640_dcmi_sta.frame_sem = 0;
     g_ov5640_dcmi_sta.lines = 0;
     g_ov5640_dcmi_sta.frame_lines = 0;
@@ -77,7 +76,6 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
         HAL_DCMI_Stop(&hdcmi);
         return OV5640_DCMI_ERROR;
     }
-    LOG_INFO("CM7","OV5640 start DCMI DMA OK");
     
     /* 等待传输完成 */
     while (g_ov5640_dcmi_sta.frame_sem == 0)
@@ -90,11 +88,6 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
         }
     }
 
-    LOG_INFO("CM7","OV5640 DCMI DMA transfer done");
-    LOG_INFO("CM7", "DCMI DMA size=%lu remaining=%lu count=%lu dma_state=%lu dcmi_state=%lu",
-             (unsigned long)hdcmi.XferSize, (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->NDTR,
-             (unsigned long)hdcmi.XferCount, (unsigned long)hdcmi.DMA_Handle->State,
-             (unsigned long)hdcmi.State);
     if (hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE ||
         (hdcmi.DMA_Handle->ErrorCode & ~HAL_DMA_ERROR_FE) != HAL_DMA_ERROR_NONE ||
         hdcmi.XferCount != hdcmi.XferTransferNumber)

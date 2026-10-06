@@ -142,5 +142,14 @@ uint8_t app_ov5640_run_test(void)
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
     LOG_INFO("CM7", "CAMERA_TEST_PASS");
 
-    return OV5640_EOK;
+    for (;;)
+    {
+        ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+        if (ret != OV5640_EOK)
+        {
+            LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
+            return ret;
+        }
+        osDelay(1);
+    }
 }
