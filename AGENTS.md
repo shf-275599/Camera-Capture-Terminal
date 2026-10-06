@@ -1,27 +1,16 @@
 # 仓库操作说明
 
-## 项目结构
+## 构建与验证
 
-- 这是一个基于 STM32H757XIH6 双核的项目，由 STM32CubeMX 6.18.1 生成，使用 Makefile 工具链。`CM7/` 为主核，拥有 SDRAM、LCD/LTDC、DMA2D 以及 OpenAMP 主端；`CM4/` 拥有 USART1 和 OpenAMP 从端。
-- 双核均使用 FreeRTOS，并通过 OpenAMP/RPMsg 经由 SRAM4 通信。CM7 在启动时通过 HSEM 释放 CM4，因此对启动同步、`CM4/OPENAMP`、`CM7/OPENAMP`、链接脚本或 MPU/缓存配置的更改必须成对考虑。
-- `BaseProject.ioc` 是 CubeMX 的源文件（真相来源）。生成的外设文件包含 `USER CODE` 区域；请保留这些区域，并注意 CubeMX 重新生成时会覆盖生成的部分。
+- 这是 STM32H757XIH6 双核固件。Windows PowerShell 中使用 GNU Make 和 `arm-none-eabi-*` 工具链（可通过 `GCC_PATH` 指定）；`make -C Makefile` 先构建 CM4、再构建 CM7，默认仅构建 A 槽。
+- 聚焦单核/单槽：`make -C Makefile/CM7 APP_SLOT=B` 或 `make -C Makefile/CM4 APP_SLOT=A`；双槽分别运行 `make -C Makefile/CM7 all-slots`、`make -C Makefile/CM4 all-slots`。各核 A 槽产物在 `Makefile/CMx/build/`，B 槽在 `Makefile/CMx/build_B/`（`CMx` 为 `CM4` 或 `CM7`）；`./clean.ps1` 清理两个核的双槽产物。
+- 仓库没有独立测试或 lint 入口；源码变更构建受影响的核，修改 `Common/`、启动或 OpenAMP 时构建两个核。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
+- `./flash_all.ps1 [-Jobs N]` 先构建两个核的双槽，再按 CM7-A、CM4-A、CM7-B、CM4-B 顺序烧录，最后复位。需要 ST-Link 和 STM32CubeProgrammer；CLI 未在 PATH 时可设置 `STM32_PROGRAMMER_CLI`。不要把烧录脚本当作仅构建命令。
 
-## 构建与清理
+## 启动和修改边界
 
-- 在仓库根目录下，使用 `make -C Makefile` 构建两个固件镜像；根 Makefile 先构建 CM4，再构建 CM7。
-- 单独构建某个核：`./flash_cm7.ps1`、`./flash_cm4.ps1` 或 `./flash_all.ps1`。生成的 ELF/HEX/BIN/MAP 文件位于对应的 `Makefile/CM4/build` 或 `Makefile/CM7/build` 目录下。
-- Makefile 直接通过 `./flash_cm7.ps1`、`./flash_cm4.ps1` 或 `./flash_all.ps1` 构建。
-- 清理生成的核输出：在 PowerShell 中运行 `./clean.ps1`，或直接执行 `make -C Makefile/CM4 clean` 和 `make -C Makefile/CM7 clean`。
-- 仓库没有测试或 lint 套件。对源码更改的验证重点是受影响核的构建成功；涉及共享启动/OpenAMP 代码的更改应同时构建两个核。
-
-## 烧录与调试
-
-- 烧录需要 Windows PowerShell、GNU Make、ST-Link 连接以及 STM32CubeProgrammer。使用 `./flash_cm7.ps1`、`./flash_cm4.ps1` 或 `./flash_all.ps1`；每个脚本在烧录前会先构建，并验证 ELF 文件是否存在。
-- 如果 `STM32_Programmer_CLI.exe` 不在 `PATH` 中，也不在脚本的 Windows 后备路径之一，请设置 `STM32_PROGRAMMER_CLI` 环境变量。`flash_all.ps1` 先烧录 CM7，再烧录 CM4，并在 CM4 烧录后执行复位。
-- VS Code Cortex-Debug 配置期望生成的 ELF 路径以及 `.vscode/launch.json` 中硬编码的本地 STM32CubeIDE/ST-Link 路径；请将这些路径视为机器特定，不要假设它们能在其他主机上工作。
-
-## 变更边界
-
-- 除非更改确实必要，否则不要编辑 `Drivers/`、`Middlewares/` 或 CubeMX 生成的外设代码段。优先在 `BSP/`、`CM4/APP/` 和 `CM7/APP/` 或 `USER CODE` 块中编写应用代码。
-- 保持 CM7/CM4 的 OpenAMP 角色和共享内存布局一致。链接脚本将 OpenAMP 共享内存放置在 `0x38000400`，大小为 63 KiB，而 MPU/缓存配置将 `0x38000000` 处的 SRAM4 视为共享非缓存内存。
-- 不要提交构建产物或调试器元数据。`.gitignore` 已排除 `*.elf`、`*.hex`、`*.bin`、`*.map`、`*.lst`、`*.d`、构建输出以及 `.vscode` 内容。
+- `CM7/Core/Src/main.c` 配置 MPU/缓存并清空 SRAM4，然后通过 HSEM 唤醒 CM4；`CM4/Core/Src/main.c` 在 D2 STOP 中等待。双核通过 `CM7/OPENAMP`、`CM4/OPENAMP` 与 `Common/` 中的共享代码协作；修改同步、IPC、启动或内存布局时同时检查两核。
+- CM7 初始化外设后通过 `CM7/APP/BOOT/boot_eeprom.c` 读取 EEPROM 启动记录、选择 CM4 应用槽，再调用 `Common/Src/cm4_boot_handoff.c` 将 CM4 应用地址写入 SRAM4，并使能 CM4 启动核；EEPROM 不可用时默认 CM4 A 槽。修改槽位选择、EEPROM 启动记录或 handoff 时，同时核对 `Common/Inc/boot_slot.h`、CM4 Stub 的约定和双核链接脚本。
+- 双核链接脚本把 SRAM4 前 1 KiB 定义为 `OPENAMP_RSC_TAB`，63 KiB 共享段从 `0x38000400` 开始；实际 `.resource_table` 节放在共享段起点。CM7 MPU 将 `0x38000000` 起的整个 64 KiB 配置为共享、不可缓存。CM7 A/B 槽分别从 `0x08020000`/`0x080A0000` 链接，CM4 A/B 槽分别从 `0x08120000`/`0x081A0000` 链接；CM4 的 `0x08100000` 留给 Stub。
+- `BaseProject.ioc` 是 CubeMX 配置源；`Core/` 中的外设代码为生成代码，修改时保留 `USER CODE` 区域。应用逻辑主要在 `CM7/APP/`、`CM4/APP/` 和 `CM7/BSP/`，不要无故改动 `Drivers/` 或 `Middlewares/`。
+- `.vscode/launch.json` 的 ST-Link/STM32CubeProgrammer 路径是本机路径，调试配置仅指向 A 槽 ELF。构建目录和固件产物已被 `.gitignore` 排除。
