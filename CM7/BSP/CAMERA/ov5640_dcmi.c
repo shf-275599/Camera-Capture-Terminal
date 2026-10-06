@@ -69,7 +69,8 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     g_ov5640_dcmi_sta.frame_sem = 0;
     g_ov5640_dcmi_sta.lines = 0;
     g_ov5640_dcmi_sta.frame_lines = 0;
-    __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME | DCMI_IT_LINE);
+    __HAL_DCMI_DISABLE_IT(&hdcmi, DCMI_IT_FRAME);
+    __HAL_DCMI_CLEAR_FLAG(&hdcmi, DCMI_FLAG_FRAMERI);
     if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
     {
         LOG_ERROR("CM7","OV5640 start DCMI DMA failed");
@@ -90,14 +91,19 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     }
 
     LOG_INFO("CM7","OV5640 DCMI DMA transfer done");
-    LOG_INFO("CM7", "DCMI lines=%u DMA size=%lu remaining=%lu count=%lu dma_state=%lu dcmi_state=%lu",
-             g_ov5640_dcmi_sta.frame_lines,
+    LOG_INFO("CM7", "DCMI DMA size=%lu remaining=%lu count=%lu dma_state=%lu dcmi_state=%lu",
              (unsigned long)hdcmi.XferSize, (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->NDTR,
              (unsigned long)hdcmi.XferCount, (unsigned long)hdcmi.DMA_Handle->State,
              (unsigned long)hdcmi.State);
-    if (hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE || hdcmi.DMA_Handle->ErrorCode != HAL_DMA_ERROR_NONE)
+    if (hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE ||
+        (hdcmi.DMA_Handle->ErrorCode & ~HAL_DMA_ERROR_FE) != HAL_DMA_ERROR_NONE ||
+        hdcmi.XferCount != hdcmi.XferTransferNumber)
     {
         LOG_ERROR("CM7", "OV5640 DCMI error=0x%lX DMA error=0x%lX", (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode);
+        LOG_ERROR("CM7", "DMA addr0=0x%08lX addr1=0x%08lX pixels first=%04X last=%04X",
+                  (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->M0AR,
+                  (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->M1AR,
+                  ((volatile uint16_t *)dts_addr)[0], ((volatile uint16_t *)dts_addr)[800U * 480U - 1U]);
         HAL_DCMI_Stop(&hdcmi);
         return OV5640_DCMI_ERROR;
     }
