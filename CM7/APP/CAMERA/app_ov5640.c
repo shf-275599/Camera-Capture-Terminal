@@ -66,7 +66,6 @@ uint8_t app_ov5640_run_test(void)
     uint8_t ret;
 
     LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_START");
-    hdcmi.Instance->CR &= ~DCMI_CR_HSPOL;
     ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
     if (ret != OV5640_EOK)
     {

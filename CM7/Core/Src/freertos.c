@@ -62,11 +62,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-const osThreadAttr_t cameraTestTask_attributes = {
-  .name = "CameraTestTask",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -113,10 +108,6 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-  if (osThreadNew(CameraTestTask, NULL, &cameraTestTask_attributes) == NULL)
-  {
-    LOG_ERROR("CM7", "CameraTestTask create failed");
-  }
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -124,6 +115,16 @@ void MX_FREERTOS_Init(void) {
   xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
                         (char *)"OpenAMP_Task",
                         (uint16_t)256,
+                        (void *)NULL,
+                        (uint8_t)5,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
+  xReturn = xTaskCreate((TaskFunction_t)CameraTestTask,
+                        (char *)"CameraTestTask",
+                        (uint16_t)512,
                         (void *)NULL,
                         (uint8_t)5,
                         (TaskHandle_t *)NULL);
