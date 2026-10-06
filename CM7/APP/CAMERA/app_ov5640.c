@@ -65,6 +65,10 @@ void app_ov5640_capture_colorbar(void)
 uint8_t app_ov5640_run_test(void)
 {
     uint8_t ret;
+    volatile uint16_t *frame = (volatile uint16_t *)LTDC_FRAME_BUF_ADDR;
+    uint16_t green = frame[800U * 240U + 350U];
+    uint32_t green_mismatches = 0;
+    uint32_t x;
 
     LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_START");
     ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
@@ -106,6 +110,15 @@ uint8_t app_ov5640_run_test(void)
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 550],
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 650],
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 750]);
+    green = frame[800U * 240U + 350U];
+    for (x = 310U; x < 390U; x++)
+    {
+        if (frame[800U * 240U + x] != green)
+        {
+            green_mismatches++;
+        }
+    }
+    LOG_INFO("CM7", "COLORBAR green=%04X mismatches=%lu/80", green, (unsigned long)green_mismatches);
 
     LOG_INFO("CM7", "CAMERA_TEST_REAL_START");
     ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
