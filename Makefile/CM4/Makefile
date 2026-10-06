@@ -27,7 +27,7 @@ APP_FLASH_ORIGIN = 0x08120000
 LDSCRIPT = stm32h757xx_flash_CM4.ld
 else ifeq ($(APP_SLOT_NAME),B)
 APP_FLASH_ORIGIN = 0x081A0000
-LDSCRIPT = stm32h757xx_flash_CM4.ld
+LDSCRIPT = stm32h757xx_flash_CM4_slot_B.ld
 TARGET := BaseProject_CM4_B
 BUILD_DIR := build_B
 else
