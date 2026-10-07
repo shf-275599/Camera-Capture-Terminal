@@ -55,9 +55,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern ETH_HandleTypeDef heth;
 extern DMA_HandleTypeDef hdma_dcmi;
 extern DCMI_HandleTypeDef hdcmi;
-extern ETH_HandleTypeDef heth;
 extern MDMA_HandleTypeDef hmdma_jpeg_infifo_th;
 extern MDMA_HandleTypeDef hmdma_jpeg_outfifo_th;
 extern JPEG_HandleTypeDef hjpeg;
