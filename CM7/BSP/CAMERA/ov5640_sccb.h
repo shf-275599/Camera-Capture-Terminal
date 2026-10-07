@@ -8,7 +8,7 @@
 #ifndef __OV5640_SCCB_H
 #define __OV5640_SCCB_H
 
-#include "bsp_sys.h"
+#include "main.h"
 
 /* SCCB软件时序IO操作（SCL/SDA由GPIO直接控制）。 */
 #define OV5640_SCCB_SCL(x)                  do{ x ?                                                             \
