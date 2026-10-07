@@ -46,11 +46,28 @@ int fputc(int ch, FILE *f)
  * @retval 无
  * */
 uint8_t Rx_Data = 0;
+static volatile uint32_t rx_event_count = 0;
+
+uint32_t usart_take_rx_events(void)
+{
+    uint32_t count;
+    uint32_t primask = __get_PRIMASK();
+
+    __disable_irq();
+    count = rx_event_count;
+    rx_event_count = 0;
+    __set_PRIMASK(primask);
+    return count;
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if(huart->Instance == USART1)
     {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
+        if (rx_event_count != UINT32_MAX)
+        {
+            rx_event_count++;
+        }
         HAL_UART_Receive_IT(&huart1, &Rx_Data, 1);
     }
 }

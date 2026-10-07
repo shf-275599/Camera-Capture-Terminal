@@ -34,6 +34,7 @@
 #include "jpeg_utils.h"
 #include "app_ov5640.h"
 #include "mylog.h"
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -154,8 +155,13 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
+    uint32_t rx_events = usart_take_rx_events();
+    while (rx_events-- != 0U)
+    {
+      HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
+    }
     HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
-    osDelay(1000);
+    osDelay(10);
   }
   /* USER CODE END StartDefaultTask */
 }
