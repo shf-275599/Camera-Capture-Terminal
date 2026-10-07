@@ -404,6 +404,8 @@ all-slots: slot-a slot-b
 #######################################
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+OBJECTS := $(filter-out $(BUILD_DIR)/init.o $(BUILD_DIR)/sys.o,$(OBJECTS))
+OBJECTS += $(BUILD_DIR)/init.o $(BUILD_DIR)/sys.o $(BUILD_DIR)/metal_init.o $(BUILD_DIR)/metal_sys.o
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
