@@ -55,6 +55,7 @@ void DebugMon_Handler(void);
 void DMA1_Stream0_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void USART1_IRQHandler(void);
+void ETH_IRQHandler(void);
 void DCMI_IRQHandler(void);
 void JPEG_IRQHandler(void);
 void MDMA_IRQHandler(void);

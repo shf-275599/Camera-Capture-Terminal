@@ -23,6 +23,7 @@
 #include "dcmi.h"
 #include "dma.h"
 #include "dma2d.h"
+#include "eth.h"
 #include "i2c.h"
 #include "jpeg.h"
 #include "ltdc.h"
@@ -174,6 +175,7 @@ int main(void)
   MX_DCMI_Init();
   MX_USART1_UART_Init();
   MX_I2C4_Init();
+  MX_ETH_Init();
   /* USER CODE BEGIN 2 */
   {                                               /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
     boot_eeprom_meta_t ee;                        // 保存 EEPROM 中的 active、pending 等启动记录
