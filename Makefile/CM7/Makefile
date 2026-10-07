@@ -154,7 +154,6 @@ C_SOURCES =  \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
 ../../CM7/Core/Src/i2c.c \
-../../CM7/Core/Src/eth.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth_ex.c \
 ../../CM7/LWIP/Target/ethernetif.c \
