@@ -416,6 +416,13 @@ vpath %.S $(sort $(dir $(ASMM_SOURCES)))
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
+$(BUILD_DIR)/init.o: ../../Middlewares/Third_Party/LwIP/src/core/init.c
+$(BUILD_DIR)/sys.o: ../../Middlewares/Third_Party/LwIP/src/core/sys.c
+$(BUILD_DIR)/metal_init.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c
+$(BUILD_DIR)/metal_sys.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c
+$(BUILD_DIR)/metal_init.o $(BUILD_DIR)/metal_sys.o: Makefile | $(BUILD_DIR)
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(@:.o=.lst) $(filter %.c,$^) -o $@
+
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 $(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
