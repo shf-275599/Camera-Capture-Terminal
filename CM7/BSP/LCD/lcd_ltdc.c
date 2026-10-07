@@ -705,6 +705,7 @@ void ltdc_init(void)
 
     LTDC_BL(1);
     ltdc_clear(0XFFFFFFFF);
+    hltdc.Instance->ICR = LTDC_ICR_CFUIF | LTDC_ICR_CTERRIF | LTDC_ICR_CRRIF;
 }
 
 
