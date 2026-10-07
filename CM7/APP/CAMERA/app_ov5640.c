@@ -6,6 +6,7 @@
 #include "ov5640.h"
 #include "lcd_ltdc.h"
 #include "dcmi.h"
+#include "ov5640_dcmi.h"
 #include "cmsis_os2.h"
 #include "mylog.h"
 
@@ -154,13 +155,25 @@ uint8_t app_ov5640_run_test(void)
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
     LOG_INFO("CM7", "CAMERA_TEST_PASS");
 
-    /* 持续更新 LTDC 帧缓冲，直到采集失败。 */
+    /* 三帧 SDRAM：显示帧、采集帧、待显示帧。DMA 持续接收，LTDC 在消隐期换帧。 */
+    /* 避开从 0xD0110000 开始的 JPEG 工作缓冲，采集帧放在独立区域。 */
+    LOG_INFO("CM7", "CAMERA_STREAM_START");
+    ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
+    if (ret != OV5640_DCMI_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_STREAM_START_FAIL=%u", ret);
+        return ret;
+    }
     for (;;)
     {
-        ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
-        if (ret != OV5640_EOK)
+        ret = ov5640_dcmi_stream_poll();
+        if (ret != OV5640_DCMI_EOK)
         {
-            LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
+            ov5640_dcmi_stream_stop();
+            ov5640_dcmi_stream_log_error();
+            LOG_ERROR("CM7", "CAMERA_STREAM_FAIL=%u DCMI=0x%lX DMA=0x%lX",
+                      ret, (unsigned long)hdcmi.ErrorCode,
+                      (unsigned long)hdcmi.DMA_Handle->ErrorCode);
             return ret;
         }
         osDelay(1);
