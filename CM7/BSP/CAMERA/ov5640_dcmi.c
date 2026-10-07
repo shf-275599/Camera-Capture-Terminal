@@ -31,8 +31,13 @@ static struct
     volatile uint16_t frame_lines;
 } g_ov5640_dcmi_sta = {0};
 
-#define CAMERA_DMA_WORDS (48000U) /* 每段 192000 字节，四段组成一帧 */
-#define CAMERA_FRAME_BYTES (CAMERA_DMA_WORDS * 4U * 4U)
+#define CAMERA_BLOCK_LINES (16U)
+#define CAMERA_DMA_WORDS (800U * CAMERA_BLOCK_LINES * 2U / 4U)
+#define CAMERA_FRAME_BYTES (800U * 480U * 2U)
+#define CAMERA_BLOCKS (480U / CAMERA_BLOCK_LINES)
+
+/* CM7 的 .bss 位于 DMA 可访问的 AXI SRAM；CPU 不访问接收后的像素。 */
+static uint32_t camera_line_buf[2][CAMERA_DMA_WORDS] __attribute__((aligned(32)));
 
 static struct
 {
@@ -76,9 +81,27 @@ static void camera_dma_complete(DMA_HandleTypeDef *hdma)
         g_stream.error = 1U;
         return;
     }
-    if (segment == 2U)
+    if ((DMA2D->CR & DMA2D_CR_START) != 0U)
     {
-        /* 最后一段正由另一目标接收，提前选定下一帧的空缓冲。 */
+        g_stream.error = 1U;
+        return;
+    }
+    DMA2D->IFCR = 0x3FU;
+    DMA2D->FGMAR = (uint32_t)camera_line_buf[finished];
+    DMA2D->OMAR = g_stream.addr[g_stream.capture] + (uint32_t)segment * CAMERA_DMA_WORDS * 4U;
+    DMA2D->NLR = (800U << 16) | CAMERA_BLOCK_LINES;
+    DMA2D->CR = DMA2D_CR_START;
+    /* 在此块重新被 DMA 使用前完成搬运；有限轮询避免中断内无限等待。 */
+    uint32_t wait = 1000000U;
+    while ((DMA2D->CR & DMA2D_CR_START) != 0U && --wait != 0U) {}
+    if (wait == 0U || (DMA2D->ISR & (DMA2D_ISR_TEIF | DMA2D_ISR_CEIF)) != 0U)
+    {
+        g_stream.error = 1U;
+        return;
+    }
+    if (segment == CAMERA_BLOCKS - 1U)
+    {
+        /* 整帧搬运完成后才发布，并选定下一帧空闲槽。 */
         for (index = 0U; index < 3U; index++)
         {
             if (index != g_stream.display && index != g_stream.pending && index != g_stream.capture)
@@ -87,9 +110,6 @@ static void camera_dma_complete(DMA_HandleTypeDef *hdma)
             }
         }
         g_stream.next = (index < 3U) ? index : g_stream.capture;
-    }
-    else if (segment == 3U)
-    {
         if (g_stream.pending == 3U && g_stream.next != g_stream.capture)
         {
             g_stream.pending = g_stream.capture;
@@ -99,19 +119,7 @@ static void camera_dma_complete(DMA_HandleTypeDef *hdma)
         g_stream.frames++;
     }
 
-    /* DMA 已切到另一目标，只有刚完成的目标可以改址。 */
-    index = (uint8_t)((segment + 2U) & 3U);
-    /* segment 2 完成时，空闲目标要接收新帧第 0 段。 */
-    if (finished == 0U)
-    {
-        dma->M0AR = g_stream.addr[segment == 2U ? g_stream.next : g_stream.capture] +
-                    (uint32_t)index * CAMERA_DMA_WORDS * 4U;
-    }
-    else
-    {
-        dma->M1AR = g_stream.addr[g_stream.capture] + (uint32_t)index * CAMERA_DMA_WORDS * 4U;
-    }
-    g_stream.segment = (uint8_t)((segment + 1U) & 3U);
+    g_stream.segment = (uint8_t)((segment + 1U) % CAMERA_BLOCKS);
 }
 
 static void camera_dma_error(DMA_HandleTypeDef *hdma)
@@ -193,13 +201,24 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
 
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)display_addr, frame_size);
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)capture_addr, 2U * frame_size);
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)camera_line_buf, sizeof(camera_line_buf));
+    if ((DMA2D->CR & DMA2D_CR_START) != 0U)
+    {
+        return OV5640_DCMI_ERROR;
+    }
+    DMA2D->CR = 0U; /* RGB565 到 RGB565 的直接搬运 */
+    DMA2D->FGPFCCR = DMA2D_INPUT_RGB565;
+    DMA2D->OPFCCR = DMA2D_OUTPUT_RGB565;
+    DMA2D->FGOR = 0U;
+    DMA2D->OOR = 0U;
+    DMA2D->AMTCR = 0U;
     dma->XferCpltCallback = camera_dma_complete;
     dma->XferM1CpltCallback = camera_dma_complete;
     dma->XferErrorCallback = camera_dma_error;
     dma->XferHalfCpltCallback = NULL;
     dma->XferM1HalfCpltCallback = NULL;
     if (HAL_DMAEx_MultiBufferStart_IT(dma, (uint32_t)&DCMI->DR,
-                                      g_stream.addr[1], g_stream.addr[1] + CAMERA_DMA_WORDS * 4U,
+                                      (uint32_t)camera_line_buf[0], (uint32_t)camera_line_buf[1],
                                       CAMERA_DMA_WORDS) != HAL_OK)
     {
         return OV5640_DCMI_ERROR;
@@ -255,10 +274,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
         primask = __get_PRIMASK();
         __disable_irq();
         pending = g_stream.pending;
-        if (pending != 3U)
-        {
-            SCB_InvalidateDCache_by_Addr((uint32_t *)g_stream.addr[pending], CAMERA_FRAME_BYTES);
-        }
+        /* 流帧由 DMA 写入、LTDC 读取，CPU 不访问像素，避免整帧维护阻塞 DMA 中断。 */
         if (pending != 3U &&
             HAL_LTDC_SetAddress_NoReload(&hltdc, g_stream.addr[pending], 0U) == HAL_OK &&
             HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING) == HAL_OK)
@@ -279,7 +295,12 @@ uint8_t ov5640_dcmi_stream_poll(void)
         capture_frames = g_stream.frames;
         LOG_INFO("CM7", "CAMERA_FPS capture=%lu display=%lu",
                  (unsigned long)((capture_frames - g_stream.fps_capture_frames) * 1000U / elapsed),
-                 (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
+                  (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
+        if ((hltdc.Instance->ISR & (LTDC_ISR_FUIF | LTDC_ISR_TERRIF)) != 0U)
+        {
+            LOG_WARN("CM7", "CAMERA_LTDC status=0x%lX", (unsigned long)hltdc.Instance->ISR);
+            hltdc.Instance->ICR = LTDC_ICR_CFUIF | LTDC_ICR_CTERRIF;
+        }
         g_stream.fps_capture_frames = capture_frames;
         g_stream.fps_display_frames = g_stream.display_frames;
         g_stream.fps_tick = now;
