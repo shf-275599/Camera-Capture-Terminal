@@ -32,4 +32,10 @@
 /* 启动一次快照模式的DCMI DMA传输，并等待帧完成中断。 */
 uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataalignment, uint32_t len); /* 开始OV5640模块DCMI接口DMA传输 */
 
+/* 800x480 RGB565 连续流：显示帧和两块独立的采集帧。 */
+uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, uint32_t frame_size);
+uint8_t ov5640_dcmi_stream_poll(void);
+void ov5640_dcmi_stream_stop(void);
+void ov5640_dcmi_stream_log_error(void);
+
 #endif

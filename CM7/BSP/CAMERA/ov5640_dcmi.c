@@ -20,6 +20,7 @@
 
 #include "ov5640_dcmi.h"
 #include "dcmi.h"
+#include "ltdc.h"
 #include "mylog.h"
 
 /* OV5640模块DCMI接口数据结构体 */
@@ -29,6 +30,109 @@ static struct
     volatile uint16_t lines;
     volatile uint16_t frame_lines;
 } g_ov5640_dcmi_sta = {0};
+
+#define CAMERA_DMA_WORDS (48000U) /* 每段 192000 字节，四段组成一帧 */
+#define CAMERA_FRAME_BYTES (CAMERA_DMA_WORDS * 4U * 4U)
+
+static struct
+{
+    uint32_t addr[3];
+    volatile uint8_t display;
+    volatile uint8_t capture;
+    volatile uint8_t next;
+    volatile uint8_t pending; /* 3 表示无待显示帧 */
+    volatile uint8_t segment;
+    volatile uint8_t active;
+    volatile uint8_t error;
+    volatile uint8_t reload;
+    uint32_t reload_tick;
+    volatile uint32_t frame_tick;
+    volatile uint32_t frames;
+    uint8_t reported;
+    volatile uint32_t dma_cr;
+    volatile uint32_t dma_ndtr;
+    volatile uint32_t dma_m0ar;
+    volatile uint32_t dma_m1ar;
+    volatile uint32_t dma_lisr;
+} g_stream;
+
+static void camera_dma_complete(DMA_HandleTypeDef *hdma)
+{
+    DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdma->Instance;
+    uint8_t finished = (dma->CR & DMA_SxCR_CT) ? 0U : 1U;
+    uint8_t segment = g_stream.segment;
+    uint8_t index;
+
+    if (!g_stream.active)
+    {
+        return;
+    }
+    if (finished != (segment & 1U))
+    {
+        g_stream.error = 1U;
+        return;
+    }
+    if (segment == 2U)
+    {
+        /* 最后一段正由另一目标接收，提前选定下一帧的空缓冲。 */
+        for (index = 0U; index < 3U; index++)
+        {
+            if (index != g_stream.display && index != g_stream.pending && index != g_stream.capture)
+            {
+                break;
+            }
+        }
+        g_stream.next = (index < 3U) ? index : g_stream.capture;
+    }
+    else if (segment == 3U)
+    {
+        if (g_stream.pending == 3U && g_stream.next != g_stream.capture)
+        {
+            g_stream.pending = g_stream.capture;
+        }
+        g_stream.capture = g_stream.next;
+        g_stream.frame_tick = HAL_GetTick();
+        g_stream.frames++;
+    }
+
+    /* DMA 已切到另一目标，只有刚完成的目标可以改址。 */
+    index = (uint8_t)((segment + 2U) & 3U);
+    /* segment 2 完成时，空闲目标要接收新帧第 0 段。 */
+    if (finished == 0U)
+    {
+        dma->M0AR = g_stream.addr[segment == 2U ? g_stream.next : g_stream.capture] +
+                    (uint32_t)index * CAMERA_DMA_WORDS * 4U;
+    }
+    else
+    {
+        dma->M1AR = g_stream.addr[g_stream.capture] + (uint32_t)index * CAMERA_DMA_WORDS * 4U;
+    }
+    g_stream.segment = (uint8_t)((segment + 1U) & 3U);
+}
+
+static void camera_dma_error(DMA_HandleTypeDef *hdma)
+{
+    if ((hdma->ErrorCode & ~HAL_DMA_ERROR_FE) == HAL_DMA_ERROR_NONE)
+    {
+        return;
+    }
+    DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdma->Instance;
+    g_stream.dma_cr = dma->CR;
+    g_stream.dma_ndtr = dma->NDTR;
+    g_stream.dma_m0ar = dma->M0AR;
+    g_stream.dma_m1ar = dma->M1AR;
+    g_stream.dma_lisr = DMA1->LISR;
+    g_stream.error = 1U;
+}
+
+void ov5640_dcmi_stream_log_error(void)
+{
+    LOG_ERROR("CM7", "CAMERA_DMA segment=%u frames=%lu CR=%08lX NDTR=%lu M0=%08lX M1=%08lX ISR=%08lX",
+              g_stream.segment, (unsigned long)g_stream.frames,
+              (unsigned long)g_stream.dma_cr, (unsigned long)g_stream.dma_ndtr,
+              (unsigned long)g_stream.dma_m0ar, (unsigned long)g_stream.dma_m1ar,
+              (unsigned long)g_stream.dma_lisr);
+}
 
 void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
@@ -44,8 +148,121 @@ void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_IT_FRAME); // 清除帧中断标志位
+    if (g_stream.active)
+    {
+        return;
+    }
     g_ov5640_dcmi_sta.frame_lines = g_ov5640_dcmi_sta.lines;
     g_ov5640_dcmi_sta.frame_sem = 1;
+}
+
+void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
+{
+    (void)hdcmi;
+    g_stream.error = 1U;
+}
+
+uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, uint32_t frame_size)
+{
+    DMA_HandleTypeDef *dma = hdcmi.DMA_Handle;
+    if (frame_size != CAMERA_FRAME_BYTES)
+    {
+        return OV5640_DCMI_EINVAL;
+    }
+    g_stream.addr[0] = display_addr;
+    g_stream.addr[1] = capture_addr;
+    g_stream.addr[2] = capture_addr + frame_size;
+    g_stream.display = 0U;
+    g_stream.capture = 1U;
+    g_stream.next = 1U;
+    g_stream.pending = 3U;
+    g_stream.segment = 0U;
+    g_stream.reload = 0U;
+    g_stream.error = 0U;
+    g_stream.frames = 0U;
+    g_stream.reported = 0U;
+    g_stream.frame_tick = HAL_GetTick();
+
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)display_addr, frame_size);
+    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)capture_addr, 2U * frame_size);
+    dma->XferCpltCallback = camera_dma_complete;
+    dma->XferM1CpltCallback = camera_dma_complete;
+    dma->XferErrorCallback = camera_dma_error;
+    dma->XferHalfCpltCallback = NULL;
+    dma->XferM1HalfCpltCallback = NULL;
+    if (HAL_DMAEx_MultiBufferStart_IT(dma, (uint32_t)&DCMI->DR,
+                                      g_stream.addr[1], g_stream.addr[1] + CAMERA_DMA_WORDS * 4U,
+                                      CAMERA_DMA_WORDS) != HAL_OK)
+    {
+        return OV5640_DCMI_ERROR;
+    }
+    g_stream.active = 1U;
+    hdcmi.ErrorCode = HAL_DCMI_ERROR_NONE;
+    __HAL_DCMI_CLEAR_FLAG(&hdcmi, DCMI_FLAG_FRAMERI | DCMI_FLAG_ERRRI | DCMI_FLAG_OVRRI);
+    __HAL_DCMI_ENABLE(&hdcmi);
+    MODIFY_REG(hdcmi.Instance->CR, DCMI_CR_CM, DCMI_MODE_CONTINUOUS);
+    __HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR | DCMI_IT_OVR);
+    SET_BIT(hdcmi.Instance->CR, DCMI_CR_CAPTURE);
+    return OV5640_DCMI_EOK;
+}
+
+uint8_t ov5640_dcmi_stream_poll(void)
+{
+    uint8_t pending;
+    uint32_t primask;
+    if (g_stream.error || HAL_GetTick() - g_stream.frame_tick > 1000U ||
+        hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE ||
+        (hdcmi.DMA_Handle->ErrorCode & ~HAL_DMA_ERROR_FE) != HAL_DMA_ERROR_NONE)
+    {
+        return OV5640_DCMI_ERROR;
+    }
+    if (g_stream.reload)
+    {
+        if ((hltdc.Instance->SRCR & LTDC_SRCR_VBR) == 0U)
+        {
+            primask = __get_PRIMASK();
+            __disable_irq();
+            g_stream.display = g_stream.pending;
+            g_stream.pending = 3U;
+            g_stream.reload = 0U;
+            __set_PRIMASK(primask);
+            if (!g_stream.reported)
+            {
+                LOG_INFO("CM7", "CAMERA_STREAM_FRAME_PASS frames=%lu display=0x%08lX",
+                         (unsigned long)g_stream.frames, (unsigned long)g_stream.addr[g_stream.display]);
+                g_stream.reported = 1U;
+            }
+        }
+        else if (HAL_GetTick() - g_stream.reload_tick > 100U)
+        {
+            return OV5640_DCMI_ETIMEOUT;
+        }
+    }
+    if (!g_stream.reload && g_stream.pending != 3U)
+    {
+        primask = __get_PRIMASK();
+        __disable_irq();
+        pending = g_stream.pending;
+        if (pending != 3U &&
+            HAL_LTDC_SetAddress_NoReload(&hltdc, g_stream.addr[pending], 0U) == HAL_OK &&
+            HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING) == HAL_OK)
+        {
+            g_stream.reload = 1U;
+            g_stream.reload_tick = HAL_GetTick();
+        }
+        else if (pending != 3U)
+        {
+            g_stream.error = 1U;
+        }
+        __set_PRIMASK(primask);
+    }
+    return g_stream.error ? OV5640_DCMI_ERROR : OV5640_DCMI_EOK;
+}
+
+void ov5640_dcmi_stream_stop(void)
+{
+    g_stream.active = 0U;
+    HAL_DCMI_Stop(&hdcmi);
 }
 
 /**
