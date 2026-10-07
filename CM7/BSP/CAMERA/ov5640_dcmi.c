@@ -48,6 +48,10 @@ static struct
     uint32_t reload_tick;
     volatile uint32_t frame_tick;
     volatile uint32_t frames;
+    uint32_t display_frames;
+    uint32_t fps_tick;
+    uint32_t fps_capture_frames;
+    uint32_t fps_display_frames;
     uint8_t reported;
     volatile uint32_t dma_cr;
     volatile uint32_t dma_ndtr;
@@ -180,8 +184,12 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
     g_stream.reload = 0U;
     g_stream.error = 0U;
     g_stream.frames = 0U;
+    g_stream.display_frames = 0U;
+    g_stream.fps_capture_frames = 0U;
+    g_stream.fps_display_frames = 0U;
     g_stream.reported = 0U;
     g_stream.frame_tick = HAL_GetTick();
+    g_stream.fps_tick = g_stream.frame_tick;
 
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)display_addr, frame_size);
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)capture_addr, 2U * frame_size);
@@ -210,6 +218,9 @@ uint8_t ov5640_dcmi_stream_poll(void)
 {
     uint8_t pending;
     uint32_t primask;
+    uint32_t now;
+    uint32_t elapsed;
+    uint32_t capture_frames;
     if (g_stream.error || HAL_GetTick() - g_stream.frame_tick > 1000U ||
         hdcmi.ErrorCode != HAL_DCMI_ERROR_NONE ||
         (hdcmi.DMA_Handle->ErrorCode & ~HAL_DMA_ERROR_FE) != HAL_DMA_ERROR_NONE)
@@ -226,6 +237,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
             g_stream.pending = 3U;
             g_stream.reload = 0U;
             __set_PRIMASK(primask);
+            g_stream.display_frames++;
             if (!g_stream.reported)
             {
                 LOG_INFO("CM7", "CAMERA_STREAM_FRAME_PASS frames=%lu display=0x%08lX",
@@ -259,6 +271,18 @@ uint8_t ov5640_dcmi_stream_poll(void)
             g_stream.error = 1U;
         }
         __set_PRIMASK(primask);
+    }
+    now = HAL_GetTick();
+    elapsed = now - g_stream.fps_tick;
+    if (elapsed >= 1000U && !g_stream.error)
+    {
+        capture_frames = g_stream.frames;
+        LOG_INFO("CM7", "CAMERA_FPS capture=%lu display=%lu",
+                 (unsigned long)((capture_frames - g_stream.fps_capture_frames) * 1000U / elapsed),
+                 (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
+        g_stream.fps_capture_frames = capture_frames;
+        g_stream.fps_display_frames = g_stream.display_frames;
+        g_stream.fps_tick = now;
     }
     return g_stream.error ? OV5640_DCMI_ERROR : OV5640_DCMI_EOK;
 }
