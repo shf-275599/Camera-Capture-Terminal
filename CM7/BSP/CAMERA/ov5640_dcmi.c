@@ -243,6 +243,10 @@ uint8_t ov5640_dcmi_stream_poll(void)
         primask = __get_PRIMASK();
         __disable_irq();
         pending = g_stream.pending;
+        if (pending != 3U)
+        {
+            SCB_InvalidateDCache_by_Addr((uint32_t *)g_stream.addr[pending], CAMERA_FRAME_BYTES);
+        }
         if (pending != 3U &&
             HAL_LTDC_SetAddress_NoReload(&hltdc, g_stream.addr[pending], 0U) == HAL_OK &&
             HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING) == HAL_OK)
