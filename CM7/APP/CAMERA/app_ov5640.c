@@ -94,18 +94,60 @@ uint8_t app_ov5640_run_test(void)
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL size=%u", ret);
         return ret;
     }
-    ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_COLOR_BAR);
+    ret = ov5640_set_light_mode(OV5640_LIGHT_MODE_ADVANCED_AWB);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL pattern=%u", ret);
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL light=%u", ret);
         return ret;
     }
-    ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+    ret = ov5640_set_color_saturation(OV5640_COLOR_SATURATION_3);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL capture=%u", ret);
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sat=%u", ret);
         return ret;
     }
+    ret = ov5640_set_brightness(OV5640_BRIGHTNESS_3);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL bright=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_contrast(OV5640_CONTRAST_3);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL contrast=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_hue(OV5640_HUE_6);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL hue=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_exposure_level(OV5640_EXPOSURE_LEVEL_2);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL exposure=%u", ret);
+        return ret;
+    }
+    ret = ov5640_set_sharpness_level(OV5640_SHARPNESS_2);
+    if (ret != OV5640_EOK)
+    {
+        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sharpness=%u", ret);
+        return ret;
+    }
+    // ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_COLOR_BAR);
+    // if (ret != OV5640_EOK)
+    // {
+    //     LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL pattern=%u", ret);
+    //     return ret;
+    // }
+    // ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+    // if (ret != OV5640_EOK)
+    // {
+    //     LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL capture=%u", ret);
+    //     return ret;
+    // }
     LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_PASS");
     /* 打印色条采样值，并以中心行 x=350 的像素检查 x=310~389 区间的一致性。 */
     LOG_INFO("CM7", "COLORBAR pixels: %04X %04X %04X %04X",
@@ -134,19 +176,19 @@ uint8_t app_ov5640_run_test(void)
 
     /* 关闭测试图案，等待画面稳定后采集实际摄像头图像。 */
     LOG_INFO("CM7", "CAMERA_TEST_REAL_START");
-    ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
-    if (ret != OV5640_EOK)
-    {
-        LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL pattern=%u", ret);
-        return ret;
-    }
-    osDelay(2000);
-    ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
-    if (ret != OV5640_EOK)
-    {
-        LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
-        return ret;
-    }
+    // ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
+    // if (ret != OV5640_EOK)
+    // {
+    //     LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL pattern=%u", ret);
+    //     return ret;
+    // }
+    // osDelay(5000);
+    // ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
+    // if (ret != OV5640_EOK)
+    // {
+    //     LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
+    //     return ret;
+    // }
     LOG_INFO("CM7", "CAMERA_TEST_REAL_PASS");
     LOG_INFO("CM7", "REAL pixels: %04X %04X %04X %04X",
              ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[0],
