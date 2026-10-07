@@ -112,7 +112,7 @@ uint8_t app_ov5640_run_test(void)
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL bright=%u", ret);
         return ret;
     }
-    ret = ov5640_set_contrast(OV5640_CONTRAST_3);
+    ret = ov5640_set_contrast(OV5640_CONTRAST_2);
     if (ret != OV5640_EOK)
     {
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL contrast=%u", ret);
@@ -130,7 +130,7 @@ uint8_t app_ov5640_run_test(void)
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL exposure=%u", ret);
         return ret;
     }
-    ret = ov5640_set_sharpness_level(OV5640_SHARPNESS_2);
+    ret = ov5640_set_sharpness_level(OV5640_SHARPNESS_5);
     if (ret != OV5640_EOK)
     {
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sharpness=%u", ret);
