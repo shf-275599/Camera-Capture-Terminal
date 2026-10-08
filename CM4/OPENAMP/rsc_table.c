@@ -158,7 +158,6 @@ void resource_table_init(int RPMsgRole, void **table_ptr, int *length)
 	resource_table.vdev.id = VIRTIO_ID_RPMSG_;
 	resource_table.vdev.num_of_vrings=VRING_COUNT;
 	resource_table.vdev.dfeatures = RPMSG_IPU_C0_FEATURES;
-	__sync_synchronize();
 #else
 
 	/* For the slave application let's wait until the resource_table is correctly initialized */
@@ -166,7 +165,6 @@ void resource_table_init(int RPMsgRole, void **table_ptr, int *length)
 	{
 
 	}
-	__sync_synchronize();
 #endif
 #endif
 #endif
