@@ -184,7 +184,7 @@ void CameraTestTask(void *argument)
 {
   (void)argument;
 
-  if (app_ov5640_run_test() != 0U)
+  if (app_ov5640_run() != 0U)
   {
     LOG_ERROR("CM7", "CAMERA_TEST_FAIL");
   }

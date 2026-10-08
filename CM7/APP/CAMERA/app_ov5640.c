@@ -73,7 +73,7 @@ void app_ov5640_capture_colorbar(void)
  * @brief  采集色条和真实画面并打印像素信息，随后持续采集真实画面
  * @return 配置或采集失败时返回 OV5640 错误码；正常运行时持续采集，不返回
  */
-uint8_t app_ov5640_run_test(void)
+uint8_t app_ov5640_run(void)
 {
     uint8_t ret;
     volatile uint16_t *frame = (volatile uint16_t *)LTDC_FRAME_BUF_ADDR;
@@ -136,66 +136,6 @@ uint8_t app_ov5640_run_test(void)
         LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sharpness=%u", ret);
         return ret;
     }
-    // ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_COLOR_BAR);
-    // if (ret != OV5640_EOK)
-    // {
-    //     LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL pattern=%u", ret);
-    //     return ret;
-    // }
-    // ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
-    // if (ret != OV5640_EOK)
-    // {
-    //     LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL capture=%u", ret);
-    //     return ret;
-    // }
-    LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_PASS");
-    /* 打印色条采样值，并以中心行 x=350 的像素检查 x=310~389 区间的一致性。 */
-    LOG_INFO("CM7", "COLORBAR pixels: %04X %04X %04X %04X",
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[0],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[400],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
-    LOG_INFO("CM7", "COLORBAR center: %04X %04X %04X %04X %04X %04X %04X %04X",
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 50],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 150],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 250],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 350],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 450],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 550],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 650],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240 + 750]);
-    green = frame[800U * 240U + 350U];
-    for (x = 310U; x < 390U; x++)
-    {
-        if (frame[800U * 240U + x] != green)
-        {
-            green_mismatches++;
-        }
-    }
-    LOG_INFO("CM7", "COLORBAR green=%04X mismatches=%lu/80", green, (unsigned long)green_mismatches);
-
-    /* 关闭测试图案，等待画面稳定后采集实际摄像头图像。 */
-    LOG_INFO("CM7", "CAMERA_TEST_REAL_START");
-    // ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_OFF);
-    // if (ret != OV5640_EOK)
-    // {
-    //     LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL pattern=%u", ret);
-    //     return ret;
-    // }
-    // osDelay(5000);
-    // ret = ov5640_get_frame(LTDC_FRAME_BUF_ADDR, OV5640_GET_TYPE_DTS_16B_INC, NULL);
-    // if (ret != OV5640_EOK)
-    // {
-    //     LOG_ERROR("CM7", "CAMERA_TEST_REAL_FAIL capture=%u", ret);
-    //     return ret;
-    // }
-    LOG_INFO("CM7", "CAMERA_TEST_REAL_PASS");
-    LOG_INFO("CM7", "REAL pixels: %04X %04X %04X %04X",
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[0],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[400],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 240],
-             ((volatile uint16_t *)LTDC_FRAME_BUF_ADDR)[800 * 479]);
-    LOG_INFO("CM7", "CAMERA_TEST_PASS");
 
     /* 三帧 SDRAM：显示帧、采集帧、待显示帧。DMA 持续接收，LTDC 在消隐期换帧。 */
     /* 避开从 0xD0110000 开始的 JPEG 工作缓冲，采集帧放在独立区域。 */
