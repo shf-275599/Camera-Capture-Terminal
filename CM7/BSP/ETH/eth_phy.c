@@ -7,6 +7,7 @@
  */
 
 #include "eth_phy.h"
+#include "ethernetif.h"
 #include "lan8720.h"
 #include "main.h"
 #include <stdio.h>
