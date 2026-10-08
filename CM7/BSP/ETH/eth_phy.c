@@ -11,6 +11,8 @@
 #include "main.h"
 #include <stdio.h>
 
+extern ETH_HandleTypeDef heth;
+
 /** LAN8720 OUI/型号：ID1=0x0007，ID2 高 12 位为 0xC0F（低 4 位为版本号，掩码匹配） */
 #define LAN8720_PHY_ID1  0x0007U
 #define LAN8720_PHY_ID2  0xC0F0U
