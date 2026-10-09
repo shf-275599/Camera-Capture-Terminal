@@ -50,6 +50,8 @@
 #include "mylog.h"
 #include "bsp_eeprom.h"
 #include "boot_eeprom.h"
+#include "eth.h"
+#include "eth_phy.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -237,6 +239,21 @@ int main(void)
     /* 使能 CM4 后，Bank2 固定 Stub 读取 handoff 并跳转到所选应用槽 */
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     LOG_INFO("APP", "CM4 boot core enabled");
+  }
+  MX_ETH_Init();
+  {
+    LOG_INFO("CM7", "ETH I/O init OK");
+    int32_t phy_status = eth_phy_init();
+    if (phy_status != LAN8720_STATUS_OK)
+    {
+      eth_phy_print_diag();
+      LOG_ERROR("CM7", "PHY init failed: %s", eth_phy_link_state_str(phy_status));
+    }
+    else
+    {
+      eth_phy_print_diag();
+      LOG_INFO("CM7", "PHY init OK, link: %s", eth_phy_link_state_str(eth_phy_get_link_state()));
+    }
   }
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM

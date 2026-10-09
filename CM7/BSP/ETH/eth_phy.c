@@ -5,12 +5,12 @@
  *          - 初始化前扫描 MDIO 0~31，用 PHY ID1/ID2 匹配 LAN8720，避免地址写死
  *          - 本板常见 PHY 地址为 0 或 1，具体以扫描结果为准
  */
-
 #include "eth_phy.h"
 #include "ethernetif.h"
 #include "lan8720.h"
 #include "main.h"
 #include <stdio.h>
+#include "mylog.h"
 
 extern ETH_HandleTypeDef heth;
 
@@ -113,23 +113,27 @@ static int32_t phy_scan_address(uint32_t *found_addr)
     if ((id1 == LAN8720_PHY_ID1) && ((id2 & 0xFFF0U) == LAN8720_PHY_ID2))
     {
       *found_addr = addr;
-      printf("PHY found at addr %lu, ID=0x%04lX/0x%04lX\r\n",
+      LOG_INFO("CM7", "PHY found at addr %lu, ID=0x%04lX/0x%04lX",
              (unsigned long)addr, (unsigned long)id1, (unsigned long)id2);
       return LAN8720_STATUS_OK;
     }
   }
 
-  printf("PHY scan: no LAN8720 found on MDIO bus\r\n");
+  LOG_ERROR("CM7", "PHY scan: no LAN8720 found on MDIO bus");
   return LAN8720_STATUS_ERROR;
 }
 
+/**
+ * @brief  打印 PHY 诊断：当前地址、最近 BCR，以及地址 0~3 的 ID/BCR/BSR
+ * @note   仅用于排障（链路起不来、复位超时、MDIO 不通等）
+ */
 void eth_phy_print_diag(void)
 {
   uint32_t id1 = 0U;
   uint32_t id2 = 0U;
   uint32_t bsr = 0U;
 
-  printf("Diag: using PHY addr %lu, last BCR=0x%04lX\r\n",
+  LOG_INFO("CM7", "Diag: using PHY addr %lu, last BCR=0x%04lX",
          (unsigned long)phy_addr, (unsigned long)last_bcr);
 
   /* 只扫低地址，覆盖本板常见布线，避免刷屏 */
@@ -139,13 +143,22 @@ void eth_phy_print_diag(void)
     {
       phy_io_read_reg(addr, 0U, &last_bcr);
       phy_io_read_reg(addr, 1U, &bsr);
-      printf("  addr %lu: ID=0x%04lX/0x%04lX BCR=0x%04lX BSR=0x%04lX\r\n",
+      LOG_INFO("CM7", "  addr %lu: ID=0x%04lX/0x%04lX BCR=0x%04lX BSR=0x%04lX",
              (unsigned long)addr, (unsigned long)id1, (unsigned long)id2,
              (unsigned long)last_bcr, (unsigned long)bsr);
     }
   }
 }
 
+/**
+ * @brief  注册 MDIO 总线回调、扫描 LAN8720 地址并完成 PHY 软复位初始化
+ * @note   须在 CubeMX 的 ETH 外设（heth）初始化之后调用；失败时会打印诊断信息
+ * @retval LAN8720_STATUS_OK            成功
+ * @retval LAN8720_STATUS_ERROR         总线注册失败
+ * @retval LAN8720_STATUS_READ_ERROR    扫描未找到 LAN8720
+ * @retval LAN8720_STATUS_RESET_TIMEOUT PHY 复位超时（仍可能部分可用）
+ * @retval 其它 LAN8720_STATUS_*        见 ST lan8720 驱动
+ */
 int32_t eth_phy_init(void)
 {
   uint32_t found_addr = 0U;
@@ -179,17 +192,30 @@ int32_t eth_phy_init(void)
   return status;
 }
 
+/**
+ * @brief  获取当前使用的 PHY MDIO 地址（0~31）
+ * @note   成功 init 后为扫描到的实际地址；失败前可能仍为默认宏 LAN8720_PHY_ADDRESS
+ */
 uint32_t eth_phy_get_address(void)
 {
   return phy_addr;
 }
 
+/**
+ * @brief  读取当前链路与协商状态
+ * @retval LAN8720_STATUS_LINK_DOWN / *_FULLDUPLEX / *_HALFDUPLEX /
+ *         LAN8720_STATUS_AUTONEGO_NOTDONE / 读写错误码等
+ */
 int32_t eth_phy_get_link_state(void)
 {
   lan8720.DevAddr = phy_addr;
   return LAN8720_GetLinkState(&lan8720);
 }
 
+/**
+ * @brief  将链路状态码转为可读字符串（用于串口日志）
+ * @param  state  eth_phy_get_link_state() 的返回值
+ */
 const char *eth_phy_link_state_str(int32_t state)
 {
   switch (state)

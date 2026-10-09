@@ -76,64 +76,59 @@ void app_ov5640_capture_colorbar(void)
 uint8_t app_ov5640_run(void)
 {
     uint8_t ret;
-    volatile uint16_t *frame = (volatile uint16_t *)LTDC_FRAME_BUF_ADDR;
-    uint16_t green = frame[800U * 240U + 350U];
-    uint32_t green_mismatches = 0;
-    uint32_t x;
 
-    LOG_INFO("CM7", "CAMERA_TEST_COLORBAR_START");
     ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL format=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_output_format failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_output_size(800, 480);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL size=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_output_size failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_light_mode(OV5640_LIGHT_MODE_ADVANCED_AWB);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL light=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_light_mode failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_color_saturation(OV5640_COLOR_SATURATION_3);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sat=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_color_saturation failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_brightness(OV5640_BRIGHTNESS_3);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL bright=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_brightness failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_contrast(OV5640_CONTRAST_2);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL contrast=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_contrast failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_hue(OV5640_HUE_6);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL hue=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_hue failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_exposure_level(OV5640_EXPOSURE_LEVEL_2);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL exposure=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_exposure_level failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_sharpness_level(OV5640_SHARPNESS_5);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "CAMERA_TEST_COLORBAR_FAIL sharpness=%u", ret);
+        LOG_ERROR("CM7", "ov5640_set_sharpness_level failed (err=%d)", ret);
         return ret;
     }
 
