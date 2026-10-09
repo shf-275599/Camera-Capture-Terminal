@@ -157,6 +157,7 @@ C_SOURCES =  \
 ../../CM7/Core/Src/i2c.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth_ex.c \
+../../CM7/Core/Src/eth.c \
 ../../CM7/LWIP/Target/ethernetif.c \
 ../../CM7/LWIP/Target/lan8720.c \
 ../../CM7/LWIP/App/lwip.c \

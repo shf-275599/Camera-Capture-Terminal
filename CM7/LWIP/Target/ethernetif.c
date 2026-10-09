@@ -133,7 +133,7 @@ __attribute__((section(".Rx_PoolSection"))) extern u8_t memp_memory_RX_POOL_base
 #endif
 
 /* USER CODE BEGIN 2 */
-
+ETH_TxPacketConfig TxConfig;
 /* USER CODE END 2 */
 
 osSemaphoreId_t RxPktSemaphore = NULL;   /* Semaphore to signal incoming packets */
@@ -222,7 +222,7 @@ static void low_level_init(struct netif *netif)
   heth.Init.RxBuffLen = 1536;
 
   /* USER CODE BEGIN MACADDRESS */
-  ETH_TxPacketConfig TxConfig;
+  
   /* USER CODE END MACADDRESS */
 
   hal_eth_init_status = HAL_ETH_Init(&heth);
