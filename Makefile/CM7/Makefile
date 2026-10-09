@@ -158,7 +158,7 @@ C_SOURCES =  \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c \
 ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth_ex.c \
 ../../CM7/LWIP/Target/ethernetif.c \
-../../CM7/LWIP/Target/eth_custom_phy_interface.c \
+../../CM7/LWIP/Target/lan8720.c \
 ../../CM7/LWIP/App/lwip.c \
 ../../Middlewares/Third_Party/LwIP/src/netif/ppp/auth.c \
 ../../Middlewares/Third_Party/LwIP/src/netif/ppp/ccp.c \
