@@ -73,6 +73,8 @@ C_SOURCES =  \
 ../../CM7/APP/JPEG/app_hw_jpeg.c \
 ../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/APP/BOOT/boot_eeprom.c \
+../../CM7/APP/NET/HTTP/app_http_server.c \
+../../CM7/APP/NET/HTTP/app_http_util.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
 ../../CM7/Core/Src/main.c \
@@ -321,6 +323,7 @@ C_INCLUDES =  \
 -I../../CM7/APP/IPC \
 -I../../CM7/APP/CAMERA \
 -I../../CM7/APP/BOOT \
+-I../../CM7/APP/NET/HTTP \
 -I../../CM7/Core/Inc \
 -I../../Utilities/TJpgDec\ \
 -I../../Common/Inc \
