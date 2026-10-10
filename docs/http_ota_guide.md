@@ -1,0 +1,484 @@
+# STM32H757 双核 HTTP OTA 实施指导
+
+本文在 [普通 HTTP 指导](http_guide.md) 和 [本地升级闭环指导](local_upgrade_guide.md) 的基础上，说明如何把固件传输接入 OTA。本文同时覆盖两种 HTTP OTA：
+
+1. **设备 HTTP Server 接收上传**：PC 或服务器向设备发送固件。
+2. **设备 HTTP Client 主动下载**：设备访问固件服务器并接收响应 body。
+
+两种方式应共用同一个 OTA 状态机、Flash 写入模块、镜像校验模块、EEPROM pending 流程和双核协调流程。HTTP 层只负责把固件字节可靠地送入 OTA 写入接口。
+
+## 1. 前置条件
+
+开始 HTTP OTA 前必须先完成：
+
+- 普通 HTTP `/status` 稳定运行。
+- LwIP、ETH DMA 和链路重连已验证。
+- 本地升级闭环已通过正常、异常和断电测试。
+- 固定 CM7 Bootloader 和 CM4 Stub 已确认存在且格式兼容。
+- CM7/CM4 A/B 槽的链接地址和槽索引已固定。
+- Flash RAM 操作、完整镜像校验和 EEPROM pending 已验证。
+- CM4 hold/ack/cancel 已通过测试。
+
+如果本地升级闭环没有完成，HTTP OTA 最多只能称为“网络传输到设备”，不能称为可靠 OTA。
+
+## 2. 当前分区和发布要求
+
+| 核 | A 槽地址 | B 槽地址 | 槽索引 | 容量 |
+| --- | ---: | ---: | ---: | ---: |
+| CM7 | `0x08020000` | `0x080A0000` | `0` / `1` | 384 KiB |
+| CM4 | `0x08120000` | `0x081A0000` | `2` / `3` | 384 KiB |
+
+设备升级时应根据实际运行槽自动选择另一槽。HTTP 请求可以携带目标核，但不建议让客户端任意指定目标槽；设备应根据自身运行状态决定目标槽，防止覆盖当前运行镜像。
+
+每个发布文件必须明确：
+
+```text
+目标核
+目标槽链接地址
+版本号
+镜像长度
+CRC32
+可选 SHA-256
+硬件型号
+最低 Bootloader 版本
+构建批次
+```
+
+CM7 A/B 和 CM4 A/B 应分别构建，不能把某一槽链接的镜像伪装成另一槽镜像。
+
+## 3. 公共 OTA 数据流
+
+```text
+HTTP Server 上传 或 HTTP Client 下载
+          ↓
+      HTTP 传输适配层
+          ↓
+  OTA begin / write / finish 接口
+          ↓
+  目标槽选择、Flash 擦写、摘要更新
+          ↓
+  Flash 读回校验、向量表检查
+          ↓
+  EEPROM pending 持久化
+          ↓
+        复位试启动
+          ↓
+     健康确认或回滚
+```
+
+建议新增：
+
+```text
+CM7/APP/NET/app_http_server.c/.h
+CM7/APP/NET/app_http_client.c/.h
+CM7/APP/OTA/app_http_ota.c/.h
+CM7/APP/OTA/app_ota.c/.h
+CM7/APP/OTA/app_image_verify.c/.h
+Common/Src/bsp_flash_ram.c
+Common/Src/cm4_ota_hold.c
+```
+
+公共接口可设计为：
+
+```c
+ota_begin(metadata)
+ota_write(offset, data, length)
+ota_finish()
+ota_abort()
+ota_get_status(status)
+```
+
+HTTP Server 和 HTTP Client 都不得直接调用 HAL Flash 擦除/编程 API。这样可以避免两个入口形成两套不一致的槽位和校验逻辑。
+
+## 4. 设备 HTTP Server 接收上传
+
+### 4.1 推荐协议
+
+采用多个短请求：
+
+```text
+GET  /ota/status
+POST /ota/begin
+POST /ota/chunk
+POST /ota/end
+POST /ota/abort
+```
+
+### 4.2 查询状态
+
+请求：
+
+```http
+GET /ota/status HTTP/1.1
+Host: device
+Connection: close
+```
+
+响应至少包含：
+
+```json
+{
+  "cm7_running_slot": 0,
+  "cm7_active_slot": 0,
+  "cm4_running_slot": 2,
+  "cm4_active_slot": 2,
+  "target_core": "none",
+  "target_slot": null,
+  "state": "idle",
+  "expected_offset": 0,
+  "image_size": 0,
+  "last_error": 0
+}
+```
+
+`running_slot` 必须来自实际启动记录或 CM4 IPC 报告，不能只读取 EEPROM active。
+
+### 4.3 开始会话
+
+请求示例：
+
+```http
+POST /ota/begin HTTP/1.1
+Host: device
+X-Ota-Core: cm7
+X-Fw-Version: 12
+X-Fw-Size: 278528
+X-Fw-Crc32: 0x12345678
+X-Fw-Sha256: <64 hex characters>
+X-Hardware: STM32H757-BOARD
+Content-Length: 0
+Connection: close
+```
+
+`begin` 应依次完成：
+
+1. 验证目标核为 `cm7` 或 `cm4`。
+2. 验证镜像长度不超过 384 KiB 槽容量。
+3. 验证版本、硬件型号和最低引导版本。
+4. 查询目标核实际运行槽。
+5. 选择另一槽作为目标槽。
+6. 若目标为 CM4，发送 hold 请求并等待 ACK。
+7. 擦除目标槽。
+8. 初始化 offset、CRC/SHA 状态和会话超时。
+
+任一步骤失败都不得继续写入，也不得设置 pending。
+
+### 4.4 分块上传
+
+请求示例：
+
+```http
+POST /ota/chunk HTTP/1.1
+Host: device
+X-Offset: 65536
+Content-Length: 8192
+Connection: close
+
+<8192 bytes firmware data>
+```
+
+建议首版限制：
+
+| 项目 | 值 |
+| --- | ---: |
+| 单块最大长度 | 8192 字节 |
+| offset 要求 | 必须等于服务端 expected offset |
+| 单请求超时 | 30 秒以内按现场链路调整 |
+| 会话总超时 | 由实现定义，必须有限制 |
+| Keep-Alive | 首版关闭 |
+
+处理顺序：
+
+```text
+验证会话
+  → 读取完整请求 body
+  → 验证 offset 和长度
+  → ota_write()
+  → 写入成功后推进 offset
+  → 返回 JSON 状态
+```
+
+写入失败时不得推进 offset。客户端应通过 `/ota/status` 查询错误，随后执行 `/ota/abort` 并重新开始会话。
+
+### 4.5 结束和取消
+
+`POST /ota/end` 必须完成：
+
+1. `expected_offset == image_size`。
+2. 对已写入 Flash 读回并计算完整 CRC/SHA。
+3. 比较 HTTP `begin` 声明的摘要。
+4. 检查初始 SP 位于目标核合法 RAM。
+5. 检查 Reset_Handler 位于目标槽且为有效 Thumb 入口。
+6. 写入 EEPROM pending 并读回确认。
+7. 清除或保留正确的 CM4 hold 状态。
+8. 只有所有步骤成功后返回 200。
+
+`POST /ota/abort` 必须清理：
+
+- OTA 会话和临时摘要状态。
+- HTTP 连接使用的缓冲区。
+- CM4 hold 请求。
+- 未完成 pending 标记。
+- 错误码和会话超时。
+
+客户端断开、接收超时、Flash 失败和摘要不匹配，都应进入同一清理路径。
+
+## 5. 设备 HTTP Client 主动下载
+
+### 5.1 下载方式
+
+设备可以从固件服务器获取 manifest：
+
+```http
+GET /firmware/manifest.json HTTP/1.1
+Host: firmware.example
+Connection: close
+```
+
+manifest 示例：
+
+```json
+{
+  "device": "STM32H757-BOARD",
+  "core": "cm7",
+  "version": 12,
+  "image_size": 278528,
+  "image_url": "/firmware/cm7-v12-b.bin",
+  "image_sha256": "...",
+  "image_crc32": "0x12345678",
+  "linked_address": "0x080A0000",
+  "min_bootloader": 2
+}
+```
+
+设备必须先检查 manifest，再决定是否下载：
+
+1. 目标核与设备请求一致。
+2. 版本高于当前版本，或符合明确的强制升级策略。
+3. 镜像长度不超过空闲槽容量。
+4. `linked_address` 与设备准备的目标槽一致。
+5. 硬件型号和最低 Bootloader 版本匹配。
+6. 摘要字段存在且格式合法。
+
+### 5.2 HTTP Client 下载循环
+
+推荐使用 `Range` 分块下载或每个块建立一个请求。首版可以使用单个响应连接，但必须在连接断开时有明确的失败和重试策略。
+
+分块方式示例：
+
+```http
+GET /firmware/cm7-v12-b.bin HTTP/1.1
+Host: firmware.example
+Range: bytes=65536-73727
+Connection: close
+```
+
+处理循环：
+
+```text
+读取 manifest
+  → 选择空闲槽
+  → ota_begin()
+  → 发起 HTTP GET
+  → 校验响应状态和 Content-Length/Content-Range
+  → 将 body 分段送入 ota_write()
+  → 检查 offset 连续
+  → 断开或完成下载
+  → ota_finish()
+```
+
+必须处理：
+
+- HTTP 非 2xx 状态。
+- `Content-Length` 与声明长度不符。
+- `Content-Range` 不连续。
+- 服务器提前断开。
+- 重定向是否允许以及允许的主机范围。
+- DNS 失败、连接超时、接收超时。
+- 下载速度过低的总超时。
+- 重试次数和重试间隔。
+- 设备复位后是否允许重新开始。
+
+设备主动下载时，服务器返回的 body 不能直接交给 Flash；仍必须经过同一个 offset、长度、槽边界和摘要校验。
+
+### 5.3 主动下载的掉电策略
+
+首版建议把下载会话状态放 RAM，掉电后重新从头开始。若要支持掉电续传，需要额外持久化：
+
+- 目标核和槽。
+- manifest 摘要。
+- 已写入 offset。
+- 当前版本。
+- 会话 generation。
+
+持久化状态本身也需要双备份和 CRC，否则掉电续传可能破坏正常 active 元数据。不要在没有测试之前声称支持掉电续传。
+
+## 6. 鉴权、传输安全和镜像可信性
+
+CRC32 只能检测传输或存储损坏，不能证明固件来自可信发布者。
+
+如果设备运行在不可信网络，应至少规划：
+
+1. HTTP Server 的设备鉴权，例如令牌或一次性升级口令。
+2. HTTP Client 的服务器身份校验。
+3. manifest 的签名校验。
+4. 固件镜像的数字签名校验。
+5. 版本回滚策略和最低允许版本。
+6. 防止重放旧镜像的版本或计数器。
+
+STM32H757 上是否直接实现 TLS、使用外部网关或只允许隔离局域网，需要结合 RAM、Flash、证书存储和产品网络环境决定。未确认前，本文只把明文 HTTP 作为受控实验室方案。
+
+## 7. 双核升级策略
+
+### 7.1 只升级 CM7
+
+- CM4 继续运行。
+- CM7 写 Bank1 空闲槽。
+- 复位后固定 Bootloader 选择 CM7 pending。
+- CM4 继续按约定 handoff 启动。
+- CM7 和 CM4 版本接口必须兼容。
+
+### 7.2 只升级 CM4
+
+- CM7 通过 mailbox/HSEM 请求 CM4 hold。
+- CM4 停止业务、DMA 和相关外设。
+- CM7 写 Bank2 空闲槽。
+- 写入和读回校验完成后清理 hold 或复位。
+- 固定 CM4 Stub 选择 pending 槽。
+
+### 7.3 同时升级 CM7 和 CM4
+
+不要简单地先设置一个 pending，再设置另一个 pending。两核可能出现一个已切换、另一个仍为旧版本的组合。
+
+应先确定一种事务策略：
+
+- 两份镜像分别校验后使用同一组 transaction ID。
+- 两个 pending 都写成功才允许复位。
+- Bootloader/Stub 能识别成组 pending。
+- 任一核健康失败时，组合版本能回退到兼容的旧组合。
+
+如果固定引导程序尚不支持成组事务，首版只支持一次升级一个核，并在 manifest 中明确版本兼容矩阵。
+
+## 8. HTTP OTA 任务和资源控制
+
+建议限制：
+
+- 同时只允许一个 OTA 会话。
+- OTA 期间拒绝第二个 `/ota/begin`。
+- OTA 写入时暂停不必要的相机捕获和大块 DMA。
+- 不让 HTTP 任务长期持有 EEPROM、OpenAMP 或相机互斥锁。
+- Flash 操作期间允许网络短暂停顿，客户端设置足够长超时。
+- 每个请求结束都释放 netbuf、pbuf 和 netconn。
+- OTA 失败后保证 CM4 hold 一定有取消路径。
+
+普通 HTTP 的 `/status` 应在 OTA 期间继续返回状态，但不要让查询任务读取正在修改的会话结构。返回只读快照。
+
+## 9. 完整测试矩阵
+
+### 9.1 Server 上传
+
+1. 正常 `status → begin → chunk* → end`。
+2. offset 跳跃。
+3. offset 重复。
+4. chunk 大于上限。
+5. body 少于 Content-Length。
+6. body 多于声明长度。
+7. 客户端中途断开。
+8. 请求头跨 TCP 包。
+9. 会话超时。
+10. 第二客户端并发 begin。
+
+### 9.2 Client 下载
+
+1. 正常 manifest 和镜像下载。
+2. DNS 失败。
+3. TCP 连接超时。
+4. HTTP 404/500。
+5. Content-Length 错误。
+6. Content-Range 错误。
+7. 服务器中途断开。
+8. 重试后摘要正确。
+9. manifest 目标核错误。
+10. manifest 链接地址与目标槽不匹配。
+
+### 9.3 通用升级安全
+
+1. 镜像超出槽容量。
+2. 初始 SP 非法。
+3. Reset_Handler 非法。
+4. CRC/SHA 不匹配。
+5. Flash 写入失败。
+6. EEPROM 写入失败。
+7. CM4 hold 超时。
+8. 升级期间断电。
+9. 新镜像启动失败。
+10. trial 耗尽后回滚。
+11. HTTP OTA 期间普通 `/status` 可用。
+12. 成功确认后 active 和版本信息一致。
+
+## 10. Windows 验证命令和发布流程
+
+固件构建必须在 Windows PowerShell 执行：
+
+```powershell
+make -C Makefile/CM7 APP_SLOT=A
+make -C Makefile/CM7 APP_SLOT=B
+make -C Makefile/CM4 APP_SLOT=A
+make -C Makefile/CM4 APP_SLOT=B
+```
+
+发布前检查每个文件：
+
+```text
+目标核正确
+目标槽链接地址正确
+镜像长度未超过 384 KiB
+向量表基址正确
+CRC32/SHA-256 与 manifest 一致
+版本号高于当前版本或符合强制策略
+硬件型号匹配
+```
+
+Server 上传可用 PowerShell 或专用上位机测试。实际协议字段以设备实现为准；不要在设备端尚未实现字段前把示例命令当作可执行接口。
+
+## 11. 故障排查顺序
+
+1. 先访问 `/status`，确认设备仍运行且网络状态正确。
+2. 查询 `/ota/status`，确认是否已有残留会话。
+3. 检查目标核、运行槽、目标槽和 expected offset。
+4. 检查 HTTP 状态码和设备错误码。
+5. 检查 Flash HAL 返回值和目标地址。
+6. 读回目标槽，与发布文件计算摘要。
+7. 检查 EEPROM 双备份和 pending/trial 内容。
+8. 检查 CM4 hold mailbox 和 OpenAMP 日志。
+9. 复位后检查 Bootloader 实际选择的槽。
+10. 检查健康确认是否发生以及提交 active 的结果。
+
+不要先通过重复发送 chunk 来掩盖 offset、Flash 或 EEPROM 错误；先恢复到 `IDLE`，保留旧 active，再重新开始会话。
+
+## 12. #questions
+
+1. 第三份方案最终是否需要同时交付 HTTP Server 上传和 HTTP Client 下载？本文已同时覆盖，但代码实现建议先做 Server 上传。
+2. 产品网络是否允许明文 HTTP？如果不允许，需要确定 TLS 在设备端、网关端还是服务器侧终止。
+3. 是否需要设备主动检查版本，还是由 PC/服务器人工触发升级？
+4. manifest 和固件是否需要数字签名？如果需要，确认签名算法、公钥存储位置和 Bootloader 验签责任。
+5. Server 上传是否需要鉴权、设备唯一标识和升级权限控制？
+6. 同时升级 CM7/CM4 是否是第一版需求？若是，需要先确认固定 Bootloader/Stub 是否支持成组 pending 和成组回滚。
+7. 设备主动下载失败后，是立即重试、等待下次周期，还是通过本地命令触发？
+8. 服务器是否支持 HTTP Range 请求？这决定主动下载是否采用可恢复分块方式。
+
+## 13. 完成标准
+
+HTTP OTA 只有在以下条件全部满足时才算完成：
+
+- Server 上传或 Client 下载能产生完整、连续的固件字节流。
+- OTA 公共状态机正确处理 begin、write、finish、abort。
+- 空闲槽选择不会覆盖当前运行槽。
+- Flash 写入、读回校验和向量表检查有效。
+- CRC/SHA 与发布元数据比较有效。
+- EEPROM pending 写入、读回和试启动流程有效。
+- CM4 升级前 hold，失败后 cancel/release 路径有效。
+- 新镜像健康确认后才提交 active。
+- 断网、断电、客户端断开、服务器错误和启动失败都能保留旧版本可启动。
+- 版本、硬件型号、目标核和链接地址检查有效。
+- 若接入不可信网络，鉴权和签名验证已完成并经过测试。
