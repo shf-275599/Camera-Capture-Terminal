@@ -57,12 +57,12 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
-  .resource_table ORIGIN(OPEN_AMP_SHMEM) (NOLOAD) :
+  .resource_table ORIGIN(OPENAMP_RSC_TAB) (NOLOAD) :
   {
     . = ALIGN(4);
     KEEP(*(.resource_table))
     . = ALIGN(4);
-  } >OPEN_AMP_SHMEM
+  } >OPENAMP_RSC_TAB
 
   /* The startup code goes first into FLASH */
   .isr_vector :
