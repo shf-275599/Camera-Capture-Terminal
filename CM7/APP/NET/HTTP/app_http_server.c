@@ -77,7 +77,7 @@ static void Http_Thread(void *argument)
         return;
     }
 
-    LOG_INFO("CM7", "HTTP: server listening on port %u\r\n",
+    LOG_INFO("CM7", "HTTP: server listening on port %u",
              (unsigned int)APP_HTTP_PORT);
 
     for (;;)
@@ -109,7 +109,7 @@ void App_HTTP_Server_Thread_Start(void)
     BaseType_t xReturn = pdPASS;
     xReturn = xTaskCreate((TaskFunction_t)Http_Thread,
                           (char *)"Http_Thread",
-                          (uint16_t)4096U,
+                          (uint16_t)1024,
                           (void *)NULL,
                           (uint8_t)5,
                           (TaskHandle_t *)NULL);
@@ -174,7 +174,7 @@ static void http_handle_client(struct netconn *conn)
 static void http_handle_status(struct netconn *conn)
 {
     char body[256];
-    char ip_address[IP4ADDR_STRLEN];
+    char ip_address[IP4ADDR_STRLEN_MAX];
     uint8_t running_slot;
     int body_length;
 
