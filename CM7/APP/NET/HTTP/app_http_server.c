@@ -80,19 +80,16 @@ static void Http_Thread(void *argument)
     for (;;)
     {
         client_connection = NULL;
-
-        error = netconn_accept(listen_connection,
-                               &client_connection);
+        /* 接受连接 */
+        error = netconn_accept(listen_connection, &client_connection);
         if (error != ERR_OK)
         {
             osDelay(100U);
             continue;
         }
-
-        http_handle_client(client_connection);
-
-        netconn_close(client_connection);
-        netconn_delete(client_connection);
+        http_handle_client(client_connection); // 处理客户端请求
+        netconn_close(client_connection);      // 关闭客户端连接
+        netconn_delete(client_connection);     // 删除客户端连接
     }
 }
 
@@ -126,10 +123,10 @@ static void http_handle_client(struct netconn *conn)
 {
     char path[64];
 
-    if (http_read_request(conn,
-                          s_request,
-                          sizeof(s_request)) != 0)
+    /* 读取 HTTP 请求 */
+    if (http_read_request(conn, s_request, sizeof(s_request)) != 0)
     {
+        /* 读取请求失败，回复 400 错误码 */
         http_reply_text(conn,
                         400,
                         "Bad Request",
@@ -138,10 +135,10 @@ static void http_handle_client(struct netconn *conn)
         return;
     }
 
-    if (http_get_request_path(s_request,
-                              path,
-                              sizeof(path)) != 0)
+    /* 提取请求路径 */
+    if (http_get_request_path(s_request, path, sizeof(path)) != 0)
     {
+        /* 提取路径失败，回复 405 错误码 */
         http_reply_text(conn,
                         405,
                         "Method Not Allowed",
@@ -150,8 +147,10 @@ static void http_handle_client(struct netconn *conn)
         return;
     }
 
+    /* 处理 /status 请求 */
     if (strcmp(path, "/status") == 0)
     {
+        /* 处理 /status 请求 */
         http_handle_status(conn);
         return;
     }
@@ -175,12 +174,11 @@ static void http_handle_status(struct netconn *conn)
     uint8_t running_slot;
     int body_length;
 
-    ip4addr_ntoa_r(netif_ip4_addr(&gnetif),
-                   ip_address,
-                   sizeof(ip_address));
-
+    /* 获取 IP 地址 */
+    ip4addr_ntoa_r(netif_ip4_addr(&gnetif), ip_address, sizeof(ip_address));
+    /* 获取运行槽位 */
     running_slot = boot_detect_slot_running();
-
+    /* 构建响应体，包含设备信息、网络状态、IP 地址和 CM7 运行槽位 */
     body_length = snprintf(body,
                            sizeof(body),
                            "{"
@@ -196,9 +194,10 @@ static void http_handle_status(struct netconn *conn)
                            ip_address,
                            (unsigned int)running_slot);
 
-    if ((body_length <= 0) ||
-        ((size_t)body_length >= sizeof(body)))
+    /* 检查响应体长度是否有效 */
+    if ((body_length <= 0) || ((size_t)body_length >= sizeof(body)))
     {
+        /* 响应体长度无效，回复 500 错误码 */
         http_reply_text(conn,
                         500,
                         "Internal Server Error",
@@ -206,7 +205,7 @@ static void http_handle_status(struct netconn *conn)
                         "status response too large\r\n");
         return;
     }
-
+    /* 响应体长度有效，回复 200 成功码 */
     http_reply_text(conn,
                     200,
                     "OK",
@@ -229,34 +228,38 @@ static int http_get_request_path(const char *request,
     const char *path_end;
     size_t path_length;
 
+    /* 检查请求是否为 GET 请求 */
     if (strncmp(request, "GET ", 4U) != 0)
     {
         return -1;
     }
 
-    path_start = request + 4U;
-    path_end = strchr(path_start, ' ');
+    path_start = request + 4U;          // 跳过 "GET "
+    path_end = strchr(path_start, ' '); // 查找路径结束位置
 
+    /* 检查路径是否有效 */
     if (path_end == NULL)
     {
         return -1;
     }
 
+    /* 计算路径长度 */
     path_length = (size_t)(path_end - path_start);
-
-    if ((path_length == 0U) ||
-        (path_length >= path_size))
+    /* 检查路径长度是否有效 */
+    if ((path_length == 0U) || (path_length >= path_size))
     {
         return -1;
     }
 
+    /* 复制路径到缓冲区 */
     memcpy(path, path_start, path_length);
     path[path_length] = '\0';
 
+    /* 检查路径是否包含查询参数 */
     path_end = strchr(path, '?');
     if (path_end != NULL)
     {
-        path[(size_t)(path_end - path)] = '\0';
+        path[(size_t)(path_end - path)] = '\0'; // 截断路径，移除查询参数
     }
 
     return 0;
@@ -277,6 +280,7 @@ static int http_read_request(struct netconn *conn,
     err_t error;
     size_t received = 0U;
 
+    /* 设置接收超时 */
     netconn_set_recvtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS);
 
     while (received + 1U < buffer_size)
@@ -284,6 +288,7 @@ static int http_read_request(struct netconn *conn,
         void *data;
         u16_t data_length;
 
+        /* 接收数据 */
         error = netconn_recv(conn, &net_buffer);
         if (error != ERR_OK)
         {
@@ -295,15 +300,18 @@ static int http_read_request(struct netconn *conn,
             data = NULL;
             data_length = 0U;
 
+            /* 处理数据 */
             if (netbuf_data(net_buffer, &data, &data_length) == ERR_OK)
             {
                 size_t copy_length = data_length;
 
+                /* 检查是否超出了缓冲区大小 */
                 if ((received + copy_length + 1U) > buffer_size)
                 {
                     copy_length = buffer_size - received - 1U;
                 }
 
+                /* 复制数据到缓冲区 */
                 if (copy_length > 0U)
                 {
                     memcpy(buffer + received, data, copy_length);
@@ -312,15 +320,16 @@ static int http_read_request(struct netconn *conn,
                 }
             }
 
+            /* 检查是否接收完整 */
             if (strstr(buffer, "\r\n\r\n") != NULL)
             {
-                netbuf_delete(net_buffer);
+                netbuf_delete(net_buffer); // 释放接收缓冲区
                 return 0;
             }
-        } while (netbuf_next(net_buffer) >= 0);
+        } while (netbuf_next(net_buffer) >= 0); // 处理下一个数据块
 
-        netbuf_delete(net_buffer);
-        net_buffer = NULL;
+        netbuf_delete(net_buffer); // 释放接收缓冲区
+        net_buffer = NULL;         // 重置指针
     }
 
     return -1;
@@ -341,12 +350,12 @@ static void http_reply_text(struct netconn *conn,
                             const char *content_type,
                             const char *body)
 {
-    char header[256];
-    int header_length;
-    size_t body_length;
+    char header[256];   // HTTP 响应头缓冲区
+    int header_length;  // HTTP 响应头长度
+    size_t body_length; // 回复内容长度
 
-    body_length = strlen(body);
-
+    body_length = strlen(body); // 计算回复内容长度
+    /* 构建 HTTP 响应头，包含状态码、状态文本、内容类型、内容长度、连接类型、缓存控制指令 */
     header_length = snprintf(header,
                              sizeof(header),
                              "HTTP/1.1 %d %s\r\n"
@@ -360,17 +369,19 @@ static void http_reply_text(struct netconn *conn,
                              content_type,
                              (unsigned long)body_length);
 
-    if ((header_length <= 0) ||
-        ((size_t)header_length >= sizeof(header)))
+    /* 检查 HTTP 响应头是否有效 */
+    if ((header_length <= 0) || ((size_t)header_length >= sizeof(header)))
     {
         return;
     }
 
+    /* 发送 HTTP 响应头 */
     if (http_send_all(conn, header, (size_t)header_length) != 0)
     {
         return;
     }
 
+    /* 发送回复内容 */
     (void)http_send_all(conn, body, body_length);
 }
 
@@ -383,6 +394,7 @@ static void http_reply_text(struct netconn *conn,
  */
 static int http_send_all(struct netconn *conn, const void *data, size_t length)
 {
+    /* 发送数据 */
     if (netconn_write(conn, data, length, NETCONN_COPY) != ERR_OK)
     {
         return -1;
