@@ -57,6 +57,19 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
+  /* ETH DMA 使用不可缓存 D2 SRAM，避开 CM4 的 0x30028000 起始区。 */
+  .eth_dma 0x30000000 (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.RxDescripSection)
+    . = ALIGN(32);
+    *(.TxDescripSection)
+    . = ALIGN(32);
+    *(.Rx_PoolSection)
+    . = ALIGN(32);
+  } >RAM_D2
+  ASSERT(SIZEOF(.eth_dma) <= 0x5000, "ETH DMA overlaps LwIP heap")
+
   .resource_table ORIGIN(OPENAMP_RSC_TAB) (NOLOAD) :
   {
     . = ALIGN(4);

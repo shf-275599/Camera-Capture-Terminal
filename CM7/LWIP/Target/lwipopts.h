@@ -114,6 +114,9 @@
 /*-----------------------------------------------------------------------------*/
 /* USER CODE BEGIN 1 */
 
+/* RX 池占用前 20 KiB，LwIP heap 从其后开始，重新生成时保留布局。 */
+#undef LWIP_RAM_HEAP_POINTER
+#define LWIP_RAM_HEAP_POINTER 0x30005000
 #define LWIP_SO_RCVTIMEO 1
 
 /* USER CODE END 1 */
