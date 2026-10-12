@@ -27,7 +27,8 @@
 #include "lwip/ethip6.h"
 #include "ethernetif.h"
 /* USER CODE BEGIN Include for User BSP */
-
+#include "eth_phy.h"
+#include "mylog.h"
 /* USER CODE END Include for User BSP */
 #include <string.h>
 #include "cmsis_os.h"
@@ -563,14 +564,78 @@ void ethernet_link_thread(void* argument)
 {
 
 /* USER CODE BEGIN ETH link init */
-
+  struct netif *netif = (struct netif *)argument;
+  int32_t previous_state = LAN8720_STATUS_LINK_DOWN;
+  uint32_t previous_ip = 0U;
+  LOG_INFO("CM7", "NET_START: 等待 PHY 链路与 DHCP 地址");
 /* USER CODE END ETH link init */
 
   for(;;)
   {
 
 /* USER CODE BEGIN ETH link Thread core code for User BSP */
-
+    int32_t state = eth_phy_get_link_state();
+    if (state != previous_state)
+    {
+      ETH_MACConfigTypeDef config;
+      uint8_t link_up = 1U;
+      HAL_ETH_GetMACConfig(&heth, &config);
+      switch (state)
+      {
+      case LAN8720_STATUS_100MBITS_FULLDUPLEX:
+        config.Speed = ETH_SPEED_100M;
+        config.DuplexMode = ETH_FULLDUPLEX_MODE;
+        break;
+      case LAN8720_STATUS_100MBITS_HALFDUPLEX:
+        config.Speed = ETH_SPEED_100M;
+        config.DuplexMode = ETH_HALFDUPLEX_MODE;
+        break;
+      case LAN8720_STATUS_10MBITS_FULLDUPLEX:
+        config.Speed = ETH_SPEED_10M;
+        config.DuplexMode = ETH_FULLDUPLEX_MODE;
+        break;
+      case LAN8720_STATUS_10MBITS_HALFDUPLEX:
+        config.Speed = ETH_SPEED_10M;
+        config.DuplexMode = ETH_HALFDUPLEX_MODE;
+        break;
+      default:
+        link_up = 0U;
+        break;
+      }
+      if (link_up != 0U)
+      {
+        if ((HAL_ETH_SetMACConfig(&heth, &config) != HAL_OK) ||
+            (HAL_ETH_Start_IT(&heth) != HAL_OK))
+        {
+          LOG_ERROR("CM7", "NET_FAIL: ETH 启动 error=0x%lX", (unsigned long)heth.ErrorCode);
+          osDelay(100);
+          continue;
+        }
+        LOCK_TCPIP_CORE();
+        netif_set_link_up(netif);
+        UNLOCK_TCPIP_CORE();
+        LOG_INFO("CM7", "NET_LINK_UP: %s", eth_phy_link_state_str(state));
+      }
+      else
+      {
+        (void)HAL_ETH_Stop_IT(&heth);
+        LOCK_TCPIP_CORE();
+        netif_set_link_down(netif);
+        UNLOCK_TCPIP_CORE();
+        LOG_INFO("CM7", "NET_LINK_DOWN: %s", eth_phy_link_state_str(state));
+      }
+      previous_state = state;
+    }
+    LOCK_TCPIP_CORE();
+    uint32_t current_ip = netif_ip4_addr(netif)->addr;
+    if (current_ip != previous_ip)
+    {
+      char address[IP4ADDR_STRLEN_MAX];
+      ip4addr_ntoa_r(netif_ip4_addr(netif), address, sizeof(address));
+      LOG_INFO("CM7", "NET_IP: %s", address);
+      previous_ip = current_ip;
+    }
+    UNLOCK_TCPIP_CORE();
 /* USER CODE END ETH link Thread core code for User BSP */
 
     osDelay(100);
