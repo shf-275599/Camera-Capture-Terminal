@@ -22,6 +22,7 @@
 #include "jpeg_utils.h"
 #include "ltdc.h"
 #include "lcd.h"
+#include "mylog.h"
 
 /*
  * SDRAM 缓冲布局。地址避开从 0xD0000000 开始的 800 x 480 RGB565
@@ -187,8 +188,8 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     HAL_JPEG_Abort(&hjpeg);
     g_jpeg.active = 0U;
 
-    printf("CM7: HW JPEG failed, error=0x%08lx\n",
-           HAL_JPEG_GetError(&hjpeg));
+    LOG_ERROR("JPEG", "HW JPEG failed, error=0x%08lx",
+              HAL_JPEG_GetError(&hjpeg));
     return -1;
   }
 
@@ -208,10 +209,10 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
-  printf("CM7: HW JPEG %lux%lu, MCU=%lu bytes\n",
-         g_jpeg.info.ImageWidth,
-         g_jpeg.info.ImageHeight,
-         g_jpeg.out_size);
+  LOG_INFO("JPEG", "HW JPEG %lux%lu, MCU=%lu bytes",
+           g_jpeg.info.ImageWidth,
+           g_jpeg.info.ImageHeight,
+           g_jpeg.out_size);
 
   g_jpeg.active = 0U;
   return 0;

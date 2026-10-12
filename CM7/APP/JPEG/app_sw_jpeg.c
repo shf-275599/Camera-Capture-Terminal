@@ -15,6 +15,7 @@
 #include <string.h>
 #include "lcd.h"
 #include "tjpgd_utils.h"
+#include "mylog.h"
 
 /* TJpgDec 在 jd_prepare() 中从该内存池分配输入缓冲、Huffman 表和工作缓冲。 */
 #define JPEG_WORK_POOL_SIZE  (8192U)
@@ -165,17 +166,17 @@ void jpeg_sw_decode(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x,
                         sizeof(jpeg_work_pool), &context);
     if (result != JDR_OK)
     {
-        printf("CM7: JPEG prepare failed, result=%d\n", (int)result);
+        LOG_ERROR("JPEG", "JPEG prepare failed, result=%d", (int)result);
         return;
     }
 
-    printf("CM7: JPEG image %ux%u, data=%u bytes\n",
-           decoder.width, decoder.height, (unsigned int)context.size);
+    LOG_INFO("JPEG", "JPEG image %ux%u, data=%u bytes",
+             decoder.width, decoder.height, (unsigned int)context.size);
 
     /* 本测试不启用缩放，原图必须能够完整放入当前 LCD 逻辑分辨率。 */
     if ((decoder.width > lcddev.width) || (decoder.height > lcddev.height))
     {
-        printf("CM7: JPEG image is larger than LCD\n");
+        LOG_WARN("JPEG", "JPEG image is larger than LCD");
         return;
     }
 
@@ -189,5 +190,5 @@ void jpeg_sw_decode(uint8_t *jpeg_data, unsigned int jpeg_data_size, uint16_t x,
     /* 确保所有显式内存操作在打印完成状态前已经结束。 */
     __DSB();
 
-    printf("CM7: JPEG decode result=%d\n", (int)result);
+    LOG_INFO("JPEG", "JPEG decode result=%d", (int)result);
 }
