@@ -32,6 +32,7 @@
 #include "app_sw_jpeg.h"
 #include "app_hw_jpeg.h"
 #include "jpeg_utils.h"
+#include "app_ipc_cm7.h"
 #include "app_ov5640.h"
 #include "mylog.h"
 #include "usart.h"
@@ -67,7 +68,6 @@ const osThreadAttr_t defaultTask_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void OpenAMP_Task(void *argument);
-void CameraTestTask(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -113,27 +113,8 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  BaseType_t xReturn = pdPASS;
-  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
-                        (char *)"OpenAMP_Task",
-                        (uint16_t)256,
-                        (void *)NULL,
-                        (uint8_t)5,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
-  xReturn = xTaskCreate((TaskFunction_t)CameraTestTask,
-                        (char *)"CameraTestTask",
-                        (uint16_t)512,
-                        (void *)NULL,
-                        (uint8_t)5,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
+  App_IPC_Thread_Start();
+  App_OV5640_Thread_Start();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -164,32 +145,13 @@ void StartDefaultTask(void *argument)
       HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
     }
     HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
-    osDelay(10);
+    osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void OpenAMP_Task(void *argument)
-{
-  for (;;)
-  {
-    OPENAMP_check_for_message();
-    osDelay(100);
-  }
-}
 
-void CameraTestTask(void *argument)
-{
-  (void)argument;
-
-  if (app_ov5640_run() != 0U)
-  {
-    LOG_ERROR("CM7", "CAMERA_TEST_FAIL");
-  }
-
-  vTaskDelete(NULL);
-}
 /* USER CODE END Application */
 

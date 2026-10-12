@@ -2,8 +2,37 @@
 #include "openamp.h"
 #include "main.h"
 #include "mylog.h"
+#include "freertos.h"
+#include "task.h"
+#include "cmsis_os2.h"
 
 static struct rpmsg_endpoint s_ept;
+
+static void IPC_Thread(void *argument)
+{
+  (void)argument;
+
+  for (;;)
+  {
+    OPENAMP_check_for_message();
+    osDelay(100);
+  }
+}
+
+void App_IPC_Thread_Start(void)
+{
+  BaseType_t xReturn = pdPASS;
+  xReturn = xTaskCreate((TaskFunction_t)IPC_Thread,
+                        (char *)"IPC_Thread",
+                        (uint16_t)256,
+                        (void *)NULL,
+                        (uint8_t)5,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
+}
 
 static int cm4_rx_callback(struct rpmsg_endpoint *ept,
                            void *data,

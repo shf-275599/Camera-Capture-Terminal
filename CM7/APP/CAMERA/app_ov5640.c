@@ -9,6 +9,44 @@
 #include "ov5640_dcmi.h"
 #include "cmsis_os2.h"
 #include "mylog.h"
+#include "freertos.h"
+#include "task.h"
+#include "cmsis_os2.h"
+
+/**
+ * @brief  OV5640 摄像头任务
+ * @note   该任务会在 FreeRTOS 中运行，用于运行摄像头功能
+ */
+static void Camera_Thread(void *argument)
+{
+  (void)argument;
+
+  if (app_ov5640_run() != 0U)
+  {
+    LOG_ERROR("CM7", "CAMERA_THREAD_FAIL");
+  }
+
+  vTaskDelete(NULL);
+}
+
+/**
+ * @brief  启动 OV5640 摄像头任务
+ * @note   该任务会在 FreeRTOS 中运行，用于测试摄像头功能
+ */
+void App_OV5640_Thread_Start(void)
+{
+    BaseType_t xReturn = pdPASS;
+      xReturn = xTaskCreate((TaskFunction_t)Camera_Thread,
+                        (char *)"Camera_Thread",
+                        (uint16_t)512,
+                        (void *)NULL,
+                        (uint8_t)5,
+                        (TaskHandle_t *)NULL);
+  if (xReturn != pdPASS)
+  {
+    return;
+  }
+}
 
 /**
  * @brief  初始化 OV5640，检查芯片并切换一次摄像头 LED

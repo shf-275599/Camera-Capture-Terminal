@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+void App_OV5640_Thread_Start(void);
 void app_ov5640_init(void);
 void app_ov5640_capture_colorbar(void);
 uint8_t app_ov5640_run(void);

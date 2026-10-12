@@ -30,6 +30,7 @@
 #include "main.h"
 #include "openamp.h"
 #include "mylog.h"
+#include "app_ipc_cm4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -101,17 +102,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  BaseType_t xReturn = pdPASS;
-  xReturn = xTaskCreate((TaskFunction_t)OpenAMP_Task,
-                        (char *)"OpenAMP_Task",
-                        (uint16_t)256,
-                        (void *)NULL,
-                        (uint8_t)5,
-                        (TaskHandle_t *)NULL);
-  if (xReturn != pdPASS)
-  {
-    return;
-  }
+  App_IPC_Thread_Start();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -141,15 +132,6 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void OpenAMP_Task(void *argument)
-{
-  (void)argument;
 
-  for (;;)
-  {
-    OPENAMP_check_for_message();
-    osDelay(100);
-  }
-}
 /* USER CODE END Application */
 

@@ -3,6 +3,7 @@
 
 #define RPMSG_SERVICE_NAME "IPC"
 
+void App_IPC_Thread_Start(void);
 void app_ipc_cm7_init(void);
 
 #endif
