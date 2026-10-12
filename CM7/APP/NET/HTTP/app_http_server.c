@@ -15,23 +15,20 @@
 #include <string.h>
 #include <stdint.h>
 
-#define APP_HTTP_PORT 80U
-#define APP_HTTP_REQUEST_SIZE 1024U
-#define APP_HTTP_RECV_TIMEOUT_MS 5000U
+#define APP_HTTP_PORT 80U              // HTTP 服务器端口
+#define APP_HTTP_REQUEST_SIZE 1024U    // HTTP 请求缓冲区大小
+#define APP_HTTP_RECV_TIMEOUT_MS 5000U // HTTP 接收超时时间
 
-extern struct netif gnetif;
+extern struct netif gnetif; // 网络接口结构体
 
-static char s_request[APP_HTTP_REQUEST_SIZE];
+static char s_request[APP_HTTP_REQUEST_SIZE]; // HTTP 请求缓冲区
 
 static void http_handle_client(struct netconn *conn);
 static void http_handle_status(struct netconn *conn);
 static int http_get_request_path(const char *request, char *path, size_t path_size);
 static int http_read_request(struct netconn *conn, char *buffer, size_t buffer_size);
-static void http_reply_text(struct netconn *conn,
-                            int status_code,
-                            const char *status_text,
-                            const char *content_type,
-                            const char *body);
+static void http_reply_text(struct netconn *conn, int status_code, const char *status_text,
+                            const char *content_type, const char *body);
 static int http_send_all(struct netconn *conn, const void *data, size_t length);
 
 /**
@@ -386,11 +383,10 @@ static void http_reply_text(struct netconn *conn,
  */
 static int http_send_all(struct netconn *conn, const void *data, size_t length)
 {
-  if (netconn_write(conn, data, length, NETCONN_COPY) != ERR_OK)
-  {
-    return -1;
-  }
+    if (netconn_write(conn, data, length, NETCONN_COPY) != ERR_OK)
+    {
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
-
