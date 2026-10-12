@@ -288,14 +288,15 @@ uint8_t ov5640_dcmi_stream_poll(void)
         }
         __set_PRIMASK(primask);
     }
+    /* 计算帧率 */
     now = HAL_GetTick();
     elapsed = now - g_stream.fps_tick;
     if (elapsed >= 1000U && !g_stream.error)
     {
         capture_frames = g_stream.frames;
-        LOG_INFO("CM7", "CAMERA_FPS capture=%lu display=%lu",
-                 (unsigned long)((capture_frames - g_stream.fps_capture_frames) * 1000U / elapsed),
-                  (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
+        // LOG_INFO("CM7", "CAMERA_FPS capture=%lu display=%lu",
+        //          (unsigned long)((capture_frames - g_stream.fps_capture_frames) * 1000U / elapsed),
+        //           (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
         if ((hltdc.Instance->ISR & (LTDC_ISR_FUIF | LTDC_ISR_TERRIF)) != 0U)
         {
             LOG_WARN("CM7", "CAMERA_LTDC status=0x%lX", (unsigned long)hltdc.Instance->ISR);
