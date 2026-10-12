@@ -116,7 +116,6 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   App_IPC_Thread_Start();
   App_OV5640_Thread_Start();
-  App_HTTP_Server_Thread_Start();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -136,6 +135,7 @@ void StartDefaultTask(void *argument)
 {
   /* init code for LWIP */
   MX_LWIP_Init();
+  App_HTTP_Server_Thread_Start();
   /* USER CODE BEGIN StartDefaultTask */
 
   /* Infinite loop */
