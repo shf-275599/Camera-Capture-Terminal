@@ -34,6 +34,7 @@
 #include "jpeg_utils.h"
 #include "app_ipc_cm7.h"
 #include "app_ov5640.h"
+#include "app_http_server.h"
 #include "mylog.h"
 #include "usart.h"
 /* USER CODE END Includes */
@@ -115,6 +116,7 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   App_IPC_Thread_Start();
   App_OV5640_Thread_Start();
+  App_HTTP_Server_Thread_Start();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
