@@ -164,15 +164,15 @@ int main(void)
 
     if (ee_load_ret == 1) // 无有效启动记录，首次写入默认值
     {
-      LOG_INFO("BOOT", "EEPROM empty, saving default metadata");
+      LOG_INFO("BOOT", "EEPROM empty, saving default metadata"); // 双备份均无效，提示写入首份默认记录
 
       if (boot_eeprom_save(&ee) == 0) // 将默认启动记录写入 EEPROM
       {
-        LOG_INFO("BOOT", "EEPROM default metadata saved");
+        LOG_INFO("BOOT", "EEPROM default metadata saved"); // 默认元数据落盘成功
       }
-      else
+      else // 保存失败：EEPROM 掉线或写超时
       {
-        LOG_ERROR("BOOT", "EEPROM default metadata save failed");
+        LOG_ERROR("BOOT", "EEPROM default metadata save failed"); // 落盘失败：本次仍按内存默认值继续，下次开机重试
       }
     }
   }
