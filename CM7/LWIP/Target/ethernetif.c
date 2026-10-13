@@ -567,7 +567,7 @@ void ethernet_link_thread(void* argument)
   struct netif *netif = (struct netif *)argument;
   int32_t previous_state = LAN8720_STATUS_LINK_DOWN;
   uint32_t previous_ip = 0U;
-  LOG_INFO("CM7", "NET_START: 等待 PHY 链路与 DHCP 地址");
+  LOG_INFO("CM7", "NET_START: wait PHY link and DHCP address");
 /* USER CODE END ETH link init */
 
   for(;;)
