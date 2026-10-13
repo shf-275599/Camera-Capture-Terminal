@@ -135,9 +135,8 @@ void StartDefaultTask(void *argument)
 {
   /* init code for LWIP */
   MX_LWIP_Init();
-  App_HTTP_Server_Thread_Start();
   /* USER CODE BEGIN StartDefaultTask */
-
+  App_HTTP_Server_Thread_Start();
   /* Infinite loop */
   for (;;)
   {
