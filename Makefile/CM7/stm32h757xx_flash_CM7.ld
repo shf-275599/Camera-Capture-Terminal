@@ -57,7 +57,7 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
-  /* ETH DMA 使用不可缓存 D2 SRAM，避开 CM4 的 0x30028000 起始区。 */
+  /* ETH DMA 使用的是不可缓存 D2 SRAM，预留 0x30000000 ～ 0x30004FFF (20KB) 区域  */
   .eth_dma 0x30000000 (NOLOAD) :
   {
     . = ALIGN(32);
