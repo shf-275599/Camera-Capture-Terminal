@@ -10,6 +10,7 @@
 #include "boot_slot.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "cmsis_os2.h"
 #include "mylog.h"
 #include <stdio.h>
 #include <string.h>
