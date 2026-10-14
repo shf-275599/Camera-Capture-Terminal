@@ -55,24 +55,30 @@ uint8_t boot_get_slot_index_from_address(uint32_t address)
 {
     /* 检查地址是否在 CM7_APP_SLOT_A 范围内 */
     if ((address >= CM7_APP_SLOT_A_BASE) &&
-        (address < (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE))) {
+        (address < (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE)))
+    {
         return CM7_APP_SLOT_A_INDEX;
     }
     /* 检查地址是否在 CM7_APP_SLOT_B 范围内 */
     else if ((address >= CM7_APP_SLOT_B_BASE) &&
-        (address < (CM7_APP_SLOT_B_BASE + CM7_APP_SLOT_B_SIZE))) {
+             (address < (CM7_APP_SLOT_B_BASE + CM7_APP_SLOT_B_SIZE)))
+    {
         return CM7_APP_SLOT_B_INDEX;
     }
     /* 检查地址是否在 CM4_APP_SLOT_A 范围内 */
     else if ((address >= CM4_APP_SLOT_A_BASE) &&
-        (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE))) {
+             (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE)))
+    {
         return CM4_APP_SLOT_A_INDEX;
     }
     /* 检查地址是否在 CM4_APP_SLOT_B 范围内 */
     else if ((address >= CM4_APP_SLOT_B_BASE) &&
-        (address < (CM4_APP_SLOT_B_BASE + CM4_APP_SLOT_B_SIZE))) {
+             (address < (CM4_APP_SLOT_B_BASE + CM4_APP_SLOT_B_SIZE)))
+    {
         return CM4_APP_SLOT_B_INDEX;
-    } else {
+    }
+    else
+    {
         return 255U;
     }
 }
@@ -181,7 +187,7 @@ uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
             return 0; // 栈不在这三块 RAM → slot 镜像非法，拒绝启动
         }
     }
-    return 1; 
+    return 1;
 }
 
 /**
