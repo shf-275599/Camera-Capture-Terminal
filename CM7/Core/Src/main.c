@@ -88,6 +88,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
+/* Boot */
 static volatile boot_eeprom_meta_t ee; // 保存 EEPROM 中的 active、pending 等启动记录
 static volatile uint8_t running;       // 当前运行的槽槽号
 static volatile uint8_t cm4_slot;      // CM4 启动的槽槽号
@@ -199,17 +200,27 @@ int main(void)
 
     if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM，成功时返回 0
     {
-      (void)boot_eeprom_init();    // 准备 Boot 元数据的 EEPROM 访问
-      (void)boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
-      ee_ok = 1;                   // EEPROM 可访问，后续按启动记录选择 CM4 槽
+      int ee_init_ret = boot_eeprom_init(); // 准备 Boot 元数据的 EEPROM 访问
+      if (ee_init_ret != 0)
+      {
+        LOG_ERROR("APP", "EEPROM init fail, CM4 default Slot A"); // 初始化失败时沿用前面设置的 CM4 A 槽默认值
+      }
+      int ee_load_ret = boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
+      if (ee_load_ret != 0)
+      {
+        LOG_WARN("APP", "EEPROM meta empty/invalid, using defaults (ret=%d)", ee_load_ret);
+      }
+      ee_ok = 1; // EEPROM 可访问，后续按启动记录选择 CM4 槽
 
       /* 打印当前 CM7 槽和 EEPROM 记录，便于核对启动状态 */
-      LOG_INFO("APP", "CM7 running slot=%u base=0x%08lX | EE active=%u pending=%u flags=0x%02X",
+      LOG_INFO("APP", "CM7 running slot=%u base=0x%08lX | EE active=%u pending=%u flags=0x%02X, init ret=%d, load ret=%d",
                (unsigned int)running,
                (unsigned long)boot_slot_base_get(running),
                (unsigned int)ee.active_slot,
                (unsigned int)ee.pending_slot,
-               (unsigned int)ee.flags);
+               (unsigned int)ee.flags,
+               (unsigned int)ee_init_ret,
+               (unsigned int)ee_load_ret);
       /* 打印 CM4 的启动槽和两个应用版本 */
       LOG_INFO("APP", "CM4 EE active=%u pending=%u flags=0x%02X verA=%lu verB=%lu",
                (unsigned int)ee.cm4_active_slot,
@@ -221,7 +232,7 @@ int main(void)
       cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、active、兜底顺序选择 CM4 槽，并处理试启动次数
       cm4_base = boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
 
-      (void)bsp_eeprom_selftest(); // 检查 EEPROM 用户区读写，不参与本次槽位选择
+      // (void)bsp_eeprom_selftest(); // 测试 EEPROM 用户区读写，不参与本次槽位选择
     }
     else
     {
