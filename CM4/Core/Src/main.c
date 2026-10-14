@@ -21,6 +21,7 @@
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #include "dma.h"
+#include "iwdg.h"
 #include "mdma.h"
 #include "openamp.h"
 #include "gpio.h"
@@ -129,6 +130,7 @@ int main(void)
   MX_GPIO_Init();
   MX_MDMA_Init();
   MX_DMA_Init();
+  MX_IWDG2_Init();
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init(); // 初始化 IPC 模块
   LOG_INFO("CM4", "main() user init OK");
