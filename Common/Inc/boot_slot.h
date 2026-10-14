@@ -77,6 +77,6 @@ uint32_t boot_slot_base_get(uint8_t slot_index);
 uint32_t boot_slot_end_get(uint8_t slot_index);
 uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack);
 uint8_t boot_get_slot_index_from_address(uint32_t address);
-uint8_t boot_detect_slot_running(void);
+uint8_t boot_get_running_slot(void);
 
 #endif

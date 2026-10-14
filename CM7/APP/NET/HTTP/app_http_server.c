@@ -178,7 +178,7 @@ static void http_handle_status(struct netconn *conn)
     /* 获取 IP 地址 */
     ip4addr_ntoa_r(netif_ip4_addr(&gnetif), ip_address, sizeof(ip_address));
     /* 获取运行槽位 */
-    running_slot = boot_detect_slot_running();
+    running_slot = boot_get_running_slot();
     /* 构建响应体，包含设备信息、网络状态、IP 地址和 CM7 运行槽位 */
     body_length = snprintf(body,
                            sizeof(body),
