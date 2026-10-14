@@ -281,7 +281,7 @@ int boot_eeprom_init(void)
 {
     s_ee_dev = *bsp_eeprom_handle();
     s_ee_ready = 1U;
-    LOG_INFO("APP", "EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
+    LOG_INFO("BOOT", "EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
              (unsigned int)BOOT_EE_COPY0_ADDR,
              (unsigned int)BOOT_EE_COPY1_ADDR,
              (unsigned int)BOOT_EE_STRUCT_VER);
@@ -316,7 +316,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
 
     c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0);
     c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1);
-    LOG_INFO("APP", "EE copy0 valid=%d seq=%lu | copy1 valid=%d seq=%lu",
+    LOG_INFO("BOOT", "EE copy0 valid=%d seq=%lu | copy1 valid=%d seq=%lu",
              c0_ok, c0_ok ? (unsigned long)c0.seq : 0UL,
              c1_ok, c1_ok ? (unsigned long)c1.seq : 0UL);
 
@@ -337,7 +337,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
         return 0;
     }
 
-    LOG_INFO("APP", "EEPROM meta empty/invalid, use defaults (CM7/CM4 active=A)");
+    LOG_INFO("BOOT", "EEPROM meta empty/invalid, use defaults (CM7/CM4 active=A)");
     return 1;
 }
 
@@ -361,7 +361,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
 
     if (sizeof(boot_eeprom_meta_t) > BOOT_EE_COPY_SIZE)
     {
-        LOG_ERROR("APP", "EEPROM meta too large (%u > %u)",
+        LOG_ERROR("BOOT", "EEPROM meta too large (%u > %u)",
                   (unsigned int)sizeof(boot_eeprom_meta_t),
                   (unsigned int)BOOT_EE_COPY_SIZE);
         return -1;
@@ -393,7 +393,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
 
     if (BL24C16F_Write(&s_ee_dev, target, (const uint8_t *)meta, sizeof(*meta)) != HAL_OK)
     {
-        LOG_ERROR("APP", "EEPROM save failed @ 0x%04X", (unsigned int)target);
+        LOG_ERROR("BOOT", "EEPROM save failed @ 0x%04X", (unsigned int)target);
         return -1;
     }
 
@@ -469,7 +469,7 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
         if (meta->boot_trial == 0U)
         {
             /* 额度用尽：取消 pending，回退 active */
-            LOG_INFO("APP", "CM7 pending trial exhausted, fallback active=%u",
+            LOG_INFO("BOOT", "CM7 pending trial exhausted, fallback active=%u",
                      (unsigned int)meta->active_slot);
             meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
             meta->pending_slot = meta->active_slot;
@@ -620,7 +620,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
         if (meta->cm4_boot_trial == 0U)
         {
             /* 额度用尽：取消 pending，回退 active */
-            LOG_INFO("APP", "CM4 pending trial exhausted, fallback active=%u",
+            LOG_INFO("BOOT", "CM4 pending trial exhausted, fallback active=%u",
                      (unsigned int)meta->cm4_active_slot);
             meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
             meta->cm4_pending_slot = meta->cm4_active_slot;
