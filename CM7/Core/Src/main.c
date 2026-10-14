@@ -155,16 +155,20 @@ int main(void)
   printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
   printf("\r\n");
 
-  LOG_INFO("BOOT","=================================================================================");
+  LOG_INFO("BOOT", "=================================================================================");
   LOG_INFO("BOOT", "Initializing EEPROM...");
   if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM；成功返回 0
   {
-    boot_eeprom_init();                     // 准备 Boot 元数据的 EEPROM 访问
-    LOG_INFO("BOOT", "EEPROM initialized"); // 初始化成功
+    int ee_init_ret = boot_eeprom_init(); // 准备 Boot 元数据的 EEPROM 访问
+    if (ee_init_ret != 0)
+    {
+      LOG_ERROR("BOOT", "EEPROM initialization failed"); // 初始化失败
+    }
+    LOG_INFO("BOOT", "EEPROM initialized "); // 初始化成功
 
     LOG_INFO("BOOT", "Loading EEPROM metadata...");
-   int ee_load_ret = boot_eeprom_load(&ee); // 读取 EEPROM 中有效的元数据，有效时返回 0，否则返回 1
-    if (ee_load_ret == 1)                // 无有效启动记录，首次写入默认值，通常是全新片或已损坏的情况。
+    int ee_load_ret = boot_eeprom_load(&ee); // 读取 EEPROM 中有效的元数据，有效时返回 0，否则返回 1
+    if (ee_load_ret == 1)                    // 无有效启动记录，首次写入默认值，通常是全新片或已损坏的情况。
     {
       LOG_INFO("BOOT", "EEPROM empty, saving default metadata"); // 双备份均无效，提示写入首份默认记录
 
@@ -233,7 +237,7 @@ int main(void)
   LOG_INFO("BOOT", "Preparing boot slot and checking CM7 slots...");
   boot_slot = boot_eeprom_prepare_boot(&ee); // 选择启动槽，并在需要时更新 EEPROM 试启动状态
   app_base = boot_slot_base_get(boot_slot);  // 将槽号换算为应用向量表的 Flash 地址
-  if (boot_app_is_valid(app_base)) // 再次确认目标槽地址及向量表符合启动条件
+  if (boot_app_is_valid(app_base))           // 再次确认目标槽地址及向量表符合启动条件
   {
     uint32_t sp = *(__IO uint32_t *)app_base;        // 向量表第 1 项：应用启动时的栈顶 MSP
     uint32_t pc = *(__IO uint32_t *)(app_base + 4U); // 向量表第 2 项：应用的 Reset_Handler 地址
