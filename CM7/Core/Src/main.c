@@ -178,20 +178,23 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C4_Init();
   /* USER CODE BEGIN 2 */
-  {                                            /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
-    boot_eeprom_meta_t ee;                     // 保存 EEPROM 中的 active、pending 等启动记录
-    uint8_t running = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
-    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
-    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;   // CM4 默认应用的 Flash 起始地址
-    int ee_ok = 0;                             // 记录本次是否成功初始化 EEPROM
-    printf("\033[1;36m");                      // 加粗；青色
+  {
+    printf("\033[1;36m"); // 加粗；青色
     printf("    _     ____   ____   _      ___   ____     _     _____  ___   ___   _   _ \n");
     printf("   / \\   |  _ \\ |  _ \\ | |    |_ _| / ___|   / \\   |_   _||_ _| / _ \\ | \\ | |\n");
     printf("  / _ \\  | |_) || |_) || |     | | | |      / _ \\    | |   | | | | | ||  \\| |\n");
     printf(" / ___ \\ |  __/ |  __/ | |___  | | | |___  / ___ \\   | |   | | | |_| || |\\  |\n");
     printf("/_/   \\_\\|_|    |_|    |_____||___| \\____|/_/   \\_\\  |_|  |___| \\___/ |_| \\_|\n");
     printf("\n");
-    if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM，成功时返回 0
+
+    /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
+    boot_eeprom_meta_t ee;                     // 保存 EEPROM 中的 active、pending 等启动记录
+    uint8_t running = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
+    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
+    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;   // CM4 默认应用的 Flash 起始地址
+    int ee_ok = 0;                             // 记录本次是否成功初始化 EEPROM
+    
+    if (bsp_eeprom_init() == 0)                // 初始化板载 EEPROM，成功时返回 0
     {
       (void)boot_eeprom_init();    // 准备 Boot 元数据的 EEPROM 访问
       (void)boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
