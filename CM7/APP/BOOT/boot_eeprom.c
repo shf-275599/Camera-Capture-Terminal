@@ -281,7 +281,7 @@ int boot_eeprom_init(void)
 {
     s_ee_dev = *bsp_eeprom_handle();
     s_ee_ready = 1U;
-    LOG_INFO("BOOT", "EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
+    LOG_INFO("BOOT", "Boot EEPROM ready (dual copy @ 0x%04X / 0x%04X, ver=%u)",
              (unsigned int)BOOT_EE_COPY0_ADDR,
              (unsigned int)BOOT_EE_COPY1_ADDR,
              (unsigned int)BOOT_EE_STRUCT_VER);
@@ -539,7 +539,7 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->boot_trial = BOOT_EE_TRIAL_MAX;
     meta->flags |= BOOT_EE_FLAG_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {
@@ -654,7 +654,7 @@ int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
     meta->cm4_active_slot = meta->cm4_pending_slot;
     meta->cm4_boot_trial = 0U;
     meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {
@@ -690,7 +690,7 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {

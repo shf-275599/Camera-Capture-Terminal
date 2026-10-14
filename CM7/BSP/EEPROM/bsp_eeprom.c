@@ -29,12 +29,12 @@ int bsp_eeprom_init(void)
   status = BL24C16F_IsReady(&s_eeprom); // 探测器件 ACK，确认芯片在线
   if (status != HAL_OK)                 // 无应答：器件缺失或 I2C 总线故障
   {
-    LOG_ERROR("BOOT", "EEPROM not ready, status=%d", (int)status); // 打印失败状态码
+    LOG_ERROR("BOOT", "BSP EEPROM not ready, status=%d", (int)status); // 打印失败状态码
     return -1;                                                     // 返回失败，上层跳过全部 EEPROM 操作
   }
 
-  LOG_INFO("BOOT", "EEPROM ready (BL24C16F @ I2C4)"); // 就绪提示
-  return 0;                                           // 返回成功，允许上层读写元数据
+  LOG_INFO("BOOT", "BSP EEPROM ready (BL24C16F @ I2C4)"); // 就绪提示
+  return 0;                                               // 返回成功，允许上层读写元数据
 }
 
 BL24C16F_HandleTypeDef *bsp_eeprom_handle(void)
