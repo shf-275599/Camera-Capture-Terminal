@@ -491,18 +491,26 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
 /**
  * @brief  OTA 成功后由 APP 调用：pending 槽转正为 active，清 trial/pending 标志并保存
  * @param  meta 元数据，可为 NULL（无 pending 时直接返回）
+ * @retval 0 成功，-1 失败
  */
-void boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
+int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
 {
     if ((meta == NULL) || ((meta->flags & BOOT_EE_FLAG_PENDING) == 0U))
     {
-        return;
+        return -1;
     }
 
     meta->active_slot = meta->pending_slot;
     meta->boot_trial = 0U;
     meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
-    (void)boot_eeprom_save(meta);
+
+    int ret = boot_eeprom_save(meta);
+    if (ret != 0)
+    {
+        return ret;
+    }
+
+    return 0;
 }
 
 /**
@@ -513,14 +521,15 @@ void boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
  * @param  image_size 镜像大小
  * @param  image_crc32 镜像 CRC32
  * @param  version    镜像版本号
+ * @retval 0 成功，-1 失败
  */
-void boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
-                             uint32_t image_size, uint32_t image_crc32,
-                             uint32_t version)
+int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
+                            uint32_t image_size, uint32_t image_crc32,
+                            uint32_t version)
 {
     if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT))
     {
-        return;
+        return -1;
     }
 
     meta->pending_slot = slot_index;
@@ -530,7 +539,14 @@ void boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->boot_trial = BOOT_EE_TRIAL_MAX;
     meta->flags |= BOOT_EE_FLAG_PENDING;
-    (void)boot_eeprom_save(meta);
+    
+    int ret = boot_eeprom_save(meta);
+    if (ret != 0)
+    {
+        return ret;
+    }
+
+    return 0;
 }
 
 /**
@@ -626,18 +642,26 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
 /**
  * @brief  CM4 OTA 成功后：pending 槽转正为 active，清 trial/pending 标志并保存
  * @param  meta 元数据，可为 NULL（无 pending 时直接返回）
+ * @retval 0 成功，-1 失败
  */
-void boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
+int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
 {
     if ((meta == NULL) || ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U))
     {
-        return;
+        return -1;
     }
 
     meta->cm4_active_slot = meta->cm4_pending_slot;
     meta->cm4_boot_trial = 0U;
     meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
-    (void)boot_eeprom_save(meta);
+    
+    int ret = boot_eeprom_save(meta);
+    if (ret != 0)
+    {
+        return ret;
+    }
+
+    return 0;
 }
 
 /**
@@ -647,15 +671,16 @@ void boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
  * @param  image_size  镜像大小
  * @param  image_crc32 镜像 CRC32
  * @param  version     镜像版本号
+ * @retval 0 成功，-1 失败
  */
-void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
-                                 uint32_t image_size, uint32_t image_crc32,
-                                 uint32_t version)
+int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
+                                uint32_t image_size, uint32_t image_crc32,
+                                uint32_t version)
 {
     if ((meta == NULL) ||
         ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX)))
     {
-        return;
+        return -1;
     }
 
     meta->cm4_pending_slot = slot_index;
@@ -665,5 +690,12 @@ void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;
-    (void)boot_eeprom_save(meta);
+    
+    int ret = boot_eeprom_save(meta);
+    if (ret != 0)
+    {
+        return ret;
+    }
+
+    return 0;
 }

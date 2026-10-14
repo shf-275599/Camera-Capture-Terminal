@@ -82,12 +82,12 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta);
 /**
  * @brief  OTA 成功后由 APP 调用：提交 CM7 pending 为 active
  */
-void boot_eeprom_commit_pending(boot_eeprom_meta_t *meta);
+int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta);
 
 /**
  * @brief  标记 CM7 pending 槽（OTA 写完镜像后由 APP 调用）
  */
-void boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
+int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                              uint32_t image_size, uint32_t image_crc32,
                              uint32_t version);
 
@@ -105,12 +105,12 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta);
 /**
  * @brief  提交 CM4 pending 为 active
  */
-void boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta);
+int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta);
 
 /**
  * @brief  标记 CM4 pending 槽
  */
-void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
+int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
                                  uint32_t version);
 
