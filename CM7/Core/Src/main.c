@@ -160,9 +160,9 @@ int main(void)
   if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM；成功返回 0
   {
     boot_eeprom_init();                  // 准备 Boot 元数据的 EEPROM 访问
-    ee_load_ret = boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时填入默认值
+    ee_load_ret = boot_eeprom_load(&ee); // 读取 EEPROM 中有效的元数据，有效时返回 0，否则返回 1
 
-    if (ee_load_ret == 1) // 无有效启动记录，首次写入默认值
+    if (ee_load_ret == 1) // 无有效启动记录，首次写入默认值，通常是全新片或已损坏的情况。
     {
       LOG_INFO("BOOT", "EEPROM empty, saving default metadata"); // 双备份均无效，提示写入首份默认记录
 
@@ -200,26 +200,26 @@ int main(void)
   else
     LOG_WARN("BOOT", "CM4 slot B: invalid");
 
-  LOG_INFO("BOOT", "CM7 EE: active=%u pending=%u trial=%u flags=0x%02X seq=%lu", // 打印 CM7 EEPROM 元数据
-           (unsigned int)ee.active_slot,                                         // 激活槽位索引
-           (unsigned int)ee.pending_slot,                                        // 待处理槽位索引
-           (unsigned int)ee.boot_trial,                                          // 启动试用次数
-           (unsigned int)ee.flags,                                               // 标志位
-           (unsigned long)ee.seq);                                               // 序列号
+  LOG_INFO("BOOT", "CM7 EEPROM metadata: active=%u pending=%u trial=%u flags=0x%02X seq=%lu", // 打印 CM7 EEPROM 元数据
+           (unsigned int)ee.active_slot,                                                      // 激活槽位索引
+           (unsigned int)ee.pending_slot,                                                     // 待处理槽位索引
+           (unsigned int)ee.boot_trial,                                                       // 启动试用次数
+           (unsigned int)ee.flags,                                                            // 标志位
+           (unsigned long)ee.seq);                                                            // 序列号
 
-  LOG_INFO("BOOT", "CM7 EE ver A=%lu B=%lu | slotA valid=%u slotB valid=%u", // 打印 EEPROM 应用版本
-           (unsigned long)ee.app_version[CM7_APP_SLOT_A_INDEX],              // 应用槽位 A 版本号
-           (unsigned long)ee.app_version[CM7_APP_SLOT_B_INDEX],              // 应用槽位 B 版本号
-           (unsigned int)cm7_slot_a_ok,                                      // 检查槽位 A 是否有效
-           (unsigned int)cm7_slot_b_ok);                                     // 检查槽位 B 是否有效
+  LOG_INFO("BOOT", "CM7 EEPROM metadata version A=%lu B=%lu | slotA valid=%u slotB valid=%u", // 打印 EEPROM 应用版本
+           (unsigned long)ee.app_version[CM7_APP_SLOT_A_INDEX],                               // 应用槽位 A 版本号
+           (unsigned long)ee.app_version[CM7_APP_SLOT_B_INDEX],                               // 应用槽位 B 版本号
+           (unsigned int)cm7_slot_a_ok,                                                       // 检查槽位 A 是否有效
+           (unsigned int)cm7_slot_b_ok);                                                      // 检查槽位 B 是否有效
 
-  LOG_INFO("BOOT", "CM4 EE: active=%u pending=%u trial=%u flags=0x%02X | ver A=%lu B=%lu",  // 打印 CM4 EEPROM 元数据
-           (unsigned int)ee.cm4_active_slot,                                                // 激活槽位索引
-           (unsigned int)ee.cm4_pending_slot,                                               // 待处理槽位索引
-           (unsigned int)ee.cm4_boot_trial,                                                 // 启动试用次数
-           (unsigned int)ee.cm4_flags,                                                      // 标志位
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],  // 应用槽位 A 版本号
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]); // 应用槽位 B 版本号
+  LOG_INFO("BOOT", "CM4 EEPROM metadata: active=%u pending=%u trial=%u flags=0x%02X | ver A=%lu B=%lu", // 打印 CM4 EEPROM 元数据
+           (unsigned int)ee.cm4_active_slot,                                                            // 激活槽位索引
+           (unsigned int)ee.cm4_pending_slot,                                                           // 待处理槽位索引
+           (unsigned int)ee.cm4_boot_trial,                                                             // 启动试用次数
+           (unsigned int)ee.cm4_flags,                                                                  // 标志位
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],              // 应用槽位 A 版本号
+           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);             // 应用槽位 B 版本号
 
   /* 按 pending、active、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
   boot_slot = boot_eeprom_prepare_boot(&ee); // 选择启动槽，并在需要时更新 EEPROM 试启动状态

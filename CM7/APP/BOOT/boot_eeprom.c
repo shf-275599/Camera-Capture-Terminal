@@ -19,9 +19,11 @@
  */
 typedef struct __attribute__((packed))
 {
-    uint32_t magic;                           // 魔数，用于识别元数据结构
-    uint16_t struct_ver;                      // 结构版本号，用于识别元数据结构
-    uint16_t length;                          // 元数据总长度，包含 CRC32 校验值
+    /* Information */
+    uint32_t magic;      // 魔数，用于识别元数据结构
+    uint16_t struct_ver; // 结构版本号，用于识别元数据结构
+    uint16_t length;     // 元数据总长度，包含 CRC32 校验值
+    /* A/B */
     uint8_t active_slot;                      // 当前活动槽槽号
     uint8_t pending_slot;                     // 待启动槽槽号，0 表示无 pending
     uint8_t boot_trial;                       // 启动尝试次数，0 表示未尝试
@@ -29,8 +31,9 @@ typedef struct __attribute__((packed))
     uint32_t app_version[CM7_APP_SLOT_COUNT]; // 应用版本号数组
     uint32_t app_size[CM7_APP_SLOT_COUNT];    // 应用尺寸数组
     uint32_t app_crc[CM7_APP_SLOT_COUNT];     // 应用 CRC32 校验值数组
-    uint32_t seq;                             // 序列号，用于识别元数据版本
-    uint32_t crc32;                           // CRC32 校验值，用于验证元数据完整性
+    /* Global */
+    uint32_t seq;   // 序列号，用于识别元数据版本
+    uint32_t crc32; // CRC32 校验值，用于验证元数据完整性
 } boot_eeprom_meta_v1_t;
 
 static BL24C16F_HandleTypeDef s_ee_dev; // EEPROM 设备句柄，由 boot_eeprom_init 从 BSP 层拷贝
@@ -48,7 +51,7 @@ static uint32_t boot_ee_crc32_bytes(const uint8_t *data, uint32_t length)
 
     for (uint32_t i = 0U; i < length; i++) // 逐字节喂入待校验数据
     {
-        crc ^= data[i]; // 当前字节异或进 CRC 低位
+        crc ^= data[i];                          // 当前字节异或进 CRC 低位
         for (uint32_t bit = 0U; bit < 8U; bit++) // 每字节按位处理 8 次
         {
             if ((crc & 1U) != 0U) // 最低位为 1：右移后需异或多项式
@@ -72,7 +75,7 @@ static uint32_t boot_ee_crc32_bytes(const uint8_t *data, uint32_t length)
  */
 static uint32_t boot_ee_crc32(const boot_eeprom_meta_t *meta)
 {
-    return boot_ee_crc32_bytes((const uint8_t *)meta, // 从结构体首字节起算
+    return boot_ee_crc32_bytes((const uint8_t *)meta,                          // 从结构体首字节起算
                                sizeof(boot_eeprom_meta_t) - sizeof(uint32_t)); // 到 crc32 字段自身之前为止
 }
 
@@ -83,7 +86,7 @@ static uint32_t boot_ee_crc32(const boot_eeprom_meta_t *meta)
  */
 static uint32_t boot_ee_crc32_v1(const boot_eeprom_meta_v1_t *meta)
 {
-    return boot_ee_crc32_bytes((const uint8_t *)meta, // 按 v1 结构体首字节起算
+    return boot_ee_crc32_bytes((const uint8_t *)meta,                             // 按 v1 结构体首字节起算
                                sizeof(boot_eeprom_meta_v1_t) - sizeof(uint32_t)); // 到 v1 的 crc32 字段之前为止
 }
 
@@ -93,13 +96,13 @@ static uint32_t boot_ee_crc32_v1(const boot_eeprom_meta_v1_t *meta)
  */
 static void boot_ee_init_cm4_defaults(boot_eeprom_meta_t *meta)
 {
-    meta->cm4_active_slot = CM4_APP_SLOT_A_INDEX; // CM4 默认激活 A 槽
-    meta->cm4_pending_slot = CM4_APP_SLOT_A_INDEX; // 无待启动槽，与 active 一致
-    meta->cm4_boot_trial = 0U; // 试启动次数清零
-    meta->cm4_flags = 0U; // 不置 CM4 PENDING 标志
+    meta->cm4_active_slot = CM4_APP_SLOT_A_INDEX;                    // CM4 默认激活 A 槽
+    meta->cm4_pending_slot = CM4_APP_SLOT_A_INDEX;                   // 无待启动槽，与 active 一致
+    meta->cm4_boot_trial = 0U;                                       // 试启动次数清零
+    meta->cm4_flags = 0U;                                            // 不置 CM4 PENDING 标志
     memset(meta->cm4_app_version, 0, sizeof(meta->cm4_app_version)); // 版本号清零
-    memset(meta->cm4_app_size, 0, sizeof(meta->cm4_app_size)); // 镜像大小清零
-    memset(meta->cm4_app_crc, 0, sizeof(meta->cm4_app_crc)); // 镜像 CRC 清零
+    memset(meta->cm4_app_size, 0, sizeof(meta->cm4_app_size));       // 镜像大小清零
+    memset(meta->cm4_app_crc, 0, sizeof(meta->cm4_app_crc));         // 镜像 CRC 清零
 }
 
 /**
@@ -108,17 +111,17 @@ static void boot_ee_init_cm4_defaults(boot_eeprom_meta_t *meta)
  */
 static void boot_ee_set_defaults(boot_eeprom_meta_t *meta)
 {
-    memset(meta, 0, sizeof(*meta)); // 整体清零，避免残留脏数据
-    meta->magic = BOOT_EE_MAGIC; // 写入识别魔数 "EEMA"
-    meta->struct_ver = BOOT_EE_STRUCT_VER; // 标记为当前 v2 结构
+    memset(meta, 0, sizeof(*meta));                      // 整体清零，避免残留脏数据
+    meta->magic = BOOT_EE_MAGIC;                         // 写入识别魔数 "EEMA"
+    meta->struct_ver = BOOT_EE_STRUCT_VER;               // 标记为当前 v2 结构
     meta->length = (uint16_t)sizeof(boot_eeprom_meta_t); // 记录结构体总长度
-    meta->active_slot = CM7_APP_SLOT_A_INDEX; // 默认激活 CM7 A 槽
-    meta->pending_slot = CM7_APP_SLOT_A_INDEX; // 无待启动槽，与 active 一致
-    meta->boot_trial = 0U; // 试启动次数清零
-    meta->flags = 0U; // 不置任何标志（含 PENDING）
-    boot_ee_init_cm4_defaults(meta); // CM4 部分同样填 A 槽默认值
-    meta->seq = 1U; // 初始序列号，作为双备份新旧裁决基准
-    meta->crc32 = boot_ee_crc32(meta); // 按当前内容计算校验值
+    meta->active_slot = CM7_APP_SLOT_A_INDEX;            // 默认激活 CM7 A 槽
+    meta->pending_slot = CM7_APP_SLOT_A_INDEX;           // 无待启动槽，与 active 一致
+    meta->boot_trial = 0U;                               // 试启动次数清零
+    meta->flags = 0U;                                    // 不置任何标志（含 PENDING）
+    boot_ee_init_cm4_defaults(meta);                     // CM4 部分同样填 A 槽默认值
+    meta->seq = 1U;                                      // 初始序列号，作为双备份新旧裁决基准
+    meta->crc32 = boot_ee_crc32(meta);                   // 按当前内容计算校验值
 }
 
 /**
@@ -240,7 +243,9 @@ static int boot_ee_read_raw(uint16_t addr, uint8_t *buf, uint16_t len)
 }
 
 /**
- * @brief  读一份备份：优先 v2，否则尝试 v1 并升级到内存中的 v2
+ * @brief  读一份备份的元数据（v2 或 v1）：优先 v2，否则尝试 v1 并升级到内存中的 v2
+ * @param  addr  EEPROM 地址
+ * @param  out    输出缓冲区
  * @retval 1 有效，0 无效
  */
 static int boot_ee_read_copy_as_v2(uint16_t addr, boot_eeprom_meta_t *out)
@@ -264,16 +269,17 @@ static int boot_ee_read_copy_as_v2(uint16_t addr, boot_eeprom_meta_t *out)
     memcpy(&v2, raw, sizeof(v2));        // 复制原始数据到 v2 元数据结构体
     if (boot_ee_copy_valid_v2(&v2) != 0) // 校验 v2 元数据
     {
-        *out = v2; // 校验通过，输出 v2 记录
+        *out = v2; // 校验通过，输出 v2 元数据
         return 1;  // 副本有效
     }
 
+    /* v2 校验失败，尝试 v1 元数据 */
     /* 尝试 v1 元数据：升级为 v2 返回，仅在内存中转换，不回写 EEPROM */
     memcpy(&v1, raw, sizeof(v1));        // 复制原始数据到 v1 元数据结构体
     if (boot_ee_copy_valid_v1(&v1) != 0) // 如果 v1 元数据校验通过，说明是 v1 元数据
     {
-        boot_ee_upgrade_v1_to_v2(&v1, out); // 升级 v1 元数据为 v2 元数据
-        return 1; // 副本有效（已按 v2 语义返回）
+        boot_ee_upgrade_v1_to_v2(&v1, out); // 升级 v1 元数据为 v2 元数据，并且校验通过，输出 v2 元数据
+        return 1;                           // 副本有效（已按 v2 语义返回）
     }
 
     return 0; // v2/v1 均校验失败：该副本无效（全新片或已损坏）
@@ -301,10 +307,10 @@ int boot_eeprom_init(void)
  */
 int boot_eeprom_load(boot_eeprom_meta_t *meta)
 {
-    boot_eeprom_meta_t c0; // 备份 0 元数据
-    boot_eeprom_meta_t c1; // 备份 1 元数据
-    int c0_ok = 0;         // 备份 0 有效标志，1 表示有效，0 表示无效
-    int c1_ok = 0;         // 备份 1 有效标志，1 表示有效，0 表示无效
+    boot_eeprom_meta_t c0; // 备份 0 地址元数据
+    boot_eeprom_meta_t c1; // 备份 1 地址元数据
+    int c0_ok = 0;         // 备份 0 地址有效标志，1 表示有效，0 表示无效
+    int c1_ok = 0;         // 备份 1 地址有效标志，1 表示有效，0 表示无效
 
     /* 参数校验 */
     if (meta == NULL) // 空指针
@@ -321,27 +327,41 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
         return 1; // 按首次使用处理
     }
 
-    c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0); // 读取备份 0 元数据
-    c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1); // 读取备份 1 元数据
+    /**
+     * @brief  读取双份备份的元数据
+     * @param  addr  EEPROM 地址
+     * @param  out    输出缓冲区
+     * @retval 1 有效，0 无效
+     *
+     * @note 假如 v2 校验通过，则说明当前读取的元数据是当前固件写的、含双核信息的完整元数据 v2 元数据，并将其返回。
+     *          版本较新的元数据，直接原样采用，不做任何转换；
+     *       假如 v1 校验通过，则说明当前读取的老版本固件遗留的旧格式元数据，只在内存里临时升级，不立刻回写 EEPROM，将其返回。
+     *          老数据还躺在芯片里，等下次任何一次 save（比如首次落盘、试启动扣减）发生时，才会顺手以 v2 格式回写 EEPROM
+     *
+     * @note 最终都是要返回 v2 元数据，因为 v2 元数据带有 CM4 A/B 字段；
+     *       而 v1 元数据只有 CM7 A/B 字段，故需要升级为 v2 元数据
+     */
+    c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0); // 读取 EEPROM 备份 0 地址有效的元数据，返回有效标志
+    c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1); // 读取 EEPROM 备份 1 地址有效的元数据，返回有效标志
 
     /* 双份均有效：取 seq 更大（更新）的一份 */
     if ((c0_ok != 0) && (c1_ok != 0))
     {
         *meta = (c0.seq >= c1.seq) ? c0 : c1; // 取 seq 更大的合法份
-        return 0; // 已读到合法备份
+        return 0;                             // 已读到合法备份
     }
     if (c0_ok != 0) // 如果备份 0 元数据有效
     {
         *meta = c0; // 取备份 0 元数据（副本 1 无效，下次 save 会修复它）
-        return 0; // 已读到合法备份
+        return 0;   // 已读到合法备份
     }
     if (c1_ok != 0) // 如果备份 1 元数据有效
     {
         *meta = c1; // 取备份 1 元数据（副本 0 无效，下次 save 会修复它）
-        return 0; // 已读到合法备份
+        return 0;   // 已读到合法备份
     }
 
-    /* 两份均无效：使用默认值 */
+    /* 两份均无效：使用默认值。通常发生在全新片或已损坏的情况。 */
     LOG_INFO("BOOT", "EEPROM meta empty/invalid, use defaults (CM7/CM4 active=A)");
     return 1; // meta 中是默认值，调用方可据此首次落盘
 }
@@ -350,21 +370,28 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
  * @brief  保存元数据：seq 自增并重算 CRC，轮换写入较旧或无效的那份备份
  * @param  meta 待保存的元数据
  * @retval 0 成功，-1 失败（未就绪/结构超长/写入失败）
+ * 
+ * @note 该函数会强制刷新头字段，seq 自增并重算 CRC，轮换写入较旧或无效的那份备份。
+ *       两份均无效时，会使用默认值（CM7/CM4 active=A）写入备份 0。
+ *       只有当备份 1 无效时，才会将当前 meta 写入备份 1。
+ *       默认值的真正来源是 boot_eeprom_load() 在返回前就填好的。
  */
 int boot_eeprom_save(boot_eeprom_meta_t *meta)
 {
-    boot_eeprom_meta_t c0; // 副本 0 读回结果
-    boot_eeprom_meta_t c1; // 副本 1 读回结果
+    boot_eeprom_meta_t c0; // EEPROM 备份 0 地址元数据
+    boot_eeprom_meta_t c1; // EEPROM 备份 1 地址元数据
     uint16_t target;       // 本次实际写入的备份地址
-    int c0_ok = 0;         // 副本 0 有效标志
-    int c1_ok = 0;         // 副本 1 有效标志
+    int c0_ok = 0;         // EEPROM 备份 0 地址有效标志
+    int c1_ok = 0;         // EEPROM 备份 1 地址有效标志
 
-    if ((meta == NULL) || (s_ee_ready == 0U)) // 空指针或 EEPROM 未初始化
+    /* 空指针或 EEPROM 未初始化 */
+    if ((meta == NULL) || (s_ee_ready == 0U))
     {
         return -1; // 拒绝写入
     }
 
-    if (sizeof(boot_eeprom_meta_t) > BOOT_EE_COPY_SIZE) // 结构体超出单份备份区容量
+    /* 结构体超出单份备份区容量 */
+    if (sizeof(boot_eeprom_meta_t) > BOOT_EE_COPY_SIZE)
     {
         LOG_ERROR("BOOT", "EEPROM meta too large (%u > %u)",
                   (unsigned int)sizeof(boot_eeprom_meta_t),
@@ -373,33 +400,36 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
     }
 
     /* 强制刷新头字段，seq 自增并重算 CRC（seq 用于双备份新旧裁决） */
-    meta->magic = BOOT_EE_MAGIC; // 重写魔数，防止上层传入脏数据
-    meta->struct_ver = BOOT_EE_STRUCT_VER; // 重写结构版本号
+    meta->magic = BOOT_EE_MAGIC;                         // 重写魔数，防止上层传入脏数据
+    meta->struct_ver = BOOT_EE_STRUCT_VER;               // 重写结构版本号
     meta->length = (uint16_t)sizeof(boot_eeprom_meta_t); // 重写结构长度
-    meta->seq++; // 序列号自增，保证本份比旧副本更新
-    meta->crc32 = boot_ee_crc32(meta); // 按最新内容重算校验值
+    meta->seq++;                                         // 序列号自增，保证本份比旧副本更新
+    meta->crc32 = boot_ee_crc32(meta);                   // 按最新内容重算校验值
 
-    /* 轮换写入：优先覆盖 seq 更旧或无效的那一份 */
-    c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0); // 读回副本 0 判定有效性
-    c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1); // 读回副本 1 判定有效性
+    /* 首次上电时，双份均无效，直接写入默认值 */
+    c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0); // 读回 EEPROM 备份 0 地址的元数据，返回有效性标志
+    c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1); // 读回 EEPROM 备份 1 地址的元数据，返回有效性标志
 
     if ((c0_ok != 0) && (c1_ok != 0)) // 双份都有效
     {
         target = (c0.seq <= c1.seq) ? BOOT_EE_COPY0_ADDR : BOOT_EE_COPY1_ADDR; // 写入 seq 更旧的那份，保留最新副本
     }
+    /* 当只有备份 1 无效时，才会将当前 meta 写入备份 1 */
     else if (c0_ok == 0) // 副本 0 无效（或已损坏）
     {
-        target = BOOT_EE_COPY0_ADDR; // 优先修复副本 0
+        target = BOOT_EE_COPY0_ADDR; // 优先写入副本 0
     }
-    else // 副本 1 无效
+    else if (c1_ok == 0) // 副本 1 无效（或已损坏）
     {
         target = BOOT_EE_COPY1_ADDR; // 写入副本 1
     }
 
+    /* 两份均无效：使用默认值。默认值的真正来源是 boot_eeprom_load() 在返回前就填好的。 */
+    /* 将元数据写入 EEPROM 目标地址 */
     if (BL24C16F_Write(&s_ee_dev, target, (const uint8_t *)meta, sizeof(*meta)) != HAL_OK) // I2C 写入失败
     {
         LOG_ERROR("BOOT", "EEPROM save failed @ 0x%04X", (unsigned int)target); // 打印失败地址
-        return -1; // 写入失败（另一份副本仍在，启动不受影响）
+        return -1;                                                              // 写入失败（另一份副本仍在，启动不受影响）
     }
 
     return 0; // 写入成功
@@ -425,7 +455,7 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
         return meta->pending_slot; // OTA 待启动槽优先
     }
 
-    if ((meta->active_slot < CM7_APP_SLOT_COUNT) && // active 索引在边界内
+    if ((meta->active_slot < CM7_APP_SLOT_COUNT) &&   // active 索引在边界内
         (boot_slot_is_valid(meta->active_slot) != 0)) // 且槽内镜像有效
     {
         return meta->active_slot; // 启动当前激活槽
@@ -450,6 +480,14 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
  *         回退 active 并落盘
  * @param  meta 元数据，可为 NULL
  * @retval 最终应启动的槽索引
+ * 
+ * @note  仅当本次确实启动 pending 槽时才消耗试启动额度。
+ *        其他情况直接返回 active 槽。
+ *        落盘失败不影响本次启动槽选择。
+ *        试启动额度用尽后，会自动取消 pending，回退 active 槽。
+ *        回退 active 槽时，会按 A → B 兜底选择。
+ *        回退后，会将试启动额度重置为初始值。
+ *        兜底返回 A 槽。
  */
 uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
 {
@@ -477,8 +515,8 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
             LOG_INFO("BOOT", "CM7 pending trial exhausted, fallback active=%u",
                      (unsigned int)meta->active_slot);
             meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING; // 清除 PENDING 标志
-            meta->pending_slot = meta->active_slot; // pending 指回 active
-            slot = meta->active_slot; // 本次改启动 active 槽
+            meta->pending_slot = meta->active_slot;        // pending 指回 active
+            slot = meta->active_slot;                      // 本次改启动 active 槽
             /* active 槽镜像也无效时按回退链重新选择 */
             if (boot_slot_is_valid(slot) == 0) // 回退目标镜像无效
             {
@@ -504,10 +542,10 @@ void boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
         return; // 无需提交，直接返回
     }
 
-    meta->active_slot = meta->pending_slot; // pending 槽转正为 active
-    meta->boot_trial = 0U; // 清零试启动计数
+    meta->active_slot = meta->pending_slot;        // pending 槽转正为 active
+    meta->boot_trial = 0U;                         // 清零试启动计数
     meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING; // 清除 PENDING 标志
-    (void)boot_eeprom_save(meta); // 提交结果落盘（失败仅打印日志）
+    (void)boot_eeprom_save(meta);                  // 提交结果落盘（失败仅打印日志）
 }
 
 /**
@@ -528,14 +566,14 @@ void boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
         return; // 参数非法，拒绝标记
     }
 
-    meta->pending_slot = slot_index; // 记录 OTA 目标槽
+    meta->pending_slot = slot_index;         // 记录 OTA 目标槽
     meta->app_size[slot_index] = image_size; // 记录新镜像大小
     meta->app_crc[slot_index] = image_crc32; // 记录新镜像 CRC32
     meta->app_version[slot_index] = version; // 记录新镜像版本号
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->boot_trial = BOOT_EE_TRIAL_MAX; // 预置 3 次试启动额度
-    meta->flags |= BOOT_EE_FLAG_PENDING; // 置位 PENDING，下次开机优先启动该槽
-    (void)boot_eeprom_save(meta); // 标记结果落盘
+    meta->flags |= BOOT_EE_FLAG_PENDING;  // 置位 PENDING，下次开机优先启动该槽
+    (void)boot_eeprom_save(meta);         // 标记结果落盘
 }
 
 /**
@@ -612,8 +650,8 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
             LOG_INFO("BOOT", "CM4 pending trial exhausted, fallback active=%u",
                      (unsigned int)meta->cm4_active_slot);
             meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING; // 清除 CM4 PENDING 标志
-            meta->cm4_pending_slot = meta->cm4_active_slot; // pending 指回 active
-            slot = meta->cm4_active_slot; // 本次改启动 active 槽
+            meta->cm4_pending_slot = meta->cm4_active_slot;        // pending 指回 active
+            slot = meta->cm4_active_slot;                          // 本次改启动 active 槽
             /* active 槽镜像也无效时按回退链重新选择 */
             if (boot_slot_is_valid(slot) == 0) // 回退目标镜像无效
             {
@@ -639,10 +677,10 @@ void boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
         return; // 无需提交，直接返回
     }
 
-    meta->cm4_active_slot = meta->cm4_pending_slot; // CM4 pending 槽转正为 active
-    meta->cm4_boot_trial = 0U; // 清零 CM4 试启动计数
+    meta->cm4_active_slot = meta->cm4_pending_slot;        // CM4 pending 槽转正为 active
+    meta->cm4_boot_trial = 0U;                             // 清零 CM4 试启动计数
     meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING; // 清除 CM4 PENDING 标志
-    (void)boot_eeprom_save(meta); // 提交结果落盘（失败仅打印日志）
+    (void)boot_eeprom_save(meta);                          // 提交结果落盘（失败仅打印日志）
 }
 
 /**
@@ -657,18 +695,18 @@ void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
                                  uint32_t version)
 {
-    if ((meta == NULL) || // 空指针
+    if ((meta == NULL) ||                                                               // 空指针
         ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX))) // 槽号非 A 非 B
     {
         return; // 参数非法，拒绝标记
     }
 
-    meta->cm4_pending_slot = slot_index; // 记录 CM4 OTA 目标槽
+    meta->cm4_pending_slot = slot_index;                                // 记录 CM4 OTA 目标槽
     meta->cm4_app_size[slot_index - CM4_APP_SLOT_A_INDEX] = image_size; // CM4 数组下标需减去 A 槽索引
     meta->cm4_app_crc[slot_index - CM4_APP_SLOT_A_INDEX] = image_crc32; // 记录新镜像 CRC32
     meta->cm4_app_version[slot_index - CM4_APP_SLOT_A_INDEX] = version; // 记录新镜像版本号
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
-    meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX; // 预置 3 次试启动额度
+    meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;    // 预置 3 次试启动额度
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING; // 置位 CM4 PENDING
-    (void)boot_eeprom_save(meta); // 标记结果落盘
+    (void)boot_eeprom_save(meta);                // 标记结果落盘
 }

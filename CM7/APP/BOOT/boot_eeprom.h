@@ -16,15 +16,21 @@
 #include <stdint.h>
 #include "boot_slot.h"
 
-#define BOOT_EE_MAGIC (0x45454D41UL) /* "EEMA" */
-#define BOOT_EE_STRUCT_VER (2U)
-#define BOOT_EE_STRUCT_VER_V1 (1U)
-#define BOOT_EE_FLAG_PENDING (1U << 0)
-#define BOOT_EE_FLAG_CM4_PENDING (1U << 0)
+#define BOOT_EE_MAGIC (0x45454D41UL)       /* "EEMA"，用于识别是否为有效备份 */
+#define BOOT_EE_STRUCT_VER (2U)            /* 结构版本，当前为 2 */
+#define BOOT_EE_STRUCT_VER_V1 (1U)         /* 旧版本，用于升级 */
+#define BOOT_EE_FLAG_PENDING (1U << 0)     /* 待启动标志位，当前为 0 */
+#define BOOT_EE_FLAG_CM4_PENDING (1U << 1) /* CM4 待启动标志位，当前为 1 */
 
-#define BOOT_EE_COPY0_ADDR (0x0000U)
-#define BOOT_EE_COPY1_ADDR (0x0100U)
-#define BOOT_EE_COPY_SIZE (256U)
+/**
+ * @brief  EEPROM 备份 0 备份地址 地址
+ * @note   0x0000 ~ 0x00FF   Copy0  (256B)   ← 启动元数据备份 0
+ * @note   0x0100 ~ 0x01FF   Copy1  (256B)   ← 启动元数据备份 1
+ * @note   0x0200 ~          用户区（APP 自检/业务参数，Boot 不管）
+ */
+#define BOOT_EE_COPY0_ADDR (0x0000U) // 备份 0 地址
+#define BOOT_EE_COPY1_ADDR (0x0100U) // 备份 1 地址
+#define BOOT_EE_COPY_SIZE (256U)     // 备份大小，当前为 256 字节
 
 /**
  * @brief  EEPROM 双备份启动元数据结构体
@@ -32,14 +38,15 @@
  */
 typedef struct __attribute__((packed))
 {
+    /* Information */
     uint32_t magic;      // 魔数，用于识别是否为有效备份
     uint16_t struct_ver; // 结构版本，当前为 2
     uint16_t length;     // 数据长度，当前为 128 字节
     /* CM7 A/B */
-    uint8_t active_slot;                      // 当前 CM7 槽索引
-    uint8_t pending_slot;                     // 待启动 CM7 槽索引
-    uint8_t boot_trial;                       // 试启动倒计时
-    uint8_t flags;                            // 标志位，当前为 0
+    uint8_t active_slot;                      // CM7 当前 active 槽索引
+    uint8_t pending_slot;                     // CM7 待启动 pending 槽索引
+    uint8_t boot_trial;                       // CM7 试启动倒计时
+    uint8_t flags;                            // CM7 标志位，当前为 0
     uint32_t app_version[CM7_APP_SLOT_COUNT]; // CM7 应用版本号数组，每个槽 4 字节
     uint32_t app_size[CM7_APP_SLOT_COUNT];    // CM7 应用大小数组，每个槽 4 字节
     uint32_t app_crc[CM7_APP_SLOT_COUNT];     // CM7 应用 CRC32 校验和数组，每个槽 4 字节
@@ -51,8 +58,9 @@ typedef struct __attribute__((packed))
     uint32_t cm4_app_version[CM4_APP_SLOT_COUNT]; // CM4 应用版本号数组，每个槽 4 字节
     uint32_t cm4_app_size[CM4_APP_SLOT_COUNT];    // CM4 应用大小数组，每个槽 4 字节
     uint32_t cm4_app_crc[CM4_APP_SLOT_COUNT];     // CM4 应用 CRC32 校验和数组，每个槽 4 字节
-    uint32_t seq;                                 // 序列号，用于判断是否为最新备份
-    uint32_t crc32;                               // 整体 CRC32 校验和，用于验证数据完整性
+    /* Global */
+    uint32_t seq;   // 序列号，用于判断是否为最新备份
+    uint32_t crc32; // 整体 CRC32 校验和，用于验证数据完整性
 } boot_eeprom_meta_t;
 
 /**
