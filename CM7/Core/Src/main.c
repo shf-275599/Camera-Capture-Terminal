@@ -183,7 +183,7 @@ int main(void)
     }
     else // 有有效启动记录，直接使用
     {
-      LOG_INFO("BOOT", "EEPROM metadeta vaild, loaded"); // 读取成功
+      LOG_INFO("BOOT", "EEPROM metadeta valid, loaded"); // 读取成功
     }
   }
 
