@@ -20,7 +20,7 @@
 #define BOOT_EE_STRUCT_VER (2U)            /* 结构版本，当前为 2 */
 #define BOOT_EE_STRUCT_VER_V1 (1U)         /* 旧版本，用于升级 */
 #define BOOT_EE_FLAG_PENDING (1U << 0)     /* 待启动标志位，当前为 0 */
-#define BOOT_EE_FLAG_CM4_PENDING (1U << 1) /* CM4 待启动标志位，当前为 1 */
+#define BOOT_EE_FLAG_CM4_PENDING (1U << 0) /* CM4 待启动标志位，当前为 0 */
 
 /**
  * @brief  EEPROM 备份 0 备份地址 地址
