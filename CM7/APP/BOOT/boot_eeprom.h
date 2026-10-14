@@ -114,4 +114,14 @@ void boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
                                  uint32_t version);
 
+/* 协议一致性护栏：改这些常量必须两边同步，任何一边单独改动都会在此编译报错 */
+_Static_assert(BOOT_EE_MAGIC == 0x45454D41UL, "BOOT_EE_MAGIC sync with the other project");
+_Static_assert(BOOT_EE_STRUCT_VER == 2U, "BOOT_EE_STRUCT_VER sync");
+_Static_assert(BOOT_EE_STRUCT_VER_V1 == 1U, "BOOT_EE_STRUCT_VER_V1 sync");
+_Static_assert(BOOT_EE_FLAG_PENDING == (1U << 0), "BOOT_EE_FLAG_PENDING sync");
+_Static_assert(BOOT_EE_FLAG_CM4_PENDING == (1U << 0), "BOOT_EE_FLAG_CM4_PENDING sync");
+_Static_assert(BOOT_EE_COPY0_ADDR == 0x0000U, "COPY0 addr sync");
+_Static_assert(BOOT_EE_COPY1_ADDR == 0x0100U, "COPY1 addr sync");
+_Static_assert(sizeof(boot_eeprom_meta_t) <= BOOT_EE_COPY_SIZE, "meta larger than copy area");
+
 #endif /* BOOT_EEPROM_H */
