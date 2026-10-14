@@ -62,9 +62,9 @@
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+    .name = "defaultTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,11 +78,12 @@ extern void MX_LWIP_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /**
-  * @brief  FreeRTOS initialization
-  * @param  None
-  * @retval None
-  */
-void MX_FREERTOS_Init(void) {
+ * @brief  FreeRTOS initialization
+ * @param  None
+ * @retval None
+ */
+void MX_FREERTOS_Init(void)
+{
   /* USER CODE BEGIN Init */
   // jpeg_sw_decode(jpeg_test_data, sizeof(jpeg_test_data), 0, 0);
   // JPEG_InitColorTables();
@@ -90,7 +91,7 @@ void MX_FREERTOS_Init(void) {
   // {
   //     printf("CM7: Hardware JPEG decode failed\n");
   // }
-  LOG_INFO("CM7","FreeRTOS init OK");
+  LOG_INFO("CM7", "FreeRTOS init OK");
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -115,6 +116,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  USART_Rx_Thread_Start();
   App_IPC_Thread_Start();
   App_OV5640_Thread_Start();
   /* USER CODE END RTOS_THREADS */
@@ -122,7 +124,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -142,13 +143,8 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    uint32_t rx_events = usart_take_rx_events();
-    while (rx_events-- != 0U)
-    {
-      HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
-    }
-    HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
     HAL_IWDG_Refresh(&hiwdg1); // 周期喂狗，调度器正常运行即视为健康
+    HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
     osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
@@ -158,4 +154,3 @@ void StartDefaultTask(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-
