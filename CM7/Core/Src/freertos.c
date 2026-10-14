@@ -37,6 +37,7 @@
 #include "app_http_server.h"
 #include "mylog.h"
 #include "usart.h"
+#include "iwdg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -136,6 +137,7 @@ void StartDefaultTask(void *argument)
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN StartDefaultTask */
+  HAL_IWDG_Refresh(&hiwdg1);
   App_HTTP_Server_Thread_Start();
   /* Infinite loop */
   for (;;)
@@ -146,6 +148,7 @@ void StartDefaultTask(void *argument)
       HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
     }
     HAL_GPIO_TogglePin(LED0_GREEN_GPIO_Port, LED0_GREEN_Pin);
+    HAL_IWDG_Refresh(&hiwdg1); // 周期喂狗，调度器正常运行即视为健康
     osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */

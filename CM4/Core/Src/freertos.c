@@ -31,6 +31,7 @@
 #include "openamp.h"
 #include "mylog.h"
 #include "app_ipc_cm4.h"
+#include "iwdg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -125,6 +126,7 @@ void StartDefaultTask(void *argument)
   for (;;)
   {
     HAL_GPIO_TogglePin(LED1_BLUE_GPIO_Port, LED1_BLUE_Pin);
+    HAL_IWDG_Refresh(&hiwdg2); // 周期喂狗，调度器正常运行即视为健康
     osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */

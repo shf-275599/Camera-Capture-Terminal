@@ -250,6 +250,7 @@ int main(void)
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     LOG_INFO("APP", "CM4 boot core enabled");
   }
+  HAL_IWDG_Refresh(&hiwdg1); // 喂狗，防初始化链累计超过 IWDG 超时
   MX_ETH_Init();
   {
     LOG_INFO("CM7", "ETH I/O init OK");
@@ -278,6 +279,7 @@ int main(void)
     LOG_INFO("APP", "CM7 OTA pending committed -> active=%u",
              (unsigned int)ee.active_slot);
   }
+  HAL_IWDG_Refresh(&hiwdg1); // EEPROM 写入后再喂一次
   /* USER CODE END 2 */
 
   /* Init scheduler */
