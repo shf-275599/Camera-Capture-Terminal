@@ -88,7 +88,11 @@
 
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
-
+static volatile boot_eeprom_meta_t ee; // 保存 EEPROM 中的 active、pending 等启动记录
+static volatile uint8_t running;       // 当前运行的槽槽号
+static volatile uint8_t cm4_slot;      // CM4 启动的槽槽号
+static volatile uint32_t cm4_base;     // CM4 启动的基地址
+static volatile int ee_ok;             // EEPROM 是否成功读取
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -188,13 +192,12 @@ int main(void)
     printf("\n");
 
     /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
-    boot_eeprom_meta_t ee;                     // 保存 EEPROM 中的 active、pending 等启动记录
-    uint8_t running = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
-    uint8_t cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
-    uint32_t cm4_base = CM4_APP_SLOT_A_BASE;   // CM4 默认应用的 Flash 起始地址
-    int ee_ok = 0;                             // 记录本次是否成功初始化 EEPROM
-    
-    if (bsp_eeprom_init() == 0)                // 初始化板载 EEPROM，成功时返回 0
+    running = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
+    cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
+    cm4_base = CM4_APP_SLOT_A_BASE;    // CM4 默认应用的 Flash 起始地址
+    ee_ok = 0;                         // 记录本次是否成功初始化 EEPROM
+
+    if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM，成功时返回 0
     {
       (void)boot_eeprom_init();    // 准备 Boot 元数据的 EEPROM 访问
       (void)boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
@@ -214,15 +217,6 @@ int main(void)
                (unsigned int)ee.cm4_flags,
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);
-
-      /* 本次确实运行在待确认槽时，将其设为正式启动槽，停止试启动回退 */
-      if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) &&
-          (ee.pending_slot == running))
-      {
-        boot_eeprom_commit_pending(&ee); // 更新 active 并清除 pending，写回 EEPROM
-        LOG_INFO("APP", "CM7 OTA pending committed -> active=%u",
-                 (unsigned int)ee.active_slot);
-      }
 
       cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、active、兜底顺序选择 CM4 槽，并处理试启动次数
       cm4_base = boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
@@ -263,6 +257,14 @@ int main(void)
   lcd_init();         // 初始化 LCD
   app_ov5640_init();  // 初始化 OV5640 摄像头
   LOG_INFO("CM7", "main() user init OK");
+
+  /* OTA 试启动确认：时钟/以太网/IPC/SDRAM/LCD/摄像头全部初始化成功后才提交 */
+  if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) && (ee.pending_slot == running))
+  {
+    boot_eeprom_commit_pending(&ee); // 更新 active 并清除 pending，写回 EEPROM
+    LOG_INFO("APP", "CM7 OTA pending committed -> active=%u",
+             (unsigned int)ee.active_slot);
+  }
   /* USER CODE END 2 */
 
   /* Init scheduler */
