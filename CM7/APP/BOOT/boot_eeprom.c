@@ -370,7 +370,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
  * @brief  保存元数据：seq 自增并重算 CRC，轮换写入较旧或无效的那份备份
  * @param  meta 待保存的元数据
  * @retval 0 成功，-1 失败（未就绪/结构超长/写入失败）
- * 
+ *
  * @note 该函数会强制刷新头字段，seq 自增并重算 CRC，轮换写入较旧或无效的那份备份。
  *       两份均无效时，会使用默认值（CM7/CM4 active=A）写入备份 0。
  *       只有当备份 1 无效时，才会将当前 meta 写入备份 1。
@@ -378,11 +378,11 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
  */
 int boot_eeprom_save(boot_eeprom_meta_t *meta)
 {
-    boot_eeprom_meta_t c0; // EEPROM 备份 0 地址元数据
-    boot_eeprom_meta_t c1; // EEPROM 备份 1 地址元数据
-    uint16_t target;       // 本次实际写入的备份地址
-    int c0_ok = 0;         // EEPROM 备份 0 地址有效标志
-    int c1_ok = 0;         // EEPROM 备份 1 地址有效标志
+    boot_eeprom_meta_t c0;                // EEPROM 备份 0 地址元数据
+    boot_eeprom_meta_t c1;                // EEPROM 备份 1 地址元数据
+    uint16_t target = BOOT_EE_COPY0_ADDR; // 本次实际写入的备份地址，默认写入备份 0
+    int c0_ok = 0;                        // EEPROM 备份 0 地址有效标志
+    int c1_ok = 0;                        // EEPROM 备份 1 地址有效标志
 
     /* 空指针或 EEPROM 未初始化 */
     if ((meta == NULL) || (s_ee_ready == 0U))
@@ -480,7 +480,7 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
  *         回退 active 并落盘
  * @param  meta 元数据，可为 NULL
  * @retval 最终应启动的槽索引
- * 
+ *
  * @note  仅当本次确实启动 pending 槽时才消耗试启动额度。
  *        其他情况直接返回 active 槽。
  *        落盘失败不影响本次启动槽选择。
