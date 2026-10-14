@@ -89,7 +89,7 @@
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
 /* Boot */
-static volatile boot_eeprom_meta_t ee; // 保存 EEPROM 中的 active、pending 等启动记录
+static boot_eeprom_meta_t ee;          // 保存 EEPROM 中的 active、pending 等启动记录
 static volatile uint8_t running;       // 当前运行的槽槽号
 static volatile uint8_t cm4_slot;      // CM4 启动的槽槽号
 static volatile uint32_t cm4_base;     // CM4 启动的基地址
