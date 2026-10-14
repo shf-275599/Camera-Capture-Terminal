@@ -316,7 +316,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
 
     c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0);
     c1_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY1_ADDR, &c1);
-    LOG_INFO("BOOT", "EE copy0 valid=%d seq=%lu | copy1 valid=%d seq=%lu",
+    LOG_INFO("BOOT", "EEPROM copy0 valid=%d seq=%lu | copy1 valid=%d seq=%lu",
              c0_ok, c0_ok ? (unsigned long)c0.seq : 0UL,
              c1_ok, c1_ok ? (unsigned long)c1.seq : 0UL);
 
