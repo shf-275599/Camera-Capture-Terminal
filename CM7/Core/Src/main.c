@@ -90,11 +90,11 @@
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
 /* Boot */
-static boot_eeprom_meta_t ee;          // 保存 EEPROM 中的 active、pending 等启动记录
-static volatile uint8_t running;       // 当前运行的槽槽号
-static volatile uint8_t cm4_slot;      // CM4 启动的槽槽号
-static volatile uint32_t cm4_base;     // CM4 启动的基地址
-static volatile int ee_ok;             // EEPROM 是否成功读取
+static boot_eeprom_meta_t ee;      // 保存 EEPROM 中的 active、pending 等启动记录
+static volatile uint8_t running;   // 当前运行的槽槽号
+static volatile uint8_t cm4_slot;  // CM4 启动的槽槽号
+static volatile uint32_t cm4_base; // CM4 启动的基地址
+static volatile int ee_ok;         // EEPROM 是否成功读取
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -114,9 +114,9 @@ static void ipc_share_region_clear(void)
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -140,7 +140,7 @@ int main(void)
     // Error_Handler();
   }
 #endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
-/* USER CODE END Boot_Mode_Sequence_1 */
+       /* USER CODE END Boot_Mode_Sequence_1 */
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -166,7 +166,7 @@ int main(void)
   /*Release HSEM in order to notify the CPU2(CM4)*/
   HAL_HSEM_Release(HSEM_ID_0, 0);
 #endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
-/* USER CODE END Boot_Mode_Sequence_2 */
+       /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
 
@@ -200,6 +200,8 @@ int main(void)
     cm4_base = CM4_APP_SLOT_A_BASE;    // CM4 默认应用的 Flash 起始地址
     ee_ok = 0;                         // 记录本次是否成功初始化 EEPROM
 
+    LOG_INFO("APP", "CM7 Boot ============================================================================");
+    LOG_INFO("APP", "Initializing EEPROM...");
     if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM，成功时返回 0
     {
       int ee_init_ret = boot_eeprom_init(); // 准备 Boot 元数据的 EEPROM 访问
@@ -207,15 +209,28 @@ int main(void)
       {
         LOG_ERROR("APP", "EEPROM init fail, CM4 default Slot A"); // 初始化失败时沿用前面设置的 CM4 A 槽默认值
       }
+      LOG_INFO("APP", "EEPROM initialized"); // 初始化成功
+
+      // /* ===== TEST: 重置 EEPROM 双备份，用于测试 EEPROM 第一次上电写入 ===== */
+      // {
+      //   uint8_t ee_wipe[BOOT_EE_COPY_SIZE] = {0};                                          // 用于擦除双备份的缓冲区
+      //   memset(ee_wipe, 0xFF, sizeof(ee_wipe));                                            // 清空缓冲区，准备写入 0xFF
+      //   BL24C16F_Write(bsp_eeprom_handle(), BOOT_EE_COPY0_ADDR, ee_wipe, sizeof(ee_wipe)); // 写入双备份 0，将所有字节设置为 0xFF
+      //   BL24C16F_Write(bsp_eeprom_handle(), BOOT_EE_COPY1_ADDR, ee_wipe, sizeof(ee_wipe)); // 写入双备份 1，将所有字节设置为 0xFF
+      // }
+      // /* ===== TEST END ===== */
+
+      LOG_INFO("APP", "Loading EEPROM metadata...");
       int ee_load_ret = boot_eeprom_load(&ee); // 从双备份读取启动记录；无有效副本时使用默认值
       if (ee_load_ret != 0)
       {
         LOG_WARN("APP", "EEPROM meta empty/invalid, using defaults (ret=%d)", ee_load_ret);
       }
+      LOG_INFO("APP", "EEPROM metadata loaded");
       ee_ok = 1; // EEPROM 可访问，后续按启动记录选择 CM4 槽
 
       /* 打印当前 CM7 槽和 EEPROM 记录，便于核对启动状态 */
-      LOG_INFO("APP", "CM7 running slot=%u base=0x%08lX | EE active=%u pending=%u flags=0x%02X, init ret=%d, load ret=%d",
+      LOG_INFO("APP", "CM7 running slot=%u base=0x%08lX | EEPROM active=%u pending=%u flags=0x%02X, init ret=%d, load ret=%d",
                (unsigned int)running,
                (unsigned long)boot_slot_base_get(running),
                (unsigned int)ee.active_slot,
@@ -224,7 +239,7 @@ int main(void)
                (unsigned int)ee_init_ret,
                (unsigned int)ee_load_ret);
       /* 打印 CM4 的启动槽和两个应用版本 */
-      LOG_INFO("APP", "CM4 EE active=%u pending=%u flags=0x%02X verA=%lu verB=%lu",
+      LOG_INFO("APP", "CM4 EEPROM active=%u pending=%u flags=0x%02X verA=%lu verB=%lu",
                (unsigned int)ee.cm4_active_slot,
                (unsigned int)ee.cm4_pending_slot,
                (unsigned int)ee.cm4_flags,
@@ -241,6 +256,7 @@ int main(void)
       LOG_ERROR("APP", "CM7 EEPROM init fail, CM4 default Slot A"); // 初始化失败时沿用前面设置的 CM4 A 槽默认值
     }
 
+    LOG_INFO("APP", "CM4 Boot ============================================================================");
     cm4_boot_handoff_write(cm4_base); // 将 CM4 应用地址写入 SRAM4，供固定 Stub 读取
     LOG_INFO("APP", "CM4 handoff slot=%u base=0x%08lX ee=%d",
              (unsigned int)cm4_slot,
@@ -249,6 +265,7 @@ int main(void)
     /* 使能 CM4 后，Bank2 固定 Stub 读取 handoff 并跳转到所选应用槽 */
     HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     LOG_INFO("APP", "CM4 boot core enabled");
+    LOG_INFO("APP", "Boot Down ===========================================================================");
   }
   HAL_IWDG_Refresh(&hiwdg1); // 喂狗，防初始化链累计超过 IWDG 超时
   MX_ETH_Init();
@@ -283,7 +300,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  osKernelInitialize(); /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */
@@ -303,28 +320,30 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Supply configuration update enable
-  */
+   */
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
-  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY))
+  {
+  }
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -343,10 +362,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
@@ -366,13 +383,13 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM2 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
@@ -388,9 +405,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -403,12 +420,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

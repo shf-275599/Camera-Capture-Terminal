@@ -26,11 +26,11 @@ int bsp_eeprom_init(void)
   status = BL24C16F_IsReady(&s_eeprom);
   if (status != HAL_OK)
   {
-    LOG_ERROR("APP", "EEPROM not ready, status=%d", (int)status);
+    LOG_ERROR("APP", "BSP EEPROM not ready, status=%d", (int)status);
     return -1;
   }
 
-  LOG_INFO("APP", "EEPROM ready (BL24C16F @ I2C4)");
+  LOG_INFO("APP", "BSP EEPROM ready (BL24C16F @ I2C4)");
   return 0;
 }
 
