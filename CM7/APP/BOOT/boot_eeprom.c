@@ -59,7 +59,15 @@ static uint32_t boot_ee_crc32_bytes(const uint8_t *data, uint32_t length)
     return ~crc;
 }
 
-/** 校验镜像长度、向量表及实际 Flash 内容的 CRC32。 */
+/**
+ * @brief  校验镜像长度、向量表及实际 Flash 内容的 CRC32。
+ * @param  slot   待校验的槽位（A/B）
+ * @param  cm4    是否为 CM4 槽
+ * @param  size   镜像尺寸（字节）
+ * @param  crc    镜像 CRC32 校验值
+ * @param  pending 是否为 pending 槽
+ * @retval 1 校验通过，0 校验失败
+ */
 static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
                                uint32_t crc, int pending)
 {
