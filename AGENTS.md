@@ -7,7 +7,7 @@
 - 仓库没有独立测试或 lint 入口；源码变更构建受影响的核，修改 `Common/`、启动或 OpenAMP 时构建两个核。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
 - `./clean.ps1` 清理两个核的双槽产物；顶层 `make -C Makefile clean` 不递归清理两核产物。
 - 源文件和头文件目录需显式加入各核 Makefile 的 `C_SOURCES` / `C_INCLUDES`。目标文件按源文件 basename 扁平化；CM7 为 LwIP 与 libmetal 的 `init.c` / `sys.c` 保留了专用规则，添加同名源文件时检查目标冲突。
-- `./flash_all.ps1 [-Jobs N]` 先构建两个核的双槽，再按 CM7-A、CM4-A、CM7-B、CM4-B 顺序烧录，最后复位。需要 ST-Link 和 STM32CubeProgrammer；CLI 未在 PATH 时可设置 `STM32_PROGRAMMER_CLI`。不要把烧录脚本当作仅构建命令。
+- `./make_all.ps1 [-Jobs N]` 构建两个核的双槽；`./make_flash_slotA.ps1 [-Jobs N]` 构建并按 CM7-A、CM4-A 顺序烧录 A 槽；`./make_flash_all.ps1 [-Jobs N]` 构建两个核的双槽，再按 CM7-A、CM4-A、CM7-B、CM4-B 顺序烧录，最后复位。需要 ST-Link 和 STM32CubeProgrammer；CLI 未在 PATH 时可设置 `STM32_PROGRAMMER_CLI`。不要把烧录脚本当作仅构建命令。
 - 该脚本仅烧录四个应用槽，不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；启动/OTA 验证需另行确认板上的固定引导程序。
 
 ## 启动和修改边界
