@@ -59,6 +59,37 @@ static uint32_t boot_ee_crc32_bytes(const uint8_t *data, uint32_t length)
     return ~crc;
 }
 
+/** 校验镜像长度、向量表及实际 Flash 内容的 CRC32。 */
+static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
+                               uint32_t crc, int pending)
+{
+    uint32_t base = cm4 ? cm4_boot_slot_base_get(slot) : boot_slot_base_get(slot);
+    uint32_t end = cm4 ? cm4_boot_slot_end_get(slot) : boot_slot_end_get(slot);
+
+    if ((base == 0U) ||
+        ((cm4 ? cm4_boot_slot_is_valid(slot) : boot_slot_is_valid(slot)) == 0))
+    {
+        return 0;
+    }
+    /* 兼容尚未登记长度/CRC 的出厂基线，但 pending 必须完整校验。 */
+    if ((pending == 0) && (size == 0U) && (crc == 0U))
+    {
+        return 1;
+    }
+    if ((size < 8U) || (size > end - base) ||
+        ((*((volatile uint32_t *)(base + 4U)) & ~1UL) >= base + size))
+    {
+        return 0;
+    }
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    if ((SCB->CCR & SCB_CCR_DC_Msk) != 0U)
+    {
+        SCB_InvalidateDCache_by_Addr((void *)base, (int32_t)((size + 31U) & ~31UL));
+    }
+#endif
+    return boot_ee_crc32_bytes((const uint8_t *)base, size) == crc;
+}
+
 /**
  * @brief  计算 v2 元数据的 CRC32（不含末尾 crc32 字段自身）
  * @param  meta 待校验的 v2 元数据
@@ -415,29 +446,35 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
     /* pending 需同时满足：标志置位、索引在边界内、槽内镜像校验有效 */
     if (((meta->flags & BOOT_EE_FLAG_PENDING) != 0U) &&
         (meta->pending_slot < CM7_APP_SLOT_COUNT) &&
-        (boot_slot_is_valid(meta->pending_slot) != 0))
+        (meta->boot_trial > 0U) &&
+        (boot_ee_image_valid(meta->pending_slot, 0, meta->app_size[meta->pending_slot],
+                             meta->app_crc[meta->pending_slot], 1) != 0))
     {
         return meta->pending_slot;
     }
 
     if ((meta->active_slot < CM7_APP_SLOT_COUNT) &&
-        (boot_slot_is_valid(meta->active_slot) != 0))
+        ((meta->flags & BOOT_EE_FLAG_PENDING) == 0U || meta->active_slot != meta->pending_slot) &&
+        (boot_ee_image_valid(meta->active_slot, 0, meta->app_size[meta->active_slot],
+                             meta->app_crc[meta->active_slot], 0) != 0))
     {
         return meta->active_slot;
     }
 
     /* active 也不可用：按 Slot A → Slot B 兜底 */
-    if (boot_slot_is_valid(CM7_APP_SLOT_A_INDEX) != 0)
+    if ((meta->pending_slot != CM7_APP_SLOT_A_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
+        boot_ee_image_valid(0U, 0, meta->app_size[0], meta->app_crc[0], 0))
     {
         return CM7_APP_SLOT_A_INDEX;
     }
 
-    if (boot_slot_is_valid(CM7_APP_SLOT_B_INDEX) != 0)
+    if ((meta->pending_slot != CM7_APP_SLOT_B_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
+        boot_ee_image_valid(1U, 0, meta->app_size[1], meta->app_crc[1], 0))
     {
         return CM7_APP_SLOT_B_INDEX;
     }
 
-    return CM7_APP_SLOT_A_INDEX;
+    return 255U;
 }
 
 /**
@@ -527,11 +564,15 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                             uint32_t image_size, uint32_t image_crc32,
                             uint32_t version)
 {
-    if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT))
+    boot_eeprom_meta_t previous;
+    if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT) ||
+        (slot_index == meta->active_slot) ||
+        !boot_ee_image_valid(slot_index, 0, image_size, image_crc32, 1))
     {
         return -1;
     }
 
+    previous = *meta;
     meta->pending_slot = slot_index;
     meta->app_size[slot_index] = image_size;
     meta->app_crc[slot_index] = image_crc32;
@@ -539,10 +580,11 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->boot_trial = BOOT_EE_TRIAL_MAX;
     meta->flags |= BOOT_EE_FLAG_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {
+        *meta = previous;
         return ret;
     }
 
@@ -565,30 +607,36 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
     if (((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) &&
         ((meta->cm4_pending_slot == CM4_APP_SLOT_A_INDEX) ||
          (meta->cm4_pending_slot == CM4_APP_SLOT_B_INDEX)) &&
-        (cm4_boot_slot_is_valid(meta->cm4_pending_slot) != 0))
+        (meta->cm4_boot_trial > 0U) &&
+        boot_ee_image_valid(meta->cm4_pending_slot, 1, meta->cm4_app_size[meta->cm4_pending_slot],
+                            meta->cm4_app_crc[meta->cm4_pending_slot], 1))
     {
         return meta->cm4_pending_slot;
     }
 
     if (((meta->cm4_active_slot == CM4_APP_SLOT_A_INDEX) ||
-         (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
-        (cm4_boot_slot_is_valid(meta->cm4_active_slot) != 0))
+          (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
+        ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U || meta->cm4_active_slot != meta->cm4_pending_slot) &&
+        boot_ee_image_valid(meta->cm4_active_slot, 1, meta->cm4_app_size[meta->cm4_active_slot],
+                            meta->cm4_app_crc[meta->cm4_active_slot], 0))
     {
         return meta->cm4_active_slot;
     }
 
     /* active 也不可用：按 Slot A → Slot B 兜底 */
-    if (cm4_boot_slot_is_valid(CM4_APP_SLOT_A_INDEX) != 0)
+    if ((meta->cm4_pending_slot != 0U || (meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U) &&
+        boot_ee_image_valid(0U, 1, meta->cm4_app_size[0], meta->cm4_app_crc[0], 0))
     {
         return CM4_APP_SLOT_A_INDEX;
     }
 
-    if (cm4_boot_slot_is_valid(CM4_APP_SLOT_B_INDEX) != 0)
+    if ((meta->cm4_pending_slot != 1U || (meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U) &&
+        boot_ee_image_valid(1U, 1, meta->cm4_app_size[1], meta->cm4_app_crc[1], 0))
     {
         return CM4_APP_SLOT_B_INDEX;
     }
 
-    return CM4_APP_SLOT_A_INDEX;
+    return 255U;
 }
 
 /**
@@ -677,12 +725,16 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                 uint32_t image_size, uint32_t image_crc32,
                                 uint32_t version)
 {
+    boot_eeprom_meta_t previous;
     if ((meta == NULL) ||
-        ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX)))
+        ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX)) ||
+        (slot_index == meta->cm4_active_slot) ||
+        !boot_ee_image_valid(slot_index, 1, image_size, image_crc32, 1))
     {
         return -1;
     }
 
+    previous = *meta;
     meta->cm4_pending_slot = slot_index;
     meta->cm4_app_size[slot_index] = image_size;
     meta->cm4_app_crc[slot_index] = image_crc32;
@@ -690,10 +742,11 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {
+        *meta = previous;
         return ret;
     }
 
