@@ -458,26 +458,24 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
     slot = boot_eeprom_select_boot_slot(meta);
 
     /* 仅当本次确实启动 pending 槽时才消耗试启动额度 */
-    if (((meta->flags & BOOT_EE_FLAG_PENDING) != 0U) &&
-        (slot == meta->pending_slot))
+    if (((meta->flags & BOOT_EE_FLAG_PENDING) != 0U) && (slot == meta->pending_slot))
     {
-        if (meta->boot_trial > 0U)
+        if (meta->boot_trial > 0U) // 试启动额度未用尽
         {
-            meta->boot_trial--;
+            meta->boot_trial--; // 试启动额度递减
         }
 
-        if (meta->boot_trial == 0U)
+        if (meta->boot_trial == 0U) // 试启动额度用尽
         {
             /* 额度用尽：取消 pending，回退 active */
-            LOG_INFO("BOOT", "CM7 pending trial exhausted, fallback active=%u",
-                     (unsigned int)meta->active_slot);
-            meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
-            meta->pending_slot = meta->active_slot;
-            slot = meta->active_slot;
+            LOG_INFO("BOOT", "CM7 pending trial exhausted, fallback active=%u", (unsigned int)meta->active_slot);
+            meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING; // 清除 pending 标志
+            meta->pending_slot = meta->active_slot;        // 回退 pending 槽为 active 槽
+            slot = meta->active_slot;                      // 回退 active 槽
             /* active 槽镜像也无效时按回退链重新选择 */
-            if (boot_slot_is_valid(slot) == 0)
+            if (boot_slot_is_valid(slot) == 0) // active 槽镜像无效
             {
-                slot = boot_eeprom_select_boot_slot(meta);
+                slot = boot_eeprom_select_boot_slot(meta); // 重新选择启动槽
             }
         }
 
