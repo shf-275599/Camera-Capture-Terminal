@@ -68,6 +68,10 @@ static volatile uint8_t cm4_slot_b_ok; // CM4 B 槽向量表检查结果
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+static void boot_print_info(void);
+static void boot_check_slots(void);
+static void boot_init_eeprom(void);
+static void boot_eeprom_metadata_log(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -119,120 +123,11 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C4_Init();
   /* USER CODE BEGIN 2 */
-  printf("\r\n");
-  printf("\033[1;36m"); // 加粗；蓝色
-  printf(" ____   ___   ___  _____ _      ___    _    ____  _____ ____          \n");
-  printf("| __ ) / _ \\ / _ \\|_   _| |    / _ \\  / \\  |  _ \\| ____|  _ \\   \n");
-  printf("|  _ \\| | | | | | | | | | |   | | | |/ _ \\ | | | |  _| | |_) |      \n");
-  printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
-  printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
-  printf("\r\n");
-  /* 两段预留区大小由相邻应用槽地址算出，仅用于打印分区表 */
-  const uint32_t cm7_reserve_size =
-      CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
-  const uint32_t cm4_reserve_size =
-      CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
-  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
-  printf("\n");
-  /* 打印双核 Flash 分区，便于对照实际烧录位置 */
-  printf("============= flash partition table ==============\r\n");
-  printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
-  printf("|     name     |   offset   |    size    | value |\r\n");
-  printf("--------------------------------------------------\r\n");
-  printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_BOOT_FLASH_BASE, CM7_BOOT_FLASH_SIZE, CM7_BOOT_FLASH_SIZE / 1024U);
-  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE, CM7_APP_SLOT_A_SIZE / 1024U);
-  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE), (unsigned int)cm7_reserve_size, (int)(cm7_reserve_size / 1024U));
-  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE, CM7_APP_SLOT_B_SIZE / 1024U);
-  printf("---------------- CM4 (Bank2, 1MB) ----------------\r\n");
-  printf("|     name     |   offset   |    size    | value |\r\n");
-  printf("--------------------------------------------------\r\n");
-  printf("| stub         | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_BOOT_STUB_BASE, CM4_BOOT_STUB_SIZE, CM4_BOOT_STUB_SIZE / 1024U);
-  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_A_SIZE, CM4_APP_SLOT_A_SIZE / 1024U);
-  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE), (unsigned int)cm4_reserve_size, (int)(cm4_reserve_size / 1024U));
-  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE, CM4_APP_SLOT_B_SIZE / 1024U);
-  printf("==================================================\r\n");
-  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印 USART1 配置
-  printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
-  printf("\r\n");
-
+  boot_print_info(); // 打印系统信息
   LOG_INFO("BOOT", "====================================================================================");
-  LOG_INFO("BOOT", "Initializing EEPROM...");
-  if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM；成功返回 0
-  {
-    int ee_init_ret = boot_eeprom_init(); // 准备 Boot 元数据的 EEPROM 访问
-    if (ee_init_ret != 0)
-    {
-      LOG_ERROR("BOOT", "EEPROM initialization failed"); // 初始化失败
-    }
-    LOG_INFO("BOOT", "EEPROM initialized "); // 初始化成功
-
-    LOG_INFO("BOOT", "Loading EEPROM metadata...");
-    int ee_load_ret = boot_eeprom_load(&ee); // 读取 EEPROM 中有效的元数据，有效时返回 0，否则返回 1
-    if (ee_load_ret == 1)                    // 无有效启动记录，首次写入默认值，通常是全新片或已损坏的情况。
-    {
-      LOG_INFO("BOOT", "EEPROM empty, saving default metadata"); // 双备份均无效，提示写入首份默认记录
-
-      if (boot_eeprom_save(&ee) == 0) // 将默认启动记录写入 EEPROM
-      {
-        LOG_INFO("BOOT", "EEPROM default metadata saved"); // 默认元数据落盘成功
-      }
-      else // 保存失败：EEPROM 掉线或写超时
-      {
-        LOG_ERROR("BOOT", "EEPROM default metadata save failed"); // 落盘失败：本次仍按内存默认值继续，下次开机重试
-      }
-    }
-    else // 有有效启动记录，直接使用
-    {
-      LOG_INFO("BOOT", "EEPROM metadeta valid, loaded"); // 读取成功
-    }
-  }
-
-  /* 仅检查栈指针和复位入口等向量表条件，不计算整个镜像的 CRC */
-  LOG_INFO("BOOT", "Checking CM7 slots...");
-  cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查 CM7 A 槽向量表
-  cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查 CM7 B 槽向量表
-  if (cm7_slot_a_ok)
-    LOG_INFO("BOOT", "CM7 slot A: valid");
-  else
-    LOG_WARN("BOOT", "CM7 slot A: invalid");
-  if (cm7_slot_b_ok)
-    LOG_INFO("BOOT", "CM7 slot B: valid");
-  else
-    LOG_WARN("BOOT", "CM7 slot B: invalid");
-
-  LOG_INFO("BOOT", "Checking CM4 slots...");
-  cm4_slot_a_ok = (uint8_t)cm4_boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查 CM4 A 槽向量表，仅用于打印
-  cm4_slot_b_ok = (uint8_t)cm4_boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查 CM4 B 槽向量表，仅用于打印
-  if (cm4_slot_a_ok)
-    LOG_INFO("BOOT", "CM4 slot A: valid");
-  else
-    LOG_WARN("BOOT", "CM4 slot A: invalid");
-  if (cm4_slot_b_ok)
-    LOG_INFO("BOOT", "CM4 slot B: valid");
-  else
-    LOG_WARN("BOOT", "CM4 slot B: invalid");
-
-  LOG_INFO("BOOT", "CM7 EEPROM metadata: active=%u pending=%u trial=%u flags=0x%02X seq=%lu | ver A=%lu B=%lu | slotA_ok=%u slotB_ok=%u", // 打印 CM7 EEPROM 元数据
-           (unsigned int)ee.active_slot,                                                                                                  // 激活槽位索引
-           (unsigned int)ee.pending_slot,                                                                                                 // 待处理槽位索引
-           (unsigned int)ee.boot_trial,                                                                                                   // 启动试用次数
-           (unsigned int)ee.flags,                                                                                                        // 标志位
-           (unsigned long)ee.seq,                                                                                                         // 序列号
-           (unsigned long)ee.app_version[CM7_APP_SLOT_A_INDEX],                                                                           // 应用槽位 A 版本号
-           (unsigned long)ee.app_version[CM7_APP_SLOT_B_INDEX],                                                                           // 应用槽位 B 版本号
-           (unsigned int)cm7_slot_a_ok,                                                                                                   // 检查槽位 A 是否有效
-           (unsigned int)cm7_slot_b_ok);                                                                                                  // 检查槽位 B 是否有效
-
-  LOG_INFO("BOOT", "CM4 EEPROM metadata: active=%u pending=%u trial=%u flags=0x%02X seq=%lu | ver A=%lu B=%lu | slotA_ok=%u slotB_ok=%u", // 打印 CM4 EEPROM 元数据
-           (unsigned int)ee.cm4_active_slot,                                                                                              // 激活槽位索引
-           (unsigned int)ee.cm4_pending_slot,                                                                                             // 待处理槽位索引
-           (unsigned int)ee.cm4_boot_trial,                                                                                               // 启动试用次数
-           (unsigned int)ee.cm4_flags,                                                                                                    // 标志位
-           (unsigned long)ee.seq,                                                                                                         // 序列号
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX],                                                                       // 应用槽位 A 版本号
-           (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX],                                                                       // 应用槽位 B 版本号
-           (unsigned int)cm4_slot_a_ok,                                                                                                   // 检查槽位 A 是否有效
-           (unsigned int)cm4_slot_b_ok);                                                                                                  // 检查槽位 B 是否有效
+  boot_init_eeprom();         // 初始化 EEPROM
+  boot_check_slots();         // 检查 CM7、CM4 槽是否有效
+  boot_eeprom_metadata_log(); // 打印 EEPROM 元数据
 
   /* 按 pending、active、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
   LOG_INFO("BOOT", "Preparing boot slot and checking CM7 slots...");
@@ -243,11 +138,20 @@ int main(void)
     uint32_t sp = *(__IO uint32_t *)app_base;        // 向量表第 1 项：应用启动时的栈顶 MSP
     uint32_t pc = *(__IO uint32_t *)(app_base + 4U); // 向量表第 2 项：应用的 Reset_Handler 地址
 
-    LOG_INFO("BOOT", "jump CM7 slot %u @ 0x%08lX", // 打印要启动的槽号和地址
-             (unsigned int)boot_slot, (unsigned long)app_base);
+    /* 打印要启动的槽号和地址 */
+    if (boot_slot == CM7_APP_SLOT_A_INDEX)
+    {
+      LOG_INFO("BOOT", "jump CM7 slot A @ 0x%08lX",
+               (unsigned long)app_base);
+    }
+    else if (boot_slot == CM7_APP_SLOT_B_INDEX)
+    {
+      LOG_INFO("BOOT", "jump CM7 slot B @ 0x%08lX",
+               (unsigned long)app_base);
+    }
     LOG_INFO("BOOT", "vec SP=0x%08lX Reset=0x%08lX", // 打印应用栈顶和复位入口
              (unsigned long)sp, (unsigned long)pc);
-    LOG_INFO("BOOT", "hold CM4 reset, then jump...");                // 提示跳转时将禁止 CM4 从固定入口启动
+    LOG_INFO("BOOT", "disable CM4 boot, then jump...");              // 提示跳转时将禁止 CM4 从固定入口启动
     boot_jump_to_app(app_base);                                      // 清理 Boot 中断、切换栈和向量表，跳到应用
     LOG_ERROR("BOOT", "ERROR: Jump returned (should never happen)"); // 正常跳转不返回；返回说明跳转异常
   }
@@ -337,6 +241,186 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+ * @brief 打印启动标题、固件标签和双核 Flash 分区信息
+ */
+static void boot_print_info(void)
+{
+  printf("\r\n");
+  printf("\033[1;36m"); // 加粗；蓝色
+  printf(" ____   ___   ___  _____ _      ___    _    ____  _____ ____          \n");
+  printf("| __ ) / _ \\ / _ \\|_   _| |    / _ \\  / \\  |  _ \\| ____|  _ \\   \n");
+  printf("|  _ \\| | | | | | | | | | |   | | | |/ _ \\ | | | |  _| | |_) |      \n");
+  printf("| |_) | |_| | |_| | | | | |___| |_| / ___ \\| |_| | |___|  _ <        \n");
+  printf("|____/ \\___/ \\___/  |_| |_____|\\___/_/   \\_\\____/|_____|_| \\_\\ \n");
+  printf("\r\n");
+  /* 两段预留区大小由相邻应用槽地址算出，仅用于打印分区表 */
+  const uint32_t cm7_reserve_size =
+      CM7_APP_SLOT_B_BASE - (CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE);
+  const uint32_t cm4_reserve_size =
+      CM4_APP_SLOT_B_BASE - (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE);
+  printf("BOOT Tag: %s\r\n", BOOT_FW_TAG); // 打印固件标签
+  printf("\n");
+  /* 打印双核 Flash 分区，便于对照实际烧录位置 */
+  printf("============= flash partition table ==============\r\n");
+  printf("---------------- CM7 (Bank1, 1MB) ----------------\r\n");
+  printf("|     name     |   address  |    size    | value |\r\n");
+  printf("--------------------------------------------------\r\n");
+  printf("| bootloader   | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_BOOT_FLASH_BASE, CM7_BOOT_FLASH_SIZE, CM7_BOOT_FLASH_SIZE / 1024U);
+  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE, CM7_APP_SLOT_A_SIZE / 1024U);
+  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM7_APP_SLOT_A_BASE + CM7_APP_SLOT_A_SIZE), (unsigned int)cm7_reserve_size, (int)(cm7_reserve_size / 1024U));
+  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE, CM7_APP_SLOT_B_SIZE / 1024U);
+  printf("---------------- CM4 (Bank2, 1MB) ----------------\r\n");
+  printf("|     name     |   address  |    size    | value |\r\n");
+  printf("--------------------------------------------------\r\n");
+  printf("| stub         | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_BOOT_STUB_BASE, CM4_BOOT_STUB_SIZE, CM4_BOOT_STUB_SIZE / 1024U);
+  printf("| slot A       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_A_SIZE, CM4_APP_SLOT_A_SIZE / 1024U);
+  printf("| reserve(S4)  | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)(CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE), (unsigned int)cm4_reserve_size, (int)(cm4_reserve_size / 1024U));
+  printf("| slot B       | 0x%08lx | 0x%08x | %dKB |\r\n", (unsigned long)CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE, CM4_APP_SLOT_B_SIZE / 1024U);
+  printf("==================================================\r\n");
+  printf("USART1 Baudrate: 115200, Pins: PA9/PA10\r\n");  // 打印 USART1 配置
+  printf("EEPROM Peripheral: I2C4, Pins: PD12/PD13\r\n"); // 打印 EEPROM 配置
+  printf("\033[0m");                                      // 恢复默认颜色
+  printf("\r\n");
+}
+
+static void boot_init_eeprom(void)
+{
+  LOG_INFO("BOOT", "Initializing EEPROM...");
+  if (bsp_eeprom_init() == 0) // 初始化板载 EEPROM；成功返回 0
+  {
+    int ee_init_ret = boot_eeprom_init(); // 准备 Boot 元数据的 EEPROM 访问
+    if (ee_init_ret != 0)
+    {
+      LOG_ERROR("BOOT", "EEPROM initialization failed"); // 初始化失败
+    }
+    else
+    {
+      LOG_INFO("BOOT", "EEPROM initialized "); // 初始化成功
+    }
+
+    LOG_INFO("BOOT", "Loading EEPROM metadata...");
+    int ee_load_ret = boot_eeprom_load(&ee); // 读取 EEPROM 中有效的元数据，有效时返回 0，否则返回 1
+    if (ee_load_ret == 1)                    // 无有效启动记录，首次写入默认值，通常是全新片或已损坏的情况。
+    {
+      LOG_INFO("BOOT", "EEPROM empty, saving default metadata"); // 双备份均无效，提示写入首份默认记录
+
+      if (boot_eeprom_save(&ee) == 0) // 将默认启动记录写入 EEPROM
+      {
+        LOG_INFO("BOOT", "EEPROM default metadata saved"); // 默认元数据落盘成功
+      }
+      else // 保存失败：EEPROM 掉线或写超时
+      {
+        LOG_ERROR("BOOT", "EEPROM default metadata save failed"); // 落盘失败：本次仍按内存默认值继续，下次开机重试
+      }
+    }
+    else // 有有效启动记录，直接使用
+    {
+      LOG_INFO("BOOT", "EEPROM metadata valid, loaded"); // 读取成功
+    }
+  }
+  else
+  {
+    LOG_ERROR("BOOT", "EEPROM initialization failed"); // 初始化失败
+  }
+}
+
+/**
+ * @brief 检查双核 A/B 槽向量表并打印结果
+ */
+static void boot_check_slots(void)
+{
+  /* 仅检查栈指针和复位入口等向量表条件，不计算整个镜像的 CRC */
+  LOG_INFO("BOOT", "==========================================================");
+  LOG_INFO("BOOT", "Checking CM7 slots...");
+  cm7_slot_a_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_A_INDEX); // 检查 CM7 A 槽向量表
+  cm7_slot_b_ok = (uint8_t)boot_slot_is_valid(CM7_APP_SLOT_B_INDEX); // 检查 CM7 B 槽向量表
+  if (cm7_slot_a_ok)
+    LOG_INFO("BOOT", "CM7 slot A vector: valid");
+  else
+    LOG_WARN("BOOT", "CM7 slot A vector: invalid");
+  if (cm7_slot_b_ok)
+    LOG_INFO("BOOT", "CM7 slot B vector: valid");
+  else
+    LOG_WARN("BOOT", "CM7 slot B vector: invalid");
+
+  LOG_INFO("BOOT", "Checking CM4 slots...");
+  cm4_slot_a_ok = (uint8_t)cm4_boot_slot_is_valid(CM4_APP_SLOT_A_INDEX); // 检查 CM4 A 槽向量表，仅用于打印
+  cm4_slot_b_ok = (uint8_t)cm4_boot_slot_is_valid(CM4_APP_SLOT_B_INDEX); // 检查 CM4 B 槽向量表，仅用于打印
+  if (cm4_slot_a_ok)
+    LOG_INFO("BOOT", "CM4 slot A vector: valid");
+  else
+    LOG_WARN("BOOT", "CM4 slot A vector: invalid");
+  if (cm4_slot_b_ok)
+    LOG_INFO("BOOT", "CM4 slot B vector: valid");
+  else
+    LOG_WARN("BOOT", "CM4 slot B vector: invalid");
+}
+
+/**
+ * @brief 打印双核 EEPROM 启动元数据
+ */
+static void boot_eeprom_metadata_log(void)
+{
+  /* 打印 CM7 EEPROM 元数据 */
+  LOG_INFO("BOOT", "==========================================================");
+  LOG_INFO("BOOT", "CM7 EEPROM metadata:");
+  /* 打印激活槽位索引 */
+  if (ee.active_slot == CM7_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "active slot: A");
+  else if (ee.active_slot == CM7_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "active slot: B");
+  else
+    LOG_ERROR("BOOT", "active slot: unknown");
+  /* 打印待处理槽位索引 */
+  if ((ee.flags & BOOT_EE_FLAG_PENDING) == 0U)
+    LOG_INFO("BOOT", "pending slot: none");
+  else if (ee.pending_slot == CM7_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "pending slot: A");
+  else if (ee.pending_slot == CM7_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "pending slot: B");
+  else
+    LOG_ERROR("BOOT", "pending slot: unknown");
+  /* 打印启动试用次数 */
+  LOG_INFO("BOOT", "boot trial before prepare: %u", ee.boot_trial);
+  /* 打印标志位 */
+  LOG_INFO("BOOT", "flags: 0x%02X", ee.flags);
+  /* 打印应用槽位 A 版本号 */
+  LOG_INFO("BOOT", "app version A: %lu", ee.app_version[CM7_APP_SLOT_A_INDEX]);
+  /* 打印应用槽位 B 版本号 */
+  LOG_INFO("BOOT", "app version B: %lu", ee.app_version[CM7_APP_SLOT_B_INDEX]);
+  LOG_INFO("BOOT", "==========================================================");
+
+  /* 打印 CM4 EEPROM 元数据 */
+  LOG_INFO("BOOT", "CM4 EEPROM metadata:");
+  /* 打印激活槽位索引 */
+  if (ee.cm4_active_slot == CM4_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "active slot: A");
+  else if (ee.cm4_active_slot == CM4_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "active slot: B");
+  else
+    LOG_ERROR("BOOT", "active slot: unknown");
+  /* 打印待处理槽位索引 */
+  if ((ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U)
+    LOG_INFO("BOOT", "pending slot: none");
+  else if (ee.cm4_pending_slot == CM4_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "pending slot: A");
+  else if (ee.cm4_pending_slot == CM4_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "pending slot: B");
+  else
+    LOG_ERROR("BOOT", "pending slot: unknown");
+  /* 打印启动试用次数 */
+  LOG_INFO("BOOT", "boot trial before prepare: %u", ee.cm4_boot_trial);
+  /* 打印标志位 */
+  LOG_INFO("BOOT", "flags: 0x%02X", ee.cm4_flags);
+  /* 打印应用槽位 A 版本号 */
+  LOG_INFO("BOOT", "app version A: %lu", ee.cm4_app_version[CM4_APP_SLOT_A_INDEX]);
+  /* 打印应用槽位 B 版本号 */
+  LOG_INFO("BOOT", "app version B: %lu", ee.cm4_app_version[CM4_APP_SLOT_B_INDEX]);
+  /* 打印序列号 */
+  LOG_INFO("BOOT", "seq: %lu", ee.seq);
+  LOG_INFO("BOOT", "==========================================================");
+}
 /* USER CODE END 4 */
 
 /**

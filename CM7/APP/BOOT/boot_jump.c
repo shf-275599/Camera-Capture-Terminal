@@ -97,5 +97,5 @@ void boot_jump_to_app(uint32_t app_base)
  */
 static void Boot_HoldCm4(void)
 {
-    CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2); // 清除 BOOT_C2 位，使能Thumb 态
+    CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2); // 清除 CM4 启动使能位
 }
