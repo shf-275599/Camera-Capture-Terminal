@@ -565,25 +565,25 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
     if (((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) &&
         ((meta->cm4_pending_slot == CM4_APP_SLOT_A_INDEX) ||
          (meta->cm4_pending_slot == CM4_APP_SLOT_B_INDEX)) &&
-        (boot_slot_is_valid(meta->cm4_pending_slot) != 0))
+        (cm4_boot_slot_is_valid(meta->cm4_pending_slot) != 0))
     {
         return meta->cm4_pending_slot;
     }
 
     if (((meta->cm4_active_slot == CM4_APP_SLOT_A_INDEX) ||
          (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
-        (boot_slot_is_valid(meta->cm4_active_slot) != 0))
+        (cm4_boot_slot_is_valid(meta->cm4_active_slot) != 0))
     {
         return meta->cm4_active_slot;
     }
 
     /* active 也不可用：按 Slot A → Slot B 兜底 */
-    if (boot_slot_is_valid(CM4_APP_SLOT_A_INDEX) != 0)
+    if (cm4_boot_slot_is_valid(CM4_APP_SLOT_A_INDEX) != 0)
     {
         return CM4_APP_SLOT_A_INDEX;
     }
 
-    if (boot_slot_is_valid(CM4_APP_SLOT_B_INDEX) != 0)
+    if (cm4_boot_slot_is_valid(CM4_APP_SLOT_B_INDEX) != 0)
     {
         return CM4_APP_SLOT_B_INDEX;
     }
@@ -626,7 +626,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
             meta->cm4_pending_slot = meta->cm4_active_slot;
             slot = meta->cm4_active_slot;
             /* active 槽镜像也无效时按回退链重新选择 */
-            if (boot_slot_is_valid(slot) == 0)
+            if (cm4_boot_slot_is_valid(slot) == 0)
             {
                 slot = boot_eeprom_select_cm4_boot_slot(meta);
             }
@@ -684,9 +684,9 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     }
 
     meta->cm4_pending_slot = slot_index;
-    meta->cm4_app_size[slot_index - CM4_APP_SLOT_A_INDEX] = image_size;
-    meta->cm4_app_crc[slot_index - CM4_APP_SLOT_A_INDEX] = image_crc32;
-    meta->cm4_app_version[slot_index - CM4_APP_SLOT_A_INDEX] = version;
+    meta->cm4_app_size[slot_index] = image_size;
+    meta->cm4_app_crc[slot_index] = image_crc32;
+    meta->cm4_app_version[slot_index] = version;
     /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 active */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;

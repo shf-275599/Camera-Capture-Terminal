@@ -67,10 +67,11 @@
 /* CM4 APP A、B 扇区大小 */
 #define CM4_APP_SLOT_A_SIZE (384U * 1024U)
 #define CM4_APP_SLOT_B_SIZE (384U * 1024U)
-/* CM4 APP A、B 扇区索引 */
-#define CM4_APP_SLOT_A_INDEX (2U)
-#define CM4_APP_SLOT_B_INDEX (3U)
+/* CM4 核内 A、B 槽索引，可直接用于 CM4 元数据数组 */
+#define CM4_APP_SLOT_A_INDEX (0U)
+#define CM4_APP_SLOT_B_INDEX (1U)
 
+/* CM7 槽接口：索引仅表示 CM7 核内的 A/B */
 int boot_slot_is_valid(uint8_t slot_index);
 uint8_t boot_slot_index_is_valid(uint8_t slot_index);
 uint32_t boot_slot_base_get(uint8_t slot_index);
@@ -78,5 +79,11 @@ uint32_t boot_slot_end_get(uint8_t slot_index);
 uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack);
 uint8_t boot_get_slot_index_from_address(uint32_t address);
 uint8_t boot_get_running_slot(void);
+
+/* CM4 槽接口：索引仅表示 CM4 核内的 A/B */
+int cm4_boot_slot_is_valid(uint8_t slot_index);
+uint32_t cm4_boot_slot_base_get(uint8_t slot_index);
+uint32_t cm4_boot_slot_end_get(uint8_t slot_index);
+uint8_t cm4_boot_get_slot_index_from_address(uint32_t address);
 
 #endif

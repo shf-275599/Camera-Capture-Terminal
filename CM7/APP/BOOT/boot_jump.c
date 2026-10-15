@@ -76,7 +76,7 @@ void boot_jump_to_app(uint32_t app_base)
     LOG_INFO("BOOT", "Switching MSP to 0x%08lx; jumping to 0x%08lx",
              (unsigned long)app_stack, (unsigned long)app_entry);
     LOG_INFO("BOOT", "Jumping to APP Reset_Handler...");
-    LOG_INFO("BOOT","=================================================================================");
+    LOG_INFO("BOOT", "====================================================================================");
     printf("\r\n");
     __set_MSP(app_stack);
     __set_CONTROL(0U);

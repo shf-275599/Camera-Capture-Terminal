@@ -16,7 +16,8 @@ uint8_t cm4_boot_handoff_jump_from_d3(void)
 {
     uint32_t app_base = 0U;
 
-    if (cm4_boot_handoff_read(&app_base) == 0) {
+    if (cm4_boot_handoff_read(&app_base) == 0)
+    {
         /* 无握手时默认尝试 Slot A，兼容未写 EEPROM 的出厂烧录 */
         app_base = CM4_APP_SLOT_A_BASE;
     }
@@ -34,10 +35,12 @@ static uint8_t cm4_boot_handoff_read(uint32_t *app_base)
     volatile uint32_t *magic = (volatile uint32_t *)CM4_BOOT_HANDOFF_MAGIC_ADDR;
     volatile uint32_t *base = (volatile uint32_t *)CM4_BOOT_HANDOFF_BASE_ADDR;
 
-    if (app_base == NULL) {
+    if (app_base == NULL)
+    {
         return 0;
     }
-    if (*magic != CM4_BOOT_HANDOFF_MAGIC) {
+    if (*magic != CM4_BOOT_HANDOFF_MAGIC)
+    {
         return 0;
     }
 
@@ -56,7 +59,8 @@ static uint8_t cm4_boot_handoff_jump(uint32_t app_base)
     uint32_t app_entry;
     void (*app_reset)(void);
 
-    if (cm4_boot_vector_ok(app_base) == 0) {
+    if (cm4_boot_vector_ok(app_base) == 0)
+    {
         return 0;
     }
 
@@ -90,15 +94,18 @@ static uint8_t cm4_boot_vector_ok(uint32_t app_base)
     uint32_t slot_end;
     uint8_t slot;
 
-    if ((app_base != CM4_APP_SLOT_A_BASE) && (app_base != CM4_APP_SLOT_B_BASE)) {
+    if ((app_base != CM4_APP_SLOT_A_BASE) && (app_base != CM4_APP_SLOT_B_BASE))
+    {
         return 0;
     }
 
-    slot = boot_get_slot_index_from_address(app_base);
-    if (boot_slot_base_get(slot) != app_base) {
+    slot = cm4_boot_get_slot_index_from_address(app_base);
+    if (cm4_boot_slot_base_get(slot) != app_base)
+    {
         return 0;
     }
-    if (boot_slot_is_valid(slot) == 0) {
+    if (cm4_boot_slot_is_valid(slot) == 0)
+    {
         return 0;
     }
 
