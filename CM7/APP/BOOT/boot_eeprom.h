@@ -69,7 +69,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta);
 int boot_eeprom_save(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  按 meta 选择应启动的 CM7 槽（pending 优先且须有效）
+ * @brief  选择 CM7 槽；已登记镜像检查完整 CRC，无有效槽返回 255
  */
 uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta);
 
@@ -85,14 +85,14 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta);
 int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  标记 CM7 pending 槽（OTA 写完镜像后由 APP 调用）
+ * @brief  校验 CM7 候选镜像长度、向量表和完整 CRC 后保存 pending
  */
 int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                              uint32_t image_size, uint32_t image_crc32,
                              uint32_t version);
 
 /**
- * @brief  按 meta 选择应启动的 CM4 槽（pending 优先且须有效）
+ * @brief  选择 CM4 槽；已登记镜像检查完整 CRC，无有效槽返回 255
  */
 uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta);
 
@@ -108,7 +108,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta);
 int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  标记 CM4 pending 槽
+ * @brief  校验 CM4 候选镜像长度、向量表和完整 CRC 后保存 pending
  */
 int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                                  uint32_t image_size, uint32_t image_crc32,
