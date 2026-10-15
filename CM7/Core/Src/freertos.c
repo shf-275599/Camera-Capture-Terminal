@@ -173,7 +173,7 @@ static void Key0_AB_Test_Thread(void *argument)
   uint8_t stable = 0U;
   (void)argument;
 
-  LOG_INFO("AB", "KEY0 ready: PA8 high=pressed, running=%u base=0x%08lX",
+  LOG_INFO("CM7-Slot-A/B", "KEY0 ready: PA8 high=pressed, running=%u base=0x%08lX",
            (unsigned int)boot_get_running_slot(),
            (unsigned long)boot_slot_base_get(boot_get_running_slot()));
   for (;;)
@@ -209,7 +209,7 @@ static void Key0_AB_Test_Thread(void *argument)
               ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) ||
               (boot_slot_is_valid(target) == 0))
           {
-            LOG_ERROR("AB", "switch rejected: check EEPROM, pending and target vector");
+            LOG_ERROR("CM7-Slot-A/B", "switch rejected: check EEPROM, pending and target vector");
             continue;
           }
           /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
@@ -217,16 +217,16 @@ static void Key0_AB_Test_Thread(void *argument)
           {
             if (boot_eeprom_select_boot_slot(&meta) != running)
             {
-              LOG_ERROR("AB", "baseline running slot mismatch");
+              LOG_ERROR("CM7-Slot-A/B", "baseline running slot mismatch");
               continue;
             }
             meta.active_slot = running;
             if (boot_eeprom_save(&meta) != 0)
             {
-              LOG_ERROR("AB", "baseline sync FAIL");
+              LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
               continue;
             }
-            LOG_INFO("AB", "baseline synced: active=%u", (unsigned int)running);
+            LOG_INFO("CM7-Slot-A/B", "baseline synced: active=%u", (unsigned int)running);
           }
           for (uint32_t i = 0U; i < size; i++)
           {
@@ -242,15 +242,15 @@ static void Key0_AB_Test_Thread(void *argument)
             }
           }
           crc = ~crc;
-          LOG_INFO("AB", "switch %u -> %u base=0x%08lX full_slot_size=%lu crc=0x%08lX",
+          LOG_INFO("CM7-Slot-A/B", "switch %u -> %u base=0x%08lX full_slot_size=%lu crc=0x%08lX",
                    (unsigned int)running, (unsigned int)target,
                    (unsigned long)boot_slot_base_get(target), (unsigned long)size, (unsigned long)crc);
           if (boot_eeprom_set_pending(&meta, target, size, crc, meta.app_version[target]) != 0)
           {
-            LOG_ERROR("AB", "pending save FAIL");
+            LOG_ERROR("CM7-Slot-A/B", "pending save FAIL");
             continue;
           }
-          LOG_INFO("AB", "pending saved: slot=%u trial=%u seq=%lu; reboot",
+          LOG_INFO("CM7-Slot-A/B", "pending saved: slot=%u trial=%u seq=%lu; reboot",
                    (unsigned int)meta.pending_slot, (unsigned int)meta.boot_trial, (unsigned long)meta.seq);
           osDelay(100U);
           HAL_NVIC_SystemReset();
