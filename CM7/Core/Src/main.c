@@ -430,7 +430,7 @@ static void app_boot_eeprom_metadata_log(void)
   if (running == CM7_APP_SLOT_A_INDEX)
     LOG_INFO("APP", "running slot: A");
   else if (running == CM7_APP_SLOT_B_INDEX)
-    LOG_INFO("APP", "running slot: %d", running);
+    LOG_INFO("APP", "running slot: B");
   else
     LOG_ERROR("APP", "running slot: unknown");
   /* 打印激活槽位索引 */
