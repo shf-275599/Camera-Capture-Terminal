@@ -98,7 +98,11 @@ static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
     return boot_ee_crc32_bytes((const uint8_t *)base, size) == crc;
 }
 
-/** 计算 v2 元数据 CRC32，不含 crc32 字段自身。 */
+/**
+ * @brief  计算 v2 元数据 CRC32，不含 crc32 字段自身。
+ * @param  meta 待校验的 v2 元数据
+ * @retval CRC32 校验值
+ */
 static uint32_t boot_ee_crc32(const boot_eeprom_meta_t *meta)
 {
     return boot_ee_crc32_bytes((const uint8_t *)meta,
