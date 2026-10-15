@@ -55,9 +55,10 @@ OPT = -Og
 # C sources
 C_SOURCES =  \
 ../../Common/Src/mylog.c \
-../../CM4/APP/IPC/app_ipc_cm4.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
+../../Common/Src/bsp_flash_ram.c \
+../../CM4/APP/IPC/app_ipc_cm4.c \
 ../../CM4/Core/Src/main.c \
 ../../CM4/Core/Src/stm32h7xx_it.c \
 ../../CM4/Core/Src/stm32h7xx_hal_msp.c \

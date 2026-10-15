@@ -55,6 +55,7 @@ OPT = -Og
 # C sources
 C_SOURCES =  \
 ../../Common/Src/mylog.c \
+../../Common/Src/bsp_flash_ram.c \
 ../../CM7/BSP/bsp_delay.c \
 ../../CM7/BSP/bsp_sys.c \
 ../../CM7/BSP/MPU/mpu.c \
