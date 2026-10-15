@@ -20,7 +20,7 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 slot_index 是否有效 */
     if (!boot_slot_index_is_valid(slot_index))
     {
-        LOG_ERROR("BOOT", "slot_index=%u is not valid", (unsigned int)slot_index);
+        LOG_ERROR("APP", "slot_index=%u is not valid", (unsigned int)slot_index);
         return 0;
     }
     /* 获取 slot_base 地址 */
@@ -33,13 +33,13 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 stack_region 是否有效 */
     if (!boot_slot_stack_region_is_valid(slot_index, stack))
     {
-        LOG_ERROR("BOOT", "slot_index=%u stack_region is not valid", (unsigned int)slot_index);
+        LOG_ERROR("APP", "slot_index=%u stack_region is not valid", (unsigned int)slot_index);
         return 0;
     }
     /* 校验复位向量：地址必须在slot范围内，且最低位为1（Cortex-M Thumb模式） */
     if ((reset < slot_base) || (reset >= slot_end) || ((reset & 1U) == 0U))
     {
-        LOG_ERROR("BOOT", "slot_index=%u reset is not valid", (unsigned int)slot_index);
+        LOG_ERROR("APP", "slot_index=%u reset is not valid", (unsigned int)slot_index);
         return 0;
     }
 
