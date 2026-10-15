@@ -72,6 +72,7 @@ static void boot_print_info(void);
 static void boot_check_slots(void);
 static void boot_init_eeprom(void);
 static void boot_eeprom_metadata_log(void);
+static void boot_key0_recover(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -79,19 +80,19 @@ static void boot_eeprom_metadata_log(void);
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
 
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
-  /* USER CODE BEGIN Boot_Mode_Sequence_0 */
+/* USER CODE BEGIN Boot_Mode_Sequence_0 */
   int32_t timeout;
-  /* USER CODE END Boot_Mode_Sequence_0 */
+/* USER CODE END Boot_Mode_Sequence_0 */
 
-  /* USER CODE BEGIN Boot_Mode_Sequence_1 */
+/* USER CODE BEGIN Boot_Mode_Sequence_1 */
   /* 等待 CM4 进入 STOP，超时后继续启动，避免 CM4 未烧录时卡住 */
   timeout = 0xFFFF; // 限制等待次数
   while ((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET) && (timeout-- > 0))
@@ -100,7 +101,7 @@ int main(void)
   {
     /* CM4 未进 STOP；跳转函数随后会禁止 CM4 从固定入口启动 */
   }
-  /* USER CODE END Boot_Mode_Sequence_1 */
+/* USER CODE END Boot_Mode_Sequence_1 */
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -111,8 +112,8 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-  /* USER CODE BEGIN Boot_Mode_Sequence_2 */
-  /* USER CODE END Boot_Mode_Sequence_2 */
+/* USER CODE BEGIN Boot_Mode_Sequence_2 */
+/* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
   /* USER CODE END SysInit */
@@ -127,6 +128,7 @@ int main(void)
   LOG_INFO("BOOT", "====================================================================================");
   boot_init_eeprom();         // 初始化 EEPROM
   boot_check_slots();         // 检查 CM7、CM4 槽是否有效
+  boot_key0_recover();        // 本地重刷镜像后，长按 KEY0 重新登记 CM7 双槽
   boot_eeprom_metadata_log(); // 打印 EEPROM 元数据
 
   /* 按 pending、active、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
@@ -183,29 +185,27 @@ int main(void)
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Supply configuration update enable
-   */
+  */
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
   /** Configure the main internal regulator output voltage
-   */
+  */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
-  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY))
-  {
-  }
+  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
   /** Initializes the RCC Oscillators according to the specified parameters
-   * in the RCC_OscInitTypeDef structure.
-   */
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -224,8 +224,10 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
+                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
@@ -421,16 +423,90 @@ static void boot_eeprom_metadata_log(void)
   LOG_INFO("BOOT", "seq: %lu", ee.seq);
   LOG_INFO("BOOT", "==========================================================");
 }
+
+/**
+ * @brief 本地维护入口：启动时 KEY0 连续为高 2 秒，重新登记现有 CM7 双槽。
+ * @note CRC 覆盖整个槽；仅在人工确认 ST-Link 镜像来源后使用。
+ */
+static void boot_key0_recover(void)
+{
+  GPIO_InitTypeDef key = {0};
+  boot_eeprom_meta_t recovered;
+  uint32_t start;
+
+  key.Pin = GPIO_PIN_8;
+  key.Mode = GPIO_MODE_INPUT;
+  key.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOA, &key);
+  if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) == GPIO_PIN_RESET)
+  {
+    return;
+  }
+  LOG_INFO("RECOVERY", "KEY0 detected, hold 2 seconds to register CM7 A/B");
+  start = HAL_GetTick();
+  while ((HAL_GetTick() - start) < 2000U)
+  {
+    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) == GPIO_PIN_RESET)
+    {
+      LOG_INFO("RECOVERY", "cancelled: KEY0 released early");
+      return;
+    }
+    HAL_Delay(10U);
+  }
+  if ((boot_eeprom_load(&recovered) != 0) ||
+      (boot_slot_is_valid(CM7_APP_SLOT_A_INDEX) == 0) ||
+      (boot_slot_is_valid(CM7_APP_SLOT_B_INDEX) == 0))
+  {
+    LOG_ERROR("RECOVERY", "FAIL: valid EEPROM and both CM7 vectors required");
+    return;
+  }
+  for (uint8_t slot = 0U; slot < CM7_APP_SLOT_COUNT; slot++)
+  {
+    uint32_t crc = 0xFFFFFFFFU;
+    uint32_t base = boot_slot_base_get(slot);
+    uint32_t size = boot_slot_end_get(slot) - base;
+    const uint8_t *image = (const uint8_t *)base;
+    for (uint32_t i = 0U; i < size; i++)
+    {
+      crc ^= image[i];
+      for (uint32_t bit = 0U; bit < 8U; bit++)
+      {
+        crc = (crc >> 1) ^ ((crc & 1U) ? 0xEDB88320U : 0U);
+      }
+    }
+    recovered.app_size[slot] = size;
+    recovered.app_crc[slot] = ~crc;
+    recovered.app_version[slot] = 0U; // 本地 BIN 无版本描述，清除旧镜像版本记录
+    LOG_INFO("RECOVERY", "CM7 slot=%u size=%lu crc=0x%08lX",
+             (unsigned int)slot, (unsigned long)size, (unsigned long)~crc);
+  }
+  recovered.active_slot = CM7_APP_SLOT_A_INDEX;
+  recovered.pending_slot = CM7_APP_SLOT_A_INDEX;
+  recovered.boot_trial = 0U;
+  recovered.flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
+  if (boot_eeprom_save(&recovered) != 0)
+  {
+    LOG_ERROR("RECOVERY", "FAIL: EEPROM save/readback");
+    return;
+  }
+  ee = recovered;
+  LOG_INFO("RECOVERY", "PASS: CM7 active=A, pending cleared, CM4 preserved; release KEY0");
+  while (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) == GPIO_PIN_SET)
+  {
+    HAL_Delay(10U);
+  }
+  HAL_Delay(50U);
+}
 /* USER CODE END 4 */
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM2 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- * @retval None
- */
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
@@ -444,9 +520,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -454,12 +530,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
- * @brief  Reports the name of the source file and the source line number
- *         where the assert_param error has occurred.
- * @param  file: pointer to the source file name
- * @param  line: assert_param error line source number
- * @retval None
- */
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
