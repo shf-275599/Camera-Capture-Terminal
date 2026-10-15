@@ -73,20 +73,28 @@ static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
 {
     uint32_t base = cm4 ? cm4_boot_slot_base_get(slot) : boot_slot_base_get(slot);
     uint32_t end = cm4 ? cm4_boot_slot_end_get(slot) : boot_slot_end_get(slot);
+    uint32_t actual_crc;
 
     if ((base == 0U) ||
         ((cm4 ? cm4_boot_slot_is_valid(slot) : boot_slot_is_valid(slot)) == 0))
     {
+        LOG_WARN("BOOT", "CM%d slot=%u image rejected: invalid base/vector (base=0x%08lX, pending=%d)",
+                 cm4 ? 4 : 7, (unsigned int)slot, (unsigned long)base, pending);
         return 0;
     }
     /* 兼容尚未登记长度/CRC 的出厂基线，但 pending 必须完整校验。 */
     if ((pending == 0) && (size == 0U) && (crc == 0U))
     {
+        LOG_INFO("BOOT", "CM%d slot=%u factory baseline: size/CRC not registered, vector check only",
+                 cm4 ? 4 : 7, (unsigned int)slot);
         return 1;
     }
     if ((size < 8U) || (size > end - base) ||
         ((*((volatile uint32_t *)(base + 4U)) & ~1UL) >= base + size))
     {
+        LOG_WARN("BOOT", "CM%d slot=%u image rejected: size/reset range (base=0x%08lX, size=%lu, reset=0x%08lX, pending=%d)",
+                 cm4 ? 4 : 7, (unsigned int)slot, (unsigned long)base,
+                 (unsigned long)size, (unsigned long)*((volatile uint32_t *)(base + 4U)), pending);
         return 0;
     }
 #if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
@@ -95,7 +103,18 @@ static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
         SCB_InvalidateDCache_by_Addr((void *)base, (int32_t)((size + 31U) & ~31UL));
     }
 #endif
-    return boot_ee_crc32_bytes((const uint8_t *)base, size) == crc;
+    actual_crc = boot_ee_crc32_bytes((const uint8_t *)base, size);
+    if (actual_crc != crc)
+    {
+        LOG_WARN("BOOT", "CM%d slot=%u CRC FAIL: size=%lu expected=0x%08lX actual=0x%08lX pending=%d",
+                 cm4 ? 4 : 7, (unsigned int)slot, (unsigned long)size,
+                 (unsigned long)crc, (unsigned long)actual_crc, pending);
+        return 0;
+    }
+    LOG_INFO("BOOT", "CM%d slot=%u image PASS: size=%lu crc=0x%08lX pending=%d",
+             cm4 ? 4 : 7, (unsigned int)slot, (unsigned long)size,
+             (unsigned long)actual_crc, pending);
+    return 1;
 }
 
 /**
@@ -512,6 +531,10 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
     }
 
     slot = boot_eeprom_select_boot_slot(meta);
+    if (slot == 255U)
+    {
+        LOG_ERROR("BOOT", "CM7 no valid slot, fallback");
+    }
 
     if ((meta->flags & BOOT_EE_FLAG_PENDING) != 0U)
     {
@@ -534,6 +557,13 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
             LOG_ERROR("BOOT", "CM7 pending clear save failed");
         }
     }
+
+    if (slot == CM7_APP_SLOT_A_INDEX)
+        LOG_INFO("BOOT", "CM7 boot slot A");
+    else if (slot == CM7_APP_SLOT_B_INDEX)
+        LOG_INFO("BOOT", "CM7 boot slot B");
+    else
+        LOG_INFO("BOOT", "CM7 boot slot unknown, fallback slot A");
 
     return slot;
 }
@@ -628,7 +658,7 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
     }
 
     if (((meta->cm4_active_slot == CM4_APP_SLOT_A_INDEX) ||
-          (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
+         (meta->cm4_active_slot == CM4_APP_SLOT_B_INDEX)) &&
         ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U || meta->cm4_active_slot != meta->cm4_pending_slot) &&
         boot_ee_image_valid(meta->cm4_active_slot, 1, meta->cm4_app_size[meta->cm4_active_slot],
                             meta->cm4_app_crc[meta->cm4_active_slot], 0))
