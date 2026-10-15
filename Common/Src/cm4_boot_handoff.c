@@ -94,11 +94,11 @@ static uint8_t cm4_boot_vector_ok(uint32_t app_base)
         return 0;
     }
 
-    slot = boot_get_slot_index_from_address(app_base);
-    if (boot_slot_base_get(slot) != app_base) {
+    slot = cm4_boot_get_slot_index_from_address(app_base);
+    if (cm4_boot_slot_base_get(slot) != app_base) {
         return 0;
     }
-    if (boot_slot_is_valid(slot) == 0) {
+    if (cm4_boot_slot_is_valid(slot) == 0) {
         return 0;
     }
 

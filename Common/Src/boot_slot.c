@@ -65,8 +65,16 @@ uint8_t boot_get_slot_index_from_address(uint32_t address)
     {
         return CM7_APP_SLOT_B_INDEX;
     }
-    /* 检查地址是否在 CM4_APP_SLOT_A 范围内 */
-    else if ((address >= CM4_APP_SLOT_A_BASE) &&
+    else
+    {
+        return 255U;
+    }
+}
+
+/** 根据地址获取 CM4 核内槽索引，槽外地址返回 255 */
+uint8_t cm4_boot_get_slot_index_from_address(uint32_t address)
+{
+    if ((address >= CM4_APP_SLOT_A_BASE) &&
              (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE)))
     {
         return CM4_APP_SLOT_A_INDEX;
@@ -92,9 +100,7 @@ uint8_t boot_slot_index_is_valid(uint8_t slot_index)
 {
     /* 检查 slot_index 是否有效 */
     if (slot_index != CM7_APP_SLOT_A_INDEX &&
-        slot_index != CM7_APP_SLOT_B_INDEX &&
-        slot_index != CM4_APP_SLOT_A_INDEX &&
-        slot_index != CM4_APP_SLOT_B_INDEX)
+        slot_index != CM7_APP_SLOT_B_INDEX)
     {
         return 0;
     }
@@ -117,6 +123,16 @@ uint32_t boot_slot_base_get(uint8_t slot_index)
     case CM7_APP_SLOT_B_INDEX:
         return CM7_APP_SLOT_B_BASE;
         break;
+    default:
+        return 0;
+    }
+}
+
+/** 获取 CM4 核内槽的 Flash 基址，无效索引返回 0 */
+uint32_t cm4_boot_slot_base_get(uint8_t slot_index)
+{
+    switch (slot_index)
+    {
     case CM4_APP_SLOT_A_INDEX:
         return CM4_APP_SLOT_A_BASE;
         break;
@@ -143,6 +159,16 @@ uint32_t boot_slot_end_get(uint8_t slot_index)
     case CM7_APP_SLOT_B_INDEX:
         return CM7_APP_SLOT_B_BASE + CM7_APP_SLOT_B_SIZE;
         break;
+    default:
+        return 0;
+    }
+}
+
+/** 获取 CM4 核内槽的 Flash 结束地址，无效索引返回 0 */
+uint32_t cm4_boot_slot_end_get(uint8_t slot_index)
+{
+    switch (slot_index)
+    {
     case CM4_APP_SLOT_A_INDEX:
         return CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE;
         break;
@@ -175,8 +201,26 @@ uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
             return 0; // 栈不在这三块 RAM → slot 镜像非法，拒绝启动
         }
     }
-    else if (slot_index == CM4_APP_SLOT_A_INDEX ||
-             slot_index == CM4_APP_SLOT_B_INDEX)
+    return 1;
+}
+
+/** 校验 CM4 槽向量表：栈地址符合 CM4 规则，复位入口位于本槽且为 Thumb */
+int cm4_boot_slot_is_valid(uint8_t slot_index)
+{
+    uint32_t slot_base;
+    uint32_t slot_end;
+    uint32_t stack;
+    uint32_t reset;
+
+    if (slot_index >= CM4_APP_SLOT_COUNT)
+    {
+        return 0;
+    }
+
+    slot_base = cm4_boot_slot_base_get(slot_index);
+    slot_end = cm4_boot_slot_end_get(slot_index);
+    stack = *(__IO uint32_t *)slot_base;
+    reset = *(__IO uint32_t *)(slot_base + 4U);
     {
         uint32_t stack_region = stack & 0xFF000000U; // 取地址最高字节，判定内存区域
         /* MSP栈顶必须落在 CM4 片内 RAM：ITCM / DTCM / AXI SRAM，禁止 Flash / 外部 SDRAM */
@@ -186,6 +230,10 @@ uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack)
         {
             return 0; // 栈不在这三块 RAM → slot 镜像非法，拒绝启动
         }
+    }
+    if ((reset < slot_base) || (reset >= slot_end) || ((reset & 1U) == 0U))
+    {
+        return 0;
     }
     return 1;
 }

@@ -243,13 +243,13 @@ int main(void)
                (unsigned int)ee.cm4_active_slot,
                (unsigned int)ee.cm4_pending_slot,
                (unsigned int)ee.cm4_flags,
-               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],
-               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);
+               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX],
+               (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX]);
 
       LOG_INFO("APP", "Preparing CM4 boot slot...");
       cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、active、兜底顺序选择 CM4 槽，并处理试启动次数
-      cm4_base = boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
-      LOG_INFO("APP", "CM4 boot slot=%u base=0x%08lX", (unsigned int)cm4_slot, (unsigned long)boot_slot_base_get(cm4_slot));
+      cm4_base = cm4_boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
+      LOG_INFO("APP", "CM4 boot slot=%u base=0x%08lX", (unsigned int)cm4_slot, (unsigned long)cm4_boot_slot_base_get(cm4_slot));
 
       // (void)bsp_eeprom_selftest(); // 测试 EEPROM 用户区读写，不参与本次槽位选择
     }
