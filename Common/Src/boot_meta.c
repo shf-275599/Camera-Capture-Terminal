@@ -59,7 +59,7 @@ static void boot_meta_set_defaults(boot_meta_t *meta)
     memset(meta, 0, sizeof(*meta));
     meta->magic = BOOT_META_MAGIC;
     meta->version = BOOT_META_VERSION;
-    meta->active_slot = CM7_APP_SLOT_A_INDEX;
+    meta->verified_slot = CM7_APP_SLOT_A_INDEX;
     meta->pending_slot = CM7_APP_SLOT_A_INDEX;
     meta->boot_trial = 0U;
     meta->flags = 0U;
@@ -155,16 +155,16 @@ uint8_t boot_meta_select_boot_slot(const boot_meta_t *meta)
         return CM7_APP_SLOT_A_INDEX;
     }
 
-    /* pending 优先（须槽有效）；否则 active；再回退 A/B */
+    /* pending 优先（须槽有效）；否则 verified；再回退 A/B */
     if (((meta->flags & BOOT_META_FLAG_PENDING) != 0U) &&
         (meta->pending_slot < CM7_APP_SLOT_COUNT) &&
         (boot_slot_is_valid(meta->pending_slot) != 0)) {
         return meta->pending_slot;
     }
 
-    if ((meta->active_slot < CM7_APP_SLOT_COUNT) &&
-        (boot_slot_is_valid(meta->active_slot) != 0)) {
-        return meta->active_slot;
+    if ((meta->verified_slot < CM7_APP_SLOT_COUNT) &&
+        (boot_slot_is_valid(meta->verified_slot) != 0)) {
+        return meta->verified_slot;
     }
 
     if (boot_slot_is_valid(CM7_APP_SLOT_A_INDEX) != 0) {
@@ -195,7 +195,7 @@ void boot_meta_on_boot_failure(boot_meta_t *meta)
 
     if (meta->boot_trial == 0U) {
         meta->flags &= (uint8_t)~BOOT_META_FLAG_PENDING;
-        meta->pending_slot = meta->active_slot;
+        meta->pending_slot = meta->verified_slot;
     }
 
     meta->crc32 = boot_meta_calc_crc(meta);
@@ -213,7 +213,7 @@ void boot_meta_commit_pending(boot_meta_t *meta)
         return;
     }
 
-    meta->active_slot = meta->pending_slot;
+    meta->verified_slot = meta->pending_slot;
     meta->boot_trial = 0U;
     meta->flags &= (uint8_t)~BOOT_META_FLAG_PENDING;
     meta->crc32 = boot_meta_calc_crc(meta);

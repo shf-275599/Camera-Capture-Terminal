@@ -20,7 +20,6 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 slot_index 是否有效 */
     if (!boot_slot_index_is_valid(slot_index))
     {
-        LOG_ERROR("BOOT", "slot slot_index %d is not valid", slot_index);
         return 0;
     }
     /* 获取 slot_base 地址 */
@@ -33,13 +32,11 @@ int boot_slot_is_valid(uint8_t slot_index)
     /* 检查 stack_region 是否有效 */
     if (!boot_slot_stack_region_is_valid(slot_index, stack))
     {
-        LOG_ERROR("BOOT", "slot slot_index %d stack_region is not valid", slot_index);
         return 0;
     }
     /* 校验复位向量：地址必须在slot范围内，且最低位为1（Cortex-M Thumb模式） */
     if ((reset < slot_base) || (reset >= slot_end) || ((reset & 1U) == 0U))
     {
-        LOG_ERROR("BOOT", "slot slot_index %d reset is not valid", slot_index);
         return 0;
     }
 
@@ -230,7 +227,6 @@ int cm4_boot_slot_is_valid(uint8_t slot_index)
 
     if (slot_index >= CM4_APP_SLOT_COUNT)
     {
-        LOG_ERROR("BOOT", "CM4 boot slot %u invalid", slot_index);
         return 0;
     }
 
@@ -245,13 +241,11 @@ int cm4_boot_slot_is_valid(uint8_t slot_index)
             (stack_region != 0x30000000U) &&
             (stack_region != 0x20000000U))
         {
-            LOG_ERROR("BOOT", "CM4 boot slot %u stack_region %08x invalid", slot_index, stack_region);
             return 0; // 栈不在这三块 RAM → slot 镜像非法，拒绝启动
         }
     }
     if ((reset < slot_base) || (reset >= slot_end) || ((reset & 1U) == 0U))
     {
-        LOG_ERROR("BOOT", "CM4 boot slot %u reset %08x invalid", slot_index, reset);
         return 0;
     }
     return 1;

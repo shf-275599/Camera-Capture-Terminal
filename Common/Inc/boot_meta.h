@@ -17,7 +17,7 @@
 typedef struct {
     uint32_t magic;
     uint32_t version;
-    uint8_t active_slot;
+    uint8_t verified_slot;
     uint8_t pending_slot;
     uint8_t boot_trial;
     uint8_t flags;
@@ -47,7 +47,7 @@ int boot_meta_load(boot_meta_t *meta);
 int boot_meta_save(const boot_meta_t *meta);
 
 /**
- * @brief  根据元数据选择本次应启动的槽索引（pending 优先，否则 active）
+ * @brief  根据元数据选择本次应启动的槽索引（pending 优先，否则 verified）
  * @param  meta 当前元数据结构指针
  * @retval 启动槽索引
  */

@@ -31,16 +31,16 @@ typedef struct __attribute__((packed)) {
     uint16_t struct_ver;
     uint16_t length;
     /* CM7 A/B */
-    uint8_t active_slot;
-    uint8_t pending_slot;
+    uint8_t verified_slot; /* 已经验证可用的正式槽 */
+    uint8_t pending_slot;  /* 准备试运行、尚未确认的新槽 */
     uint8_t boot_trial;
     uint8_t flags;
     uint32_t app_version[CM7_APP_SLOT_COUNT];
     uint32_t app_size[CM7_APP_SLOT_COUNT];
     uint32_t app_crc[CM7_APP_SLOT_COUNT];
     /* CM4 A/B */
-    uint8_t cm4_active_slot;
-    uint8_t cm4_pending_slot;
+    uint8_t cm4_verified_slot; /* CM4 已经验证可用的正式槽 */
+    uint8_t cm4_pending_slot;  /* CM4 准备试运行、尚未确认的新槽 */
     uint8_t cm4_boot_trial;
     uint8_t cm4_flags;
     uint32_t cm4_app_version[CM4_APP_SLOT_COUNT];
@@ -57,7 +57,7 @@ typedef struct __attribute__((packed)) {
 int boot_eeprom_init(void);
 
 /**
- * @brief  从双备份区加载元数据（无效则填默认 active=A）
+ * @brief  从双备份区加载元数据（无效则填默认 verified=A）
  * @retval 0 成功读到合法备份，1 使用默认值，-1 参数错误
  */
 int boot_eeprom_load(boot_eeprom_meta_t *meta);
@@ -80,7 +80,7 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta);
 uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  OTA 成功后由 APP 调用：提交 CM7 pending 为 active
+ * @brief  OTA 成功后由 APP 调用：提交 CM7 pending 为 verified
  */
 int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta);
 
@@ -103,7 +103,7 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta);
 uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  提交 CM4 pending 为 active
+ * @brief  提交 CM4 pending 为 verified
  */
 int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta);
 

@@ -50,7 +50,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* Private Variables 私有变量 */
-static boot_eeprom_meta_t ee;          // EEPROM 中的 active、pending、试启动次数等记录
+static boot_eeprom_meta_t ee;          // EEPROM 中的 verified、pending、试启动次数等记录
 static uint8_t boot_slot;              // 本次选中的 CM7 槽号
 static uint32_t app_base;              // 本次选中的 CM7 应用 Flash 起始地址
 static volatile uint8_t cm7_slot_a_ok; // CM7 A 槽向量表检查结果
@@ -131,7 +131,7 @@ int main(void)
   boot_key0_recover();        // 本地重刷镜像后，长按 KEY0 重新登记 CM7 双槽
   boot_eeprom_metadata_log(); // 打印 EEPROM 元数据
 
-  /* 按 pending、active、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
+  /* 按 pending、verified、A、B 的顺序选 CM7 槽；试启动可能扣减次数并回退 */
   LOG_INFO("BOOT", "Preparing boot slot and checking CM7 slots...");
   boot_slot = boot_eeprom_prepare_boot(&ee); // 选择启动槽，并在需要时更新 EEPROM 试启动状态
   app_base = boot_slot_base_get(boot_slot);  // 将槽号换算为应用向量表的 Flash 地址
@@ -369,12 +369,12 @@ static void boot_eeprom_metadata_log(void)
   LOG_INFO("BOOT", "==========================================================");
   LOG_INFO("BOOT", "CM7 EEPROM metadata:");
   /* 打印激活槽位索引 */
-  if (ee.active_slot == CM7_APP_SLOT_A_INDEX)
-    LOG_INFO("BOOT", "active slot: A");
-  else if (ee.active_slot == CM7_APP_SLOT_B_INDEX)
-    LOG_INFO("BOOT", "active slot: B");
+  if (ee.verified_slot == CM7_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "verified slot: A");
+  else if (ee.verified_slot == CM7_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "verified slot: B");
   else
-    LOG_ERROR("BOOT", "active slot: unknown");
+    LOG_ERROR("BOOT", "verified slot: unknown");
   /* 打印待处理槽位索引 */
   if ((ee.flags & BOOT_EE_FLAG_PENDING) == 0U)
     LOG_INFO("BOOT", "pending slot: none");
@@ -397,12 +397,12 @@ static void boot_eeprom_metadata_log(void)
   /* 打印 CM4 EEPROM 元数据 */
   LOG_INFO("BOOT", "CM4 EEPROM metadata:");
   /* 打印激活槽位索引 */
-  if (ee.cm4_active_slot == CM4_APP_SLOT_A_INDEX)
-    LOG_INFO("BOOT", "active slot: A");
-  else if (ee.cm4_active_slot == CM4_APP_SLOT_B_INDEX)
-    LOG_INFO("BOOT", "active slot: B");
+  if (ee.cm4_verified_slot == CM4_APP_SLOT_A_INDEX)
+    LOG_INFO("BOOT", "verified slot: A");
+  else if (ee.cm4_verified_slot == CM4_APP_SLOT_B_INDEX)
+    LOG_INFO("BOOT", "verified slot: B");
   else
-    LOG_ERROR("BOOT", "active slot: unknown");
+    LOG_ERROR("BOOT", "verified slot: unknown");
   /* 打印待处理槽位索引 */
   if ((ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U)
     LOG_INFO("BOOT", "pending slot: none");
@@ -481,7 +481,7 @@ static void boot_key0_recover(void)
     LOG_INFO("RECOVERY", "CM7 slot=%u size=%lu crc=0x%08lX",
              (unsigned int)slot, (unsigned long)size, (unsigned long)~crc);
   }
-  recovered.active_slot = CM7_APP_SLOT_A_INDEX;
+  recovered.verified_slot = CM7_APP_SLOT_A_INDEX;
   recovered.pending_slot = CM7_APP_SLOT_A_INDEX;
   recovered.boot_trial = 0U;
   recovered.flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
@@ -491,7 +491,7 @@ static void boot_key0_recover(void)
     return;
   }
   ee = recovered;
-  LOG_INFO("RECOVERY", "PASS: CM7 active=A, pending cleared, CM4 preserved; release KEY0");
+  LOG_INFO("RECOVERY", "PASS: CM7 verified=A, pending cleared, CM4 preserved; release KEY0");
   while (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) == GPIO_PIN_SET)
   {
     HAL_Delay(10U);
