@@ -82,6 +82,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(LED0_GREEN_GPIO_Port, &GPIO_InitStruct);
 
+  /* KEY0 外接 3.3V：松开下拉为低，按下为高。 */
+  GPIO_InitStruct.Pin = KEY0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(KEY0_GPIO_Port, &GPIO_InitStruct);
+
   /**/
   HAL_I2CEx_EnableFastModePlus(SYSCFG_PMCR_I2C_PB6_FMP);
 

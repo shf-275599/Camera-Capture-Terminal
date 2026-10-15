@@ -71,6 +71,8 @@ void Error_Handler(void);
 #define LTDC_BL_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+#define KEY0_Pin GPIO_PIN_8
+#define KEY0_GPIO_Port GPIOA
 
 /* USER CODE END Private defines */
 
