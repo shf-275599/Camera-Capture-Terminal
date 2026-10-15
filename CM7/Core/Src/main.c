@@ -90,8 +90,8 @@
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
 /* Boot */
-static boot_eeprom_meta_t ee;      // 保存 EEPROM 中的 verified、pending 等启动记录
-static volatile uint8_t running;   // 当前运行的槽槽号
+static boot_eeprom_meta_t ee;      // 保存 EEPROM 中的 confirmed、pending 等启动记录
+static volatile uint8_t running_slot;   // 当前运行的槽槽号
 static volatile uint8_t cm4_slot;  // CM4 启动的槽槽号
 static volatile uint32_t cm4_base; // CM4 启动的基地址
 static volatile int ee_ok;         // EEPROM 是否成功读取
@@ -193,7 +193,7 @@ int main(void)
   {
     app_boot_print_info(); // 打印启动信息
     /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
-    running = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
+    running_slot = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
     cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
     cm4_base = CM4_APP_SLOT_A_BASE;    // CM4 默认应用的 Flash 起始地址
     ee_ok = 0;                         // 记录本次是否读到有效的 EEPROM 启动记录
@@ -203,7 +203,7 @@ int main(void)
     app_boot_eeprom_metadata_log(); // 打印双核 EEPROM 启动元数据
 
     LOG_INFO("APP", "Preparing CM4 boot slot...");
-    cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、verified、兜底顺序选择 CM4 槽，并处理试启动次数
+    cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、confirmed、兜底顺序选择 CM4 槽，并处理试启动次数
     cm4_base = cm4_boot_slot_base_get(cm4_slot);  // 将 CM4 槽号换算成 Flash 起始地址
     LOG_INFO("APP", "CM4 boot base=0x%08lX", (unsigned long)cm4_boot_slot_base_get(cm4_slot));
 
@@ -252,12 +252,12 @@ int main(void)
   LOG_INFO("CM7", "main() user init OK");
 
   /* OTA 试启动确认：初始化调用流程结束后，当前运行槽匹配 pending 时尝试提交 */
-  if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) && (ee.pending_slot == running))
+  if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) && (ee.pending_slot == running_slot))
   {
-    int commit_ret = boot_eeprom_commit_pending(&ee); // 更新 verified 并清除 pending，写回 EEPROM
+    int commit_ret = boot_eeprom_commit_pending(&ee); // 更新 confirmed 并清除 pending，写回 EEPROM
     if (commit_ret == 0)
     {
-      LOG_INFO("APP", "CM7 OTA pending committed -> verified=%u", (unsigned int)ee.verified_slot);
+      LOG_INFO("APP", "CM7 OTA pending committed -> confirmed=%u", (unsigned int)ee.confirmed_slot);
     }
     else
     {
@@ -427,19 +427,19 @@ static void app_boot_eeprom_metadata_log(void)
   /* 打印 CM7 EEPROM 元数据 */
   LOG_INFO("APP", "==========================================================");
   LOG_INFO("APP", "CM7 EEPROM metadata:");
-  if (running == CM7_APP_SLOT_A_INDEX)
-    LOG_INFO("APP", "running slot: A");
-  else if (running == CM7_APP_SLOT_B_INDEX)
-    LOG_INFO("APP", "running slot: B");
+  if (running_slot == CM7_APP_SLOT_A_INDEX)
+    LOG_INFO("APP", "running_slot: A");
+  else if (running_slot == CM7_APP_SLOT_B_INDEX)
+    LOG_INFO("APP", "running_slot: B");
   else
-    LOG_ERROR("APP", "running slot: unknown");
+    LOG_ERROR("APP", "running_slot: unknown");
   /* 打印激活槽位索引 */
-  if (ee.verified_slot == CM7_APP_SLOT_A_INDEX)
-    LOG_INFO("APP", "verified slot: A");
-  else if (ee.verified_slot == CM7_APP_SLOT_B_INDEX)
-    LOG_INFO("APP", "verified slot: B");
+  if (ee.confirmed_slot == CM7_APP_SLOT_A_INDEX)
+    LOG_INFO("APP", "confirmed_slot: A");
+  else if (ee.confirmed_slot == CM7_APP_SLOT_B_INDEX)
+    LOG_INFO("APP", "confirmed_slot: B");
   else
-    LOG_ERROR("APP", "verified slot: unknown");
+    LOG_ERROR("APP", "confirmed_slot: unknown");
   /* 打印待处理槽位索引 */
   if ((ee.flags & BOOT_EE_FLAG_PENDING) == 0U)
     LOG_INFO("APP", "pending slot: none");
@@ -462,12 +462,12 @@ static void app_boot_eeprom_metadata_log(void)
   /* 打印 CM4 EEPROM 元数据 */
   LOG_INFO("APP", "CM4 EEPROM metadata:");
   /* 打印激活槽位索引 */
-  if (ee.cm4_verified_slot == CM4_APP_SLOT_A_INDEX)
-    LOG_INFO("APP", "verified slot: A");
-  else if (ee.cm4_verified_slot == CM4_APP_SLOT_B_INDEX)
-    LOG_INFO("APP", "verified slot: B");
+  if (ee.cm4_confirmed_slot == CM4_APP_SLOT_A_INDEX)
+    LOG_INFO("APP", "confirmed_slot: A");
+  else if (ee.cm4_confirmed_slot == CM4_APP_SLOT_B_INDEX)
+    LOG_INFO("APP", "confirmed_slot: B");
   else
-    LOG_ERROR("APP", "verified slot: unknown");
+    LOG_ERROR("APP", "confirmed_slot: unknown");
   /* 打印待处理槽位索引 */
   if ((ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U)
     LOG_INFO("APP", "pending slot: none");

@@ -16,7 +16,7 @@ typedef struct __attribute__((packed))
     uint32_t magic;
     uint16_t struct_ver;
     uint16_t length;
-    uint8_t verified_slot;
+    uint8_t confirmed_slot;
     uint8_t pending_slot;
     uint8_t boot_trial;
     uint8_t flags;
@@ -121,12 +121,12 @@ static uint32_t boot_ee_crc32_v1(const boot_eeprom_meta_v1_t *meta)
 }
 
 /**
- * @brief  填入 CM4 槽默认元数据（verified=A，无 pending，版本/尺寸/CRC 清零）
+ * @brief  填入 CM4 槽默认元数据（confirmed=A，无 pending，版本/尺寸/CRC 清零）
  * @param  meta 待填充的元数据
  */
 static void boot_ee_init_cm4_defaults(boot_eeprom_meta_t *meta)
 {
-    meta->cm4_verified_slot = CM4_APP_SLOT_A_INDEX;
+    meta->cm4_confirmed_slot = CM4_APP_SLOT_A_INDEX;
     meta->cm4_pending_slot = CM4_APP_SLOT_A_INDEX;
     meta->cm4_boot_trial = 0U;
     meta->cm4_flags = 0U;
@@ -136,7 +136,7 @@ static void boot_ee_init_cm4_defaults(boot_eeprom_meta_t *meta)
 }
 
 /**
- * @brief  填入整份默认元数据（magic/结构版本/双核 verified=A，seq=1 并计算 CRC）
+ * @brief  填入整份默认元数据（magic/结构版本/双核 confirmed=A，seq=1 并计算 CRC）
  * @param  meta 待填充的元数据
  */
 static void boot_ee_set_defaults(boot_eeprom_meta_t *meta)
@@ -145,7 +145,7 @@ static void boot_ee_set_defaults(boot_eeprom_meta_t *meta)
     meta->magic = BOOT_EE_MAGIC;
     meta->struct_ver = BOOT_EE_STRUCT_VER;
     meta->length = (uint16_t)sizeof(boot_eeprom_meta_t);
-    meta->verified_slot = CM7_APP_SLOT_A_INDEX;
+    meta->confirmed_slot = CM7_APP_SLOT_A_INDEX;
     meta->pending_slot = CM7_APP_SLOT_A_INDEX;
     meta->boot_trial = 0U;
     meta->flags = 0U;
@@ -166,7 +166,7 @@ static void boot_ee_upgrade_v1_to_v2(const boot_eeprom_meta_v1_t *v1,
     out->magic = BOOT_EE_MAGIC;
     out->struct_ver = BOOT_EE_STRUCT_VER;
     out->length = (uint16_t)sizeof(boot_eeprom_meta_t);
-    out->verified_slot = v1->verified_slot;
+    out->confirmed_slot = v1->confirmed_slot;
     out->pending_slot = v1->pending_slot;
     out->boot_trial = v1->boot_trial;
     out->flags = v1->flags;
@@ -197,7 +197,7 @@ static int boot_ee_copy_valid_v2(const boot_eeprom_meta_t *meta)
     {
         return 0;
     }
-    if (meta->verified_slot >= CM7_APP_SLOT_COUNT)
+    if (meta->confirmed_slot >= CM7_APP_SLOT_COUNT)
     {
         return 0;
     }
@@ -205,8 +205,8 @@ static int boot_ee_copy_valid_v2(const boot_eeprom_meta_t *meta)
     {
         return 0;
     }
-    if ((meta->cm4_verified_slot != CM4_APP_SLOT_A_INDEX) &&
-        (meta->cm4_verified_slot != CM4_APP_SLOT_B_INDEX))
+    if ((meta->cm4_confirmed_slot != CM4_APP_SLOT_A_INDEX) &&
+        (meta->cm4_confirmed_slot != CM4_APP_SLOT_B_INDEX))
     {
         return 0;
     }
@@ -241,7 +241,7 @@ static int boot_ee_copy_valid_v1(const boot_eeprom_meta_v1_t *meta)
     {
         return 0;
     }
-    if (meta->verified_slot >= CM7_APP_SLOT_COUNT)
+    if (meta->confirmed_slot >= CM7_APP_SLOT_COUNT)
     {
         return 0;
     }
@@ -376,7 +376,7 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
         return 0;
     }
 
-    LOG_INFO("APP", "EEPROM meta empty/invalid, use defaults (CM7/CM4 verified=A)");
+    LOG_INFO("APP", "EEPROM meta empty/invalid, use defaults (CM7/CM4 confirmed=A)");
     return 1;
 }
 
@@ -451,7 +451,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
 }
 
 /**
- * @brief  选择 CM7 启动槽：pending（需置位且有效）→ verified → Slot A → Slot B
+ * @brief  选择 CM7 启动槽：pending（需置位且有效）→ confirmed → Slot A → Slot B
  * @param  meta 元数据，可为 NULL
  * @retval 槽索引，meta 为 NULL 时返回 Slot A
  */
@@ -472,15 +472,15 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
         return meta->pending_slot;
     }
 
-    if ((meta->verified_slot < CM7_APP_SLOT_COUNT) &&
-        ((meta->flags & BOOT_EE_FLAG_PENDING) == 0U || meta->verified_slot != meta->pending_slot) &&
-        (boot_ee_image_valid(meta->verified_slot, 0, meta->app_size[meta->verified_slot],
-                             meta->app_crc[meta->verified_slot], 0) != 0))
+    if ((meta->confirmed_slot < CM7_APP_SLOT_COUNT) &&
+        ((meta->flags & BOOT_EE_FLAG_PENDING) == 0U || meta->confirmed_slot != meta->pending_slot) &&
+        (boot_ee_image_valid(meta->confirmed_slot, 0, meta->app_size[meta->confirmed_slot],
+                             meta->app_crc[meta->confirmed_slot], 0) != 0))
     {
-        return meta->verified_slot;
+        return meta->confirmed_slot;
     }
 
-    /* verified 也不可用：按 Slot A → Slot B 兜底 */
+    /* confirmed 也不可用：按 Slot A → Slot B 兜底 */
     if ((meta->pending_slot != CM7_APP_SLOT_A_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
         boot_ee_image_valid(0U, 0, meta->app_size[0], meta->app_crc[0], 0))
     {
@@ -498,7 +498,7 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
 
 /**
  * @brief  CM7 试启动处理：从 pending 槽启动前递减 boot_trial，用尽则清 pending
- *         回退 verified 并落盘
+ *         回退 confirmed 并落盘
  * @param  meta 元数据，可为 NULL
  * @retval 最终应启动的槽索引
  */
@@ -528,7 +528,7 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
         meta->boot_trial = 0U;
         slot = boot_eeprom_select_boot_slot(meta);
         meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
-        meta->pending_slot = meta->verified_slot;
+        meta->pending_slot = meta->confirmed_slot;
         if (boot_eeprom_save(meta) != 0)
         {
             LOG_ERROR("APP", "CM7 pending clear save failed");
@@ -539,7 +539,7 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
 }
 
 /**
- * @brief  OTA 成功后由 APP 调用：pending 槽转正为 verified，清 trial/pending 标志并保存
+ * @brief  OTA 成功后由 APP 调用：pending 槽转正为 confirmed，清 trial/pending 标志并保存
  * @param  meta 元数据，可为 NULL（无 pending 时直接返回）
  * @retval 0 成功，-1 失败
  */
@@ -550,7 +550,7 @@ int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
         return -1;
     }
 
-    meta->verified_slot = meta->pending_slot;
+    meta->confirmed_slot = meta->pending_slot;
     meta->boot_trial = 0U;
     meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
 
@@ -579,7 +579,7 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
 {
     boot_eeprom_meta_t previous;
     if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT) ||
-        (slot_index == meta->verified_slot) ||
+        (slot_index == meta->confirmed_slot) ||
         !boot_ee_image_valid(slot_index, 0, image_size, image_crc32, 1))
     {
         return -1;
@@ -590,7 +590,7 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     meta->app_size[slot_index] = image_size;
     meta->app_crc[slot_index] = image_crc32;
     meta->app_version[slot_index] = version;
-    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 verified */
+    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 confirmed */
     meta->boot_trial = BOOT_EE_TRIAL_MAX;
     meta->flags |= BOOT_EE_FLAG_PENDING;
 
@@ -605,7 +605,7 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
 }
 
 /**
- * @brief  选择 CM4 启动槽：pending（需置位且有效）→ verified → Slot A → Slot B
+ * @brief  选择 CM4 启动槽：pending（需置位且有效）→ confirmed → Slot A → Slot B
  * @param  meta 元数据，可为 NULL
  * @retval 槽索引，meta 为 NULL 时返回 Slot A
  */
@@ -627,16 +627,16 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
         return meta->cm4_pending_slot;
     }
 
-    if (((meta->cm4_verified_slot == CM4_APP_SLOT_A_INDEX) ||
-          (meta->cm4_verified_slot == CM4_APP_SLOT_B_INDEX)) &&
-        ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U || meta->cm4_verified_slot != meta->cm4_pending_slot) &&
-        boot_ee_image_valid(meta->cm4_verified_slot, 1, meta->cm4_app_size[meta->cm4_verified_slot],
-                            meta->cm4_app_crc[meta->cm4_verified_slot], 0))
+    if (((meta->cm4_confirmed_slot == CM4_APP_SLOT_A_INDEX) ||
+          (meta->cm4_confirmed_slot == CM4_APP_SLOT_B_INDEX)) &&
+        ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U || meta->cm4_confirmed_slot != meta->cm4_pending_slot) &&
+        boot_ee_image_valid(meta->cm4_confirmed_slot, 1, meta->cm4_app_size[meta->cm4_confirmed_slot],
+                            meta->cm4_app_crc[meta->cm4_confirmed_slot], 0))
     {
-        return meta->cm4_verified_slot;
+        return meta->cm4_confirmed_slot;
     }
 
-    /* verified 也不可用：按 Slot A → Slot B 兜底 */
+    /* confirmed 也不可用：按 Slot A → Slot B 兜底 */
     if ((meta->cm4_pending_slot != 0U || (meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U) &&
         boot_ee_image_valid(0U, 1, meta->cm4_app_size[0], meta->cm4_app_crc[0], 0))
     {
@@ -654,7 +654,7 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
 
 /**
  * @brief  CM4 试启动处理：从 pending 槽启动前递减 cm4_boot_trial，用尽则清
- *         pending 回退 verified 并落盘
+ *         pending 回退 confirmed 并落盘
  * @param  meta 元数据，可为 NULL
  * @retval 最终应启动的 CM4 槽索引
  */
@@ -683,7 +683,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
         meta->cm4_boot_trial = 0U;
         slot = boot_eeprom_select_cm4_boot_slot(meta);
         meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
-        meta->cm4_pending_slot = meta->cm4_verified_slot;
+        meta->cm4_pending_slot = meta->cm4_confirmed_slot;
         if (boot_eeprom_save(meta) != 0)
         {
             LOG_ERROR("APP", "CM4 pending clear save failed");
@@ -694,7 +694,7 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
 }
 
 /**
- * @brief  CM4 OTA 成功后：pending 槽转正为 verified，清 trial/pending 标志并保存
+ * @brief  CM4 OTA 成功后：pending 槽转正为 confirmed，清 trial/pending 标志并保存
  * @param  meta 元数据，可为 NULL（无 pending 时直接返回）
  * @retval 0 成功，-1 失败
  */
@@ -705,7 +705,7 @@ int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
         return -1;
     }
 
-    meta->cm4_verified_slot = meta->cm4_pending_slot;
+    meta->cm4_confirmed_slot = meta->cm4_pending_slot;
     meta->cm4_boot_trial = 0U;
     meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
 
@@ -734,7 +734,7 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     boot_eeprom_meta_t previous;
     if ((meta == NULL) ||
         ((slot_index != CM4_APP_SLOT_A_INDEX) && (slot_index != CM4_APP_SLOT_B_INDEX)) ||
-        (slot_index == meta->cm4_verified_slot) ||
+        (slot_index == meta->cm4_confirmed_slot) ||
         !boot_ee_image_valid(slot_index, 1, image_size, image_crc32, 1))
     {
         return -1;
@@ -745,7 +745,7 @@ int boot_eeprom_set_cm4_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
     meta->cm4_app_size[slot_index] = image_size;
     meta->cm4_app_crc[slot_index] = image_crc32;
     meta->cm4_app_version[slot_index] = version;
-    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 verified */
+    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 confirmed */
     meta->cm4_boot_trial = BOOT_EE_TRIAL_MAX;
     meta->cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;
 

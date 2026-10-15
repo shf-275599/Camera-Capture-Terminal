@@ -15,7 +15,7 @@ OTA 的目标应当是：
 3. 写入结束后校验 Flash 中的完整镜像。
 4. 在 EEPROM 中记录待启动槽位。
 5. 复位后由固定引导程序选择 pending 槽。
-6. 新应用完成健康检查后提交为 verified。
+6. 新应用完成健康检查后提交为 confirmed。
 7. 新应用启动失败时自动回到旧槽。
 
 只有完成第 4～7 步，才是具有断电恢复能力的 OTA。单独增加 HTTP 上传接口并不能完成可靠升级。
@@ -88,11 +88,11 @@ CM4 需要增加一个轻量的 OTA 协调任务，通过 SRAM4 或 OpenAMP 接�
 复位
   → 读取 EEPROM 双备份
   → 校验 EEPROM CRC
-  → 选择 pending 或 verified 槽
+  → 选择 pending 或 confirmed 槽
   → 校验目标槽向量表和完整镜像
   → 持久化试启动状态
   → 跳转到目标应用
-  → 应用健康确认后提交 verified
+  → 应用健康确认后提交 confirmed
   → 启动失败或试启动耗尽时回退旧槽
 ```
 
@@ -113,15 +113,15 @@ Host: device
 
 ```json
 {
-  "cm7_verified_slot": 0,
+  "cm7_confirmed_slot": 0,
   "cm7_running_slot": 0,
-  "cm4_verified_slot": 2,
+  "cm4_confirmed_slot": 2,
   "cm4_running_slot": 2,
   "ota_state": "idle"
 }
 ```
 
-设备必须返回实际运行槽，不能只返回 EEPROM 中的 verified 槽。实际运行槽可由启动代码记录，也可由 CM4 通过 IPC 报告。
+设备必须返回实际运行槽，不能只返回 EEPROM 中的 confirmed 槽。实际运行槽可由启动代码记录，也可由 CM4 通过 IPC 报告。
 
 ### 5.2 开始升级
 
@@ -288,7 +288,7 @@ CM7 写入 REQUEST_HOLD
 
 ## 8. EEPROM pending、试启动和回滚
 
-当前 [CM7/APP/BOOT/boot_eeprom.h](../CM7/APP/BOOT/boot_eeprom.h) 已定义 CM7 和 CM4 的 verified、pending、试启动次数、版本、长度和 CRC 字段。
+当前 [CM7/APP/BOOT/boot_eeprom.h](../CM7/APP/BOOT/boot_eeprom.h) 已定义 CM7 和 CM4 的 confirmed、pending、试启动次数、版本、长度和 CRC 字段。
 
 建议将接口改成能返回错误状态的形式。尤其是以下操作不能忽略返回值：
 
@@ -300,12 +300,12 @@ CM7 写入 REQUEST_HOLD
 推荐状态转换：
 
 ```text
-verified = A, pending = none
+confirmed = A, pending = none
   → 镜像写入 B 并校验
   → pending = B, trial = 3
   → 复位启动 B
   → 应用健康确认
-  → verified = B, pending = none
+  → confirmed = B, pending = none
 ```
 
 失败时：
@@ -316,7 +316,7 @@ B 启动失败
   → trial 减一
   → trial 耗尽
   → 清除 pending
-  → 回到 verified = A
+  → 回到 confirmed = A
 ```
 
 试启动计数必须在跳转新应用前持久化。应用不能一进入 `main` 就立即提交 pending；应等到必要的时钟、内存、通信、摄像头和业务初始化全部成功，并持续运行一段时间后再确认。
@@ -389,10 +389,10 @@ make -C Makefile/CM4 all-slots
 2. 将合法 B 槽镜像写入 B 槽。
 3. 设置 B 为 pending。
 4. 复位并确认启动 B。
-5. 应用健康确认后确认 verified 已变为 B。
+5. 应用健康确认后确认 confirmed 已变为 B。
 6. 写入一个故意启动失败的 B 槽镜像。
 7. 复位多次，确认最终回到 A 槽。
-8. 在擦写和 EEPROM 写入的不同阶段断电，确认 verified 槽仍可启动。
+8. 在擦写和 EEPROM 写入的不同阶段断电，确认 confirmed 槽仍可启动。
 
 ### 11.2 HTTP 协议验证
 
@@ -432,4 +432,4 @@ make -C Makefile/CM4 all-slots
 7. 在 Windows 环境构建四种核/槽镜像。
 8. 进行断网、断电、错误镜像、启动失败和双核组合测试。
 
-最重要的验收标准是：**新镜像写入失败、设备在升级过程中断电或新应用启动失败时，旧 verified 槽仍然可以启动。**
+最重要的验收标准是：**新镜像写入失败、设备在升级过程中断电或新应用启动失败时，旧 confirmed 槽仍然可以启动。**

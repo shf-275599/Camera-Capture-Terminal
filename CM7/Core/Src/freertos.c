@@ -173,7 +173,7 @@ static void Key0_AB_Test_Thread(void *argument)
   uint8_t stable = 0U;
   (void)argument;
 
-  LOG_INFO("CM7-Slot-A/B", "KEY0 ready: PA8 high=pressed, running=%u base=0x%08lX",
+  LOG_INFO("CM7-Slot-A/B", "KEY0 ready: PA8 high=pressed, running_slot=%u base=0x%08lX",
            (unsigned int)boot_get_running_slot(),
            (unsigned long)boot_slot_base_get(boot_get_running_slot()));
   for (;;)
@@ -197,13 +197,13 @@ static void Key0_AB_Test_Thread(void *argument)
         osDelay(40U);
         if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_SET)
         {
-          uint8_t running = boot_get_running_slot();
-          uint8_t target = (running == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX : CM7_APP_SLOT_A_INDEX;
+          uint8_t running_slot = boot_get_running_slot();
+          uint8_t target = (running_slot == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX : CM7_APP_SLOT_A_INDEX;
           uint32_t size = CM7_APP_SLOT_A_SIZE;
           uint32_t crc = 0xFFFFFFFFU;
           const uint8_t *image = (const uint8_t *)boot_slot_base_get(target);
           armed = 0U;
-          if ((boot_slot_index_is_valid(running) == 0U) ||
+          if ((boot_slot_index_is_valid(running_slot) == 0U) ||
               (boot_eeprom_load(&meta) != 0) ||
               ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
               ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) ||
@@ -213,20 +213,20 @@ static void Key0_AB_Test_Thread(void *argument)
             continue;
           }
           /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
-          if (meta.verified_slot != running)
+          if (meta.confirmed_slot != running_slot)
           {
-            if (boot_eeprom_select_boot_slot(&meta) != running)
+            if (boot_eeprom_select_boot_slot(&meta) != running_slot)
             {
-              LOG_ERROR("CM7-Slot-A/B", "baseline running slot mismatch");
+              LOG_ERROR("CM7-Slot-A/B", "baseline running_slot mismatch");
               continue;
             }
-            meta.verified_slot = running;
+            meta.confirmed_slot = running_slot;
             if (boot_eeprom_save(&meta) != 0)
             {
               LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
               continue;
             }
-            LOG_INFO("CM7-Slot-A/B", "baseline synced: verified=%u", (unsigned int)running);
+            LOG_INFO("CM7-Slot-A/B", "baseline synced: confirmed=%u", (unsigned int)running_slot);
           }
           for (uint32_t i = 0U; i < size; i++)
           {
@@ -243,7 +243,7 @@ static void Key0_AB_Test_Thread(void *argument)
           }
           crc = ~crc;
           LOG_INFO("CM7-Slot-A/B", "switch %u -> %u base=0x%08lX full_slot_size=%lu crc=0x%08lX",
-                   (unsigned int)running, (unsigned int)target,
+                   (unsigned int)running_slot, (unsigned int)target,
                    (unsigned long)boot_slot_base_get(target), (unsigned long)size, (unsigned long)crc);
           if (boot_eeprom_set_pending(&meta, target, size, crc, meta.app_version[target]) != 0)
           {
