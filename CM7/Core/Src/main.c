@@ -246,8 +246,10 @@ int main(void)
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_A_INDEX - CM4_APP_SLOT_A_INDEX],
                (unsigned long)ee.cm4_app_version[CM4_APP_SLOT_B_INDEX - CM4_APP_SLOT_A_INDEX]);
 
+      LOG_INFO("APP", "Preparing CM4 boot slot...");
       cm4_slot = boot_eeprom_prepare_cm4_boot(&ee); // 按 pending、active、兜底顺序选择 CM4 槽，并处理试启动次数
       cm4_base = boot_slot_base_get(cm4_slot);      // 将 CM4 槽号换算成 Flash 起始地址
+      LOG_INFO("APP", "CM4 boot slot=%u base=0x%08lX", (unsigned int)cm4_slot, (unsigned long)boot_slot_base_get(cm4_slot));
 
       // (void)bsp_eeprom_selftest(); // 测试 EEPROM 用户区读写，不参与本次槽位选择
     }
@@ -257,8 +259,9 @@ int main(void)
     }
 
     LOG_INFO("APP", "CM4 Boot ============================================================================");
+    LOG_INFO("APP", "Enabling CM4 boot core...");
     cm4_boot_handoff_write(cm4_base); // 将 CM4 应用地址写入 SRAM4，供固定 Stub 读取
-    LOG_INFO("APP", "CM4 handoff slot=%u base=0x%08lX ee=%d",
+    LOG_INFO("APP", "CM4 handoff slot=%u base=0x%08lX ee_ok=%d",
              (unsigned int)cm4_slot,
              (unsigned long)cm4_base,
              ee_ok);
