@@ -213,20 +213,20 @@ static void Key0_AB_Test_Thread(void *argument)
             continue;
           }
           /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
-          if (meta.active_slot != running)
+          if (meta.verified_slot != running)
           {
             if (boot_eeprom_select_boot_slot(&meta) != running)
             {
               LOG_ERROR("CM7-Slot-A/B", "baseline running slot mismatch");
               continue;
             }
-            meta.active_slot = running;
+            meta.verified_slot = running;
             if (boot_eeprom_save(&meta) != 0)
             {
               LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
               continue;
             }
-            LOG_INFO("CM7-Slot-A/B", "baseline synced: active=%u", (unsigned int)running);
+            LOG_INFO("CM7-Slot-A/B", "baseline synced: verified=%u", (unsigned int)running);
           }
           for (uint32_t i = 0U; i < size; i++)
           {
