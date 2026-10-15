@@ -37,6 +37,7 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 ../../Common/Src/boot_slot.c \
+../../Common/Src/boot_meta.c \
 ../../CM7/Log/mylog.c \
 ../../CM7/APP/BOOT/boot_jump.c \
 ../../CM7/APP/BOOT/boot_eeprom.c \
