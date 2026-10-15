@@ -63,7 +63,7 @@ int boot_eeprom_init(void);
 int boot_eeprom_load(boot_eeprom_meta_t *meta);
 
 /**
- * @brief  写入下一份备份（双分区轮换）
+ * @brief  写入下一份备份（双分区轮换），读回校验成功才返回 0
  * @retval 0 成功，-1 失败
  */
 int boot_eeprom_save(boot_eeprom_meta_t *meta);
@@ -74,7 +74,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta);
 uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta);
 
 /**
- * @brief  CM7 试启动倒计时；用尽则取消 pending，回退 active
+ * @brief  CM7 试启动前持久化扣减次数；无额度或保存失败时回退
  * @retval 最终应启动的槽索引
  */
 uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta);
@@ -97,7 +97,7 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
 uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta);
 
 /**
- * @brief  CM4 试启动倒计时；用尽则取消 pending，回退 active
+ * @brief  CM4 试启动前持久化扣减次数；无额度或保存失败时回退
  * @retval 最终应启动的 CM4 槽索引
  */
 uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta);

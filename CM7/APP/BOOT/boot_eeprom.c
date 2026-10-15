@@ -90,11 +90,7 @@ static int boot_ee_image_valid(uint8_t slot, int cm4, uint32_t size,
     return boot_ee_crc32_bytes((const uint8_t *)base, size) == crc;
 }
 
-/**
- * @brief  计算 v2 元数据的 CRC32（不含末尾 crc32 字段自身）
- * @param  meta 待校验的 v2 元数据
- * @retval CRC32 校验值
- */
+/** 计算 v2 元数据 CRC32，不含 crc32 字段自身。 */
 static uint32_t boot_ee_crc32(const boot_eeprom_meta_t *meta)
 {
     return boot_ee_crc32_bytes((const uint8_t *)meta,
@@ -422,12 +418,23 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
         target = BOOT_EE_COPY1_ADDR;
     }
 
+    if (boot_ee_copy_valid_v2(meta) == 0)
+    {
+        return -1;
+    }
     if (BL24C16F_Write(&s_ee_dev, target, (const uint8_t *)meta, sizeof(*meta)) != HAL_OK)
     {
         LOG_ERROR("APP", "EEPROM save failed @ 0x%04X", (unsigned int)target);
         return -1;
     }
 
+    if ((boot_ee_read_raw(target, (uint8_t *)&c0, sizeof(c0)) != 0) ||
+        (boot_ee_copy_valid_v2(&c0) == 0) ||
+        (memcmp(&c0, meta, sizeof(c0)) != 0))
+    {
+        LOG_ERROR("APP", "EEPROM readback failed @ 0x%04X", (unsigned int)target);
+        return -1;
+    }
     return 0;
 }
 
@@ -494,32 +501,26 @@ uint8_t boot_eeprom_prepare_boot(boot_eeprom_meta_t *meta)
 
     slot = boot_eeprom_select_boot_slot(meta);
 
-    /* 仅当本次确实启动 pending 槽时才消耗试启动额度 */
-    if (((meta->flags & BOOT_EE_FLAG_PENDING) != 0U) &&
-        (slot == meta->pending_slot))
+    if ((meta->flags & BOOT_EE_FLAG_PENDING) != 0U)
     {
-        if (meta->boot_trial > 0U)
+        if ((slot == meta->pending_slot) && (meta->boot_trial > 0U))
         {
             meta->boot_trial--;
-        }
-
-        if (meta->boot_trial == 0U)
-        {
-            /* 额度用尽：取消 pending，回退 active */
-            LOG_INFO("APP", "CM7 pending trial exhausted, fallback active=%u",
-                     (unsigned int)meta->active_slot);
-            meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
-            meta->pending_slot = meta->active_slot;
-            slot = meta->active_slot;
-            /* active 槽镜像也无效时按回退链重新选择 */
-            if (boot_slot_is_valid(slot) == 0)
+            if (boot_eeprom_save(meta) == 0)
             {
-                slot = boot_eeprom_select_boot_slot(meta);
+                return slot;
             }
+            LOG_ERROR("APP", "CM7 trial save failed, fallback");
         }
-
-        /* 落盘失败不影响本次启动槽选择 */
-        (void)boot_eeprom_save(meta);
+        /* 保留被拒候选的排除条件，避免兜底再次选回该槽。 */
+        meta->boot_trial = 0U;
+        slot = boot_eeprom_select_boot_slot(meta);
+        meta->flags &= (uint8_t)~BOOT_EE_FLAG_PENDING;
+        meta->pending_slot = meta->active_slot;
+        if (boot_eeprom_save(meta) != 0)
+        {
+            LOG_ERROR("APP", "CM7 pending clear save failed");
+        }
     }
 
     return slot;
@@ -656,32 +657,25 @@ uint8_t boot_eeprom_prepare_cm4_boot(boot_eeprom_meta_t *meta)
 
     slot = boot_eeprom_select_cm4_boot_slot(meta);
 
-    /* 仅当本次确实启动 pending 槽时才消耗试启动额度 */
-    if (((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) &&
-        (slot == meta->cm4_pending_slot))
+    if ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U)
     {
-        if (meta->cm4_boot_trial > 0U)
+        if ((slot == meta->cm4_pending_slot) && (meta->cm4_boot_trial > 0U))
         {
             meta->cm4_boot_trial--;
-        }
-
-        if (meta->cm4_boot_trial == 0U)
-        {
-            /* 额度用尽：取消 pending，回退 active */
-            LOG_INFO("APP", "CM4 pending trial exhausted, fallback active=%u",
-                     (unsigned int)meta->cm4_active_slot);
-            meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
-            meta->cm4_pending_slot = meta->cm4_active_slot;
-            slot = meta->cm4_active_slot;
-            /* active 槽镜像也无效时按回退链重新选择 */
-            if (cm4_boot_slot_is_valid(slot) == 0)
+            if (boot_eeprom_save(meta) == 0)
             {
-                slot = boot_eeprom_select_cm4_boot_slot(meta);
+                return slot;
             }
+            LOG_ERROR("APP", "CM4 trial save failed, fallback");
         }
-
-        /* 落盘失败不影响本次启动槽选择 */
-        (void)boot_eeprom_save(meta);
+        meta->cm4_boot_trial = 0U;
+        slot = boot_eeprom_select_cm4_boot_slot(meta);
+        meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
+        meta->cm4_pending_slot = meta->cm4_active_slot;
+        if (boot_eeprom_save(meta) != 0)
+        {
+            LOG_ERROR("APP", "CM4 pending clear save failed");
+        }
     }
 
     return slot;
@@ -702,7 +696,7 @@ int boot_eeprom_commit_cm4_pending(boot_eeprom_meta_t *meta)
     meta->cm4_active_slot = meta->cm4_pending_slot;
     meta->cm4_boot_trial = 0U;
     meta->cm4_flags &= (uint8_t)~BOOT_EE_FLAG_CM4_PENDING;
-    
+
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {
