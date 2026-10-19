@@ -7,6 +7,10 @@
 #include "bl24c16f.h"
 #include "bsp_eeprom.h"
 #include "mylog.h"
+#include "freertos.h"
+#include "task.h"
+#include "cmsis_os2.h"
+#include "iwdg.h"
 
 #define BOOT_EE_TRIAL_MAX (3U)
 
@@ -29,6 +33,120 @@ typedef struct __attribute__((packed))
 
 static BL24C16F_HandleTypeDef s_ee_dev;
 static uint8_t s_ee_ready;
+
+/**
+ * @brief  切换槽位线程
+ * @note 该线程用于测试切换当前运行的槽位（A 或 B）。
+ */
+static void SwitchSlot_Thread(void *argument)
+{
+    static boot_eeprom_meta_t meta;
+    uint8_t armed = 0U;
+    uint8_t stable = 0U;
+    (void)argument;
+
+    LOG_INFO("CM7-Slot-A/B", "KEY0 ready, running_slot=%u base=0x%08lX",
+             (unsigned int)boot_get_running_slot(),
+             (unsigned long)boot_slot_base_get(boot_get_running_slot()));
+    for (;;)
+    {
+        if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_RESET)
+        {
+            if (stable < 3U)
+            {
+                stable++;
+            }
+            if (stable == 3U)
+            {
+                armed = 1U;
+            }
+        }
+        else
+        {
+            stable = 0U;
+            if (armed != 0U)
+            {
+                osDelay(40U);
+                if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_SET)
+                {
+                    uint8_t running_slot = boot_get_running_slot();
+                    uint8_t target = (running_slot == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX : CM7_APP_SLOT_A_INDEX;
+                    uint32_t size = CM7_APP_SLOT_A_SIZE;
+                    uint32_t crc = 0xFFFFFFFFU;
+                    const uint8_t *image = (const uint8_t *)boot_slot_base_get(target);
+                    armed = 0U;
+                    if ((boot_slot_index_is_valid(running_slot) == 0U) ||
+                        (boot_eeprom_load(&meta) != 0) ||
+                        ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
+                        ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) ||
+                        (boot_slot_is_valid(target) == 0))
+                    {
+                        LOG_ERROR("CM7-Slot-A/B", "switch rejected: check EEPROM, pending and target vector");
+                        continue;
+                    }
+                    /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
+                    if (meta.confirmed_slot != running_slot)
+                    {
+                        if (boot_eeprom_select_boot_slot(&meta) != running_slot)
+                        {
+                            LOG_ERROR("CM7-Slot-A/B", "baseline running_slot mismatch");
+                            continue;
+                        }
+                        meta.confirmed_slot = running_slot;
+                        if (boot_eeprom_save(&meta) != 0)
+                        {
+                            LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
+                            continue;
+                        }
+                        LOG_INFO("CM7-Slot-A/B", "baseline synced: confirmed=%u", (unsigned int)running_slot);
+                    }
+                    for (uint32_t i = 0U; i < size; i++)
+                    {
+                        crc ^= image[i];
+                        for (uint32_t bit = 0U; bit < 8U; bit++)
+                        {
+                            crc = (crc >> 1) ^ ((crc & 1U) ? 0xEDB88320U : 0U);
+                        }
+                        if ((i & 4095U) == 0U)
+                        {
+                            HAL_IWDG_Refresh(&hiwdg1);
+                            osDelay(1U);
+                        }
+                    }
+                    crc = ~crc;
+                    LOG_INFO("CM7-Slot-A/B", "switch %u -> %u base=0x%08lX full_slot_size=%lu crc=0x%08lX",
+                             (unsigned int)running_slot, (unsigned int)target,
+                             (unsigned long)boot_slot_base_get(target), (unsigned long)size, (unsigned long)crc);
+                    if (boot_eeprom_set_pending(&meta, target, size, crc, meta.app_version[target]) != 0)
+                    {
+                        LOG_ERROR("CM7-Slot-A/B", "pending save FAIL");
+                        continue;
+                    }
+                    LOG_INFO("CM7-Slot-A/B", "pending saved: slot=%u trial=%u seq=%lu; reboot",
+                             (unsigned int)meta.pending_slot, (unsigned int)meta.boot_trial, (unsigned long)meta.seq);
+                    osDelay(100U);
+                    HAL_NVIC_SystemReset();
+                }
+            }
+        }
+        osDelay(20U);
+    }
+}
+
+void EEPROM_Thread_Start(void)
+{
+    BaseType_t xReturn = pdPASS;
+    xReturn = xTaskCreate((TaskFunction_t)SwitchSlot_Thread,
+                          (char *)"SwitchSlot_Thread",
+                          (uint16_t)512,
+                          (void *)NULL,
+                          (uint8_t)5,
+                          (TaskHandle_t *)NULL);
+    if (xReturn != pdPASS)
+    {
+        return;
+    }
+}
 
 /**
  * @brief  计算一段字节数据的 CRC32（多项式 0xEDB88320）
@@ -628,7 +746,7 @@ uint8_t boot_eeprom_select_cm4_boot_slot(const boot_eeprom_meta_t *meta)
     }
 
     if (((meta->cm4_confirmed_slot == CM4_APP_SLOT_A_INDEX) ||
-          (meta->cm4_confirmed_slot == CM4_APP_SLOT_B_INDEX)) &&
+         (meta->cm4_confirmed_slot == CM4_APP_SLOT_B_INDEX)) &&
         ((meta->cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U || meta->cm4_confirmed_slot != meta->cm4_pending_slot) &&
         boot_ee_image_valid(meta->cm4_confirmed_slot, 1, meta->cm4_app_size[meta->cm4_confirmed_slot],
                             meta->cm4_app_crc[meta->cm4_confirmed_slot], 0))
