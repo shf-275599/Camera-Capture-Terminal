@@ -9,9 +9,13 @@
 #include "bsp_flash_ram.h"
 #include "cmsis_os2.h"
 #include "main.h"
-#include "mylog.h"
 #include <stdio.h>
 #include <string.h>
+#include "cm4_ota_hold.h"
+#include "boot_eeprom.h"
+#include "boot_slot.h"
+#include "app_ov5640.h"
+#include "mylog.h"
 
 #define APP_OTA_PROG_CHUNK (8192U)           // 编程缓冲粒度
 #define APP_OTA_CM4_HOLD_MS (3000U)          // 等待 CM4 ACK 超时
@@ -102,7 +106,6 @@ static uint32_t crc32_update(uint32_t crc, const uint8_t *data, uint32_t len)
 }
 
 /**
-/**
  * @brief  生成 IEEE CRC32 终值（按位取反）
  * @param  crc  当前 CRC32 值（未取反）
  * @return  终值后的 CRC32 值（未取反）
@@ -143,7 +146,7 @@ static int erase_inactive_slot(uint8_t slot)
       LOG_ERROR("[OTA]", " erase S1~S3 FAIL");
       return -1;
     }
-    cache_invalidate_range(CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_SIZE);
+    cache_invalidate_range(CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE);
     LOG_INFO("[OTA]", " erase CM7 slot A done");
     return 0;
   }
@@ -156,7 +159,7 @@ static int erase_inactive_slot(uint8_t slot)
       LOG_ERROR("[OTA]", " erase S5~S7 FAIL");
       return -1;
     }
-    cache_invalidate_range(CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_SIZE);
+    cache_invalidate_range(CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE);
     LOG_INFO("[OTA]", " erase CM7 slot B done");
     return 0;
   }
@@ -181,7 +184,7 @@ static int erase_cm4_inactive_slot(uint8_t slot)
       LOG_ERROR("[OTA]", " erase Bank2 S1~S3 FAIL");
       return -1;
     }
-    cache_invalidate_range(CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_SIZE);
+    cache_invalidate_range(CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_A_SIZE);
     LOG_INFO("[OTA]", " erase CM4 slot A done");
     return 0;
   }
@@ -194,7 +197,7 @@ static int erase_cm4_inactive_slot(uint8_t slot)
       LOG_ERROR("[OTA]", " erase Bank2 S5~S7 FAIL");
       return -1;
     }
-    cache_invalidate_range(CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_SIZE);
+    cache_invalidate_range(CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE);
     LOG_INFO("[OTA]", " erase CM4 slot B done");
     return 0;
   }
@@ -368,7 +371,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
   if (core == APP_OTA_CORE_CM4)
   {
     /* 运行槽以 EEPROM cm4_active 为准（CM7 侧不能像本核那样用向量表探测 CM4） */
-    running = ee.cm4_active_slot;
+    running = ee.cm4_confirmed_slot;
     if (running >= CM4_APP_SLOT_COUNT)
     {
       running = CM4_APP_SLOT_A_INDEX;
@@ -409,12 +412,12 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
                  (unsigned)running,
                  (unsigned)inactive,
-                 (unsigned)ee.cm4_active_slot,
+                 (unsigned)ee.cm4_confirmed_slot,
                  (unsigned)ee.cm4_pending_slot,
                  (unsigned)ee.cm4_flags,
                  (unsigned)ee.cm4_boot_trial,
                  (unsigned)inactive,
-                 (unsigned long)cm4_boot_slot_base(inactive),
+                 (unsigned long)cm4_boot_slot_base_get(inactive),
                  (unsigned long)CM4_BOOT_STUB_BASE,
                  (unsigned long)APP_OTA_MAX_IMAGE_SIZE_CM4,
                  (unsigned long)ee.cm4_app_version[0],
@@ -423,11 +426,11 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  (unsigned long)ee.cm4_app_size[1],
                  (unsigned long)CM4_BOOT_STUB_BASE,
                  (inactive == CM4_APP_SLOT_A_INDEX) ? 'A' : 'B',
-                 (unsigned long)cm4_boot_slot_base(inactive));
+                 (unsigned long)cm4_boot_slot_base_get(inactive));
   }
   else
   {
-    running = boot_slot_detect_running();
+    running = boot_get_running_slot();
     inactive = boot_slot_inactive_index(running);
 
     n = snprintf(buf, buflen,
@@ -463,19 +466,19 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
                  (unsigned)running,
                  (unsigned)inactive,
-                 (unsigned)ee.active_slot,
+                 (unsigned)ee.confirmed_slot,
                  (unsigned)ee.pending_slot,
                  (unsigned)ee.flags,
                  (unsigned)ee.boot_trial,
                  (unsigned)inactive,
-                 (unsigned long)boot_slot_base(inactive),
+                 (unsigned long)boot_slot_base_get(inactive),
                  (unsigned long)APP_OTA_MAX_IMAGE_SIZE,
                  (unsigned long)ee.app_version[0],
                  (unsigned long)ee.app_version[1],
                  (unsigned long)ee.app_size[0],
                  (unsigned long)ee.app_size[1],
                  (inactive == CM7_APP_SLOT_A_INDEX) ? 'A' : 'B',
-                 (unsigned long)boot_slot_base(inactive));
+                 (unsigned long)boot_slot_base_get(inactive));
   }
 
   if (n < 0)
@@ -534,14 +537,14 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
     /* —— CM4：hold → 擦 Bank2 空闲槽 —— */
     memset(&ee, 0, sizeof(ee));
     (void)boot_eeprom_load(&ee);
-    running = ee.cm4_active_slot;
+    running = ee.cm4_confirmed_slot;
     if (running >= CM4_APP_SLOT_COUNT)
     {
       running = CM4_APP_SLOT_A_INDEX;
     }
     s_core = APP_OTA_CORE_CM4;
     s_target_slot = cm4_boot_slot_inactive_index(running);
-    s_target_base = cm4_boot_slot_base(s_target_slot);
+    s_target_base = cm4_boot_slot_base_get(s_target_slot);
 
     LOG_INFO("[OTA]", " begin CM4 size=%lu ver=0x%08lX active=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
@@ -575,10 +578,10 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
   else
   {
     /* —— CM7：擦 Bank1 空闲槽 —— */
-    running = boot_slot_detect_running();
+    running = boot_get_running_slot();
     s_core = APP_OTA_CORE_CM7;
     s_target_slot = boot_slot_inactive_index(running);
-    s_target_base = boot_slot_base(s_target_slot);
+    s_target_base = boot_slot_base_get(s_target_slot);
 
     LOG_INFO("[OTA]", " begin CM7 size=%lu ver=0x%08lX running=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,

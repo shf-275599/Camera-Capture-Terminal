@@ -21,9 +21,9 @@ extern "C"
 #endif
 
 // CM7 单槽镜像上限（= CM7_APP_SLOT_SIZE）
-#define APP_OTA_MAX_IMAGE_SIZE (CM7_APP_SLOT_SIZE)
+#define APP_OTA_MAX_IMAGE_SIZE (CM7_APP_SLOT_A_SIZE)
 // CM4 单槽镜像上限（= CM4_APP_SLOT_SIZE）
-#define APP_OTA_MAX_IMAGE_SIZE_CM4 (CM4_APP_SLOT_SIZE)
+#define APP_OTA_MAX_IMAGE_SIZE_CM4 (CM4_APP_SLOT_A_SIZE)
 
   /**
    * @brief  OTA 目标核（与上位机头 X-Ota-Core / 查询 ?core= 对齐）
