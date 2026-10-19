@@ -24,7 +24,9 @@
 typedef enum
 {
   APP_OTA_IDLE = 0, // 空闲
+  APP_OTA_PREPARING,
   APP_OTA_RECV,     // 已 begin，正在收/写镜像
+  APP_OTA_PENDING_REBOOT,
 } app_ota_state_t;
 
 static app_ota_state_t s_state; // 会话状态
@@ -35,6 +37,7 @@ static uint32_t s_image_size;   // begin 约定总长度
 static uint32_t s_version;      // X-Fw-Version 编码值
 static uint32_t s_offset;       // 已刷入 Flash 的字节（不含 buf）
 static uint32_t s_crc;          // 累计 CRC32（未取反）
+static uint32_t s_expected_crc;
 static uint8_t s_prog_buf[APP_OTA_PROG_CHUNK];
 static uint32_t s_prog_fill;     // prog_buf 已填字节
 static uint32_t s_prog_log_next; // 下一次进度日志阈值
@@ -241,16 +244,9 @@ static int flush_prog_buf(void)
  * @brief  停相机 DMA/预览并挂起其它业务线程，再允许擦写 Flash
  * @note   保持中断开启：Eth/tcpip/SysTick 需继续工作；勿长关 __disable_irq
  */
-static void ota_quiesce_system(void)
+static int ota_quiesce_system(void)
 {
-  // if (app_camera_stream_is_active() != 0U)
-  // {
-  //   app_camera_stream_end();
-  // }
-  // app_camera_preview_stop();
-  // app_ota_coop_suspend_peers();
-  /* 给 DMA/中断收尾一点时间 */
-  osDelay(20);
+  return app_ov5640_pause(3000U);
 }
 
 /**
@@ -258,8 +254,7 @@ static void ota_quiesce_system(void)
  */
 static void ota_restore_system(void)
 {
-  // app_ota_coop_resume_peers();
-  // (void)app_camera_preview_start();
+  app_ov5640_resume();
 }
 
 /**
@@ -277,7 +272,7 @@ int app_ota_is_busy(void)
  */
 uint32_t app_ota_image_size(void)
 {
-  return (s_state == APP_OTA_RECV) ? s_image_size : 0U;
+  return (s_state != APP_OTA_IDLE) ? s_image_size : 0U;
 }
 
 /**
@@ -286,7 +281,7 @@ uint32_t app_ota_image_size(void)
  */
 uint32_t app_ota_written_bytes(void)
 {
-  return (s_state == APP_OTA_RECV) ? ota_written_bytes_internal() : 0U;
+  return (s_state != APP_OTA_IDLE) ? ota_written_bytes_internal() : 0U;
 }
 
 /**
@@ -295,7 +290,7 @@ uint32_t app_ota_written_bytes(void)
  */
 uint32_t app_ota_session_version(void)
 {
-  return (s_state == APP_OTA_RECV) ? s_version : 0U;
+  return (s_state != APP_OTA_IDLE) ? s_version : 0U;
 }
 
 /**
@@ -304,6 +299,11 @@ uint32_t app_ota_session_version(void)
  */
 void app_ota_abort(void)
 {
+  /* pending 已持久化，保持资源直到调用方复位，不能伪装成已取消。 */
+  if (s_state == APP_OTA_PENDING_REBOOT)
+  {
+    return;
+  }
   if (s_state != APP_OTA_IDLE)
   {
     LOG_ERROR("[OTA]", " abort: core=%s written=%lu/%lu target=%u",
@@ -324,6 +324,7 @@ void app_ota_abort(void)
   s_offset = 0U;
   s_image_size = 0U;
   s_version = 0U;
+  s_expected_crc = 0U;
   s_prog_log_next = 0U;
   ota_restore_system();
 }
@@ -334,7 +335,7 @@ void app_ota_abort(void)
  */
 app_ota_core_t app_ota_session_core(void)
 {
-  return (s_state == APP_OTA_RECV) ? s_core : APP_OTA_CORE_CM7;
+  return (s_state != APP_OTA_IDLE) ? s_core : APP_OTA_CORE_CM7;
 }
 
 /**
@@ -362,7 +363,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
   memset(&ee, 0, sizeof(ee));
   (void)boot_eeprom_load(&ee);
 
-  session_match = ((s_state == APP_OTA_RECV) && (s_core == core)) ? 1 : 0;
+  session_match = ((s_state != APP_OTA_IDLE) && (s_core == core)) ? 1 : 0;
   busy_for_core = (session_match != 0) ? 1U : 0U;
   written = (session_match != 0) ? ota_written_bytes_internal() : 0U;
   image_size = (session_match != 0) ? s_image_size : 0U;
@@ -370,11 +371,11 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
 
   if (core == APP_OTA_CORE_CM4)
   {
-    /* 运行槽以 EEPROM cm4_active 为准（CM7 侧不能像本核那样用向量表探测 CM4） */
-    running = ee.cm4_confirmed_slot;
+    /* 运行槽由 CM4 启动后的任务报告，不能用 confirmed 代替。 */
+    running = cm4_ota_running_slot();
     if (running >= CM4_APP_SLOT_COUNT)
     {
-      running = CM4_APP_SLOT_A_INDEX;
+      return -1;
     }
     inactive = cm4_boot_slot_inactive_index(running);
 
@@ -406,7 +407,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  (unsigned long)written,
                  (unsigned long)image_size,
                  (unsigned long)session_ver,
-                 (s_state == APP_OTA_RECV)
+                  (s_state != APP_OTA_IDLE)
                      ? ((s_core == APP_OTA_CORE_CM4) ? "cm4" : "cm7")
                      : "none",
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
@@ -460,7 +461,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  (unsigned long)written,
                  (unsigned long)image_size,
                  (unsigned long)session_ver,
-                 (s_state == APP_OTA_RECV)
+                  (s_state != APP_OTA_IDLE)
                      ? ((s_core == APP_OTA_CORE_CM4) ? "cm4" : "cm7")
                      : "none",
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
@@ -498,10 +499,13 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
  * @param  image_size  Content-Length（raw .bin）
  * @param  version     来自 X-Fw-Version（解析为整数；失败则为 0）
  * @param  core        目标核（CM7 Bank1 / CM4 Bank2）
+ * @param  expected_crc32 发布文件的完整 CRC32
+ * @param  linked_base 发布文件链接地址，必须等于空闲槽基址
  * @retval 0 成功；非 0 失败（忙/尺寸非法/擦除失败等）；-11=CM4 hold 超时
- * @note   若已在 RECV 且 size/version 相同，上位机应走 resume（HTTP 层处理），勿重复 begin
+ * @note   会话存在时拒绝 begin；调用方必须串行管理会话，勿仅凭 size/version 续传
  */
-int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
+int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
+                  uint32_t expected_crc32, uint32_t linked_base)
 {
   boot_eeprom_meta_t ee;
   uint8_t running;
@@ -513,9 +517,34 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
     return -1;
   }
 
+  if ((core != APP_OTA_CORE_CM7) && (core != APP_OTA_CORE_CM4))
+  {
+    return -2;
+  }
+  if ((boot_eeprom_load(&ee) != 0) ||
+      ((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
+      ((ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U))
+  {
+    return -6;
+  }
+  running = (core == APP_OTA_CORE_CM4) ? cm4_ota_running_slot() : boot_get_running_slot();
+  if ((running >= 2U) ||
+      (running != ((core == APP_OTA_CORE_CM4) ? ee.cm4_confirmed_slot : ee.confirmed_slot)))
+  {
+    return -8;
+  }
+  s_target_slot = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_inactive_index(running)
+                                           : boot_slot_inactive_index(running);
+  s_target_base = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_base_get(s_target_slot)
+                                           : boot_slot_base_get(s_target_slot);
+  if (linked_base != s_target_base)
+  {
+    return -8;
+  }
+
   max_size = (core == APP_OTA_CORE_CM4) ? APP_OTA_MAX_IMAGE_SIZE_CM4
                                         : APP_OTA_MAX_IMAGE_SIZE;
-  if ((image_size == 0U) || (image_size > max_size))
+  if ((image_size < 8U) || (image_size > max_size))
   {
     LOG_ERROR("[OTA]", " begin rejected: core=%s size=%lu max=%lu",
               (core == APP_OTA_CORE_CM4) ? "CM4" : "CM7",
@@ -531,20 +560,18 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
   s_prog_log_next = APP_OTA_PROG_LOG_STEP;
   s_crc = 0xFFFFFFFFUL;
   s_cm4_held = 0U;
+  s_expected_crc = expected_crc32;
+  s_core = core;
+  s_state = APP_OTA_PREPARING;
+  if (ota_quiesce_system() != 0)
+  {
+    app_ota_abort();
+    return -9;
+  }
 
   if (core == APP_OTA_CORE_CM4)
   {
     /* —— CM4：hold → 擦 Bank2 空闲槽 —— */
-    memset(&ee, 0, sizeof(ee));
-    (void)boot_eeprom_load(&ee);
-    running = ee.cm4_confirmed_slot;
-    if (running >= CM4_APP_SLOT_COUNT)
-    {
-      running = CM4_APP_SLOT_A_INDEX;
-    }
-    s_core = APP_OTA_CORE_CM4;
-    s_target_slot = cm4_boot_slot_inactive_index(running);
-    s_target_base = cm4_boot_slot_base_get(s_target_slot);
 
     LOG_INFO("[OTA]", " begin CM4 size=%lu ver=0x%08lX active=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
@@ -556,16 +583,15 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
              (unsigned long)s_target_base);
 
     LOG_INFO("[OTA]", " quiesce system (stop cam / suspend peers)");
-    ota_quiesce_system();
 
     LOG_INFO("[OTA]", " hold CM4 before Bank2 erase");
+    s_cm4_held = 1U; // 请求发出后，无论 ACK 是否到达都必须清理
     if (cm4_ota_hold_request(APP_OTA_CM4_HOLD_MS) != 0)
     {
       LOG_ERROR("[OTA]", " CM4 hold timeout");
       app_ota_abort();
       return -11;
     }
-    s_cm4_held = 1U;
     LOG_INFO("[OTA]", " CM4 held (ACK ok)");
 
     if (erase_cm4_inactive_slot(s_target_slot) != 0)
@@ -578,10 +604,6 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
   else
   {
     /* —— CM7：擦 Bank1 空闲槽 —— */
-    running = boot_get_running_slot();
-    s_core = APP_OTA_CORE_CM7;
-    s_target_slot = boot_slot_inactive_index(running);
-    s_target_base = boot_slot_base_get(s_target_slot);
 
     LOG_INFO("[OTA]", " begin CM7 size=%lu ver=0x%08lX running=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
@@ -593,7 +615,6 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core)
              (unsigned long)s_target_base);
 
     LOG_INFO("[OTA]", " quiesce system (stop cam / suspend peers)");
-    ota_quiesce_system();
 
     if (erase_inactive_slot(s_target_slot) != 0)
     {
@@ -627,7 +648,8 @@ int app_ota_write(const uint8_t *data, uint32_t len)
     LOG_ERROR("[OTA]", " write rejected: null data len=%lu", (unsigned long)len);
     return -1;
   }
-  if ((s_offset + s_prog_fill + len) > s_image_size)
+  uint32_t received = ota_written_bytes_internal();
+  if ((received > s_image_size) || (len > s_image_size - received))
   {
     LOG_ERROR("[OTA]", " write overflow: got+=%lu would=%lu limit=%lu",
               (unsigned long)len,
@@ -696,6 +718,13 @@ int app_ota_finish(void)
 
   ota_log_write_progress(1);
   image_crc = crc32_finish(s_crc);
+  if (image_crc != s_expected_crc)
+  {
+    LOG_ERROR("OTA", "CRC mismatch received=0x%08lX expected=0x%08lX",
+              (unsigned long)image_crc, (unsigned long)s_expected_crc);
+    app_ota_abort();
+    return -7;
+  }
 
   if (s_core == APP_OTA_CORE_CM4)
   {
@@ -713,9 +742,14 @@ int app_ota_finish(void)
     memset(&ee, 0, sizeof(ee));
     if (boot_eeprom_load(&ee) != 0)
     {
-      LOG_ERROR("[OTA]", " EEPROM load warn (continue with defaults)");
+      app_ota_abort();
+      return -6;
     }
-    boot_eeprom_set_cm4_pending(&ee, s_target_slot, s_image_size, image_crc, s_version);
+    if (boot_eeprom_set_cm4_pending(&ee, s_target_slot, s_image_size, s_expected_crc, s_version) != 0)
+    {
+      app_ota_abort();
+      return -5;
+    }
     LOG_INFO("[OTA]", " EEPROM CM4 pending set: slot=%u trial pending",
              (unsigned)s_target_slot);
 
@@ -742,9 +776,14 @@ int app_ota_finish(void)
     memset(&ee, 0, sizeof(ee));
     if (boot_eeprom_load(&ee) != 0)
     {
-      LOG_ERROR("[OTA]", " EEPROM load warn (continue with defaults)");
+      app_ota_abort();
+      return -6;
     }
-    boot_eeprom_set_pending(&ee, s_target_slot, s_image_size, image_crc, s_version);
+    if (boot_eeprom_set_pending(&ee, s_target_slot, s_image_size, s_expected_crc, s_version) != 0)
+    {
+      app_ota_abort();
+      return -5;
+    }
     LOG_INFO("[OTA]", " EEPROM pending set: slot=%u trial pending",
              (unsigned)s_target_slot);
 
@@ -756,7 +795,7 @@ int app_ota_finish(void)
              (unsigned long)s_version);
   }
 
-  s_state = APP_OTA_IDLE;
+  s_state = APP_OTA_PENDING_REBOOT;
   /* 即将复位：CM4 hold / peer 挂起可保持 */
   return 0;
 }

@@ -40,7 +40,9 @@ extern "C"
   uint32_t app_ota_written_bytes(void);
   uint32_t app_ota_session_version(void);
   int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core);
-  int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core);
+  /* 所有会话接口由同一个 RTOS 管理任务串行调用；成功 finish 后由调用方复位。 */
+  int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
+                    uint32_t expected_crc32, uint32_t linked_base);
   int app_ota_write(const uint8_t *data, uint32_t len);
   int app_ota_finish(void);
   void app_ota_abort(void);
