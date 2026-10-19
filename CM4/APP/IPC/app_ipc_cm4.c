@@ -5,15 +5,18 @@
 #include "freertos.h"
 #include "task.h"
 #include "cmsis_os2.h"
+#include "cm4_ota_hold.h"
 
 static struct rpmsg_endpoint s_ept;
 
 static void IPC_Thread(void *argument)
 {
   (void)argument;
+  cm4_ota_publish_running_slot();
 
   for (;;)
   {
+    (void)cm4_ota_hold_service();
     OPENAMP_check_for_message();
     osDelay(100);
   }

@@ -13,6 +13,43 @@
 #include "task.h"
 #include "cmsis_os2.h"
 
+static volatile uint8_t s_pause_requested;
+static volatile uint8_t s_paused;
+static volatile uint8_t s_camera_running;
+
+int app_ov5640_pause(uint32_t timeout_ms)
+{
+    uint32_t start = osKernelGetTickCount();
+    s_pause_requested = 1U;
+    while ((s_camera_running != 0U) && (s_paused == 0U))
+    {
+        if ((osKernelGetTickCount() - start) >=
+            ((uint64_t)timeout_ms * osKernelGetTickFreq() / 1000U))
+        {
+            s_pause_requested = 0U;
+            return -1;
+        }
+        osDelay(1U);
+    }
+    if (((DCMI->CR & DCMI_CR_CAPTURE) != 0U) ||
+        ((((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->CR & DMA_SxCR_EN) != 0U) ||
+        ((DMA2D->CR & DMA2D_CR_START) != 0U))
+    {
+        s_pause_requested = 0U;
+        return -1;
+    }
+    return 0;
+}
+
+void app_ov5640_resume(void)
+{
+    s_pause_requested = 0U;
+    while ((s_paused != 0U) && (s_camera_running != 0U))
+    {
+        osDelay(1U);
+    }
+}
+
 /**
  * @brief  OV5640 摄像头任务
  * @note   该任务会在 FreeRTOS 中运行，用于运行摄像头功能
@@ -21,11 +58,13 @@ static void Camera_Thread(void *argument)
 {
   (void)argument;
 
+  s_camera_running = 1U;
   if (app_ov5640_run() != 0U)
   {
     LOG_ERROR("CM7", "CAMERA_THREAD_FAIL");
   }
 
+  s_camera_running = 0U;
   vTaskDelete(NULL);
 }
 
@@ -36,6 +75,7 @@ static void Camera_Thread(void *argument)
 void App_OV5640_Thread_Start(void)
 {
     BaseType_t xReturn = pdPASS;
+    s_camera_running = 1U;
       xReturn = xTaskCreate((TaskFunction_t)Camera_Thread,
                         (char *)"Camera_Thread",
                         (uint16_t)512,
@@ -44,6 +84,7 @@ void App_OV5640_Thread_Start(void)
                         (TaskHandle_t *)NULL);
   if (xReturn != pdPASS)
   {
+    s_camera_running = 0U;
     return;
   }
 }
@@ -177,6 +218,12 @@ uint8_t app_ov5640_run(void)
     /* 三帧 SDRAM：显示帧、采集帧、待显示帧。DMA 持续接收，LTDC 在消隐期换帧。 */
     /* 避开从 0xD0110000 开始的 JPEG 工作缓冲，采集帧放在独立区域。 */
     LOG_INFO("CM7", "CAMERA_STREAM_START");
+    while (s_pause_requested != 0U)
+    {
+        s_paused = 1U;
+        osDelay(1U);
+    }
+    s_paused = 0U;
     ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
     if (ret != OV5640_DCMI_EOK)
     {
@@ -185,6 +232,30 @@ uint8_t app_ov5640_run(void)
     }
     for (;;)
     {
+        if (s_pause_requested != 0U)
+        {
+            ov5640_dcmi_stream_stop();
+            if (((DCMI->CR & DCMI_CR_CAPTURE) != 0U) ||
+                ((((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->CR & DMA_SxCR_EN) != 0U))
+            {
+                return OV5640_DCMI_ERROR;
+            }
+            while ((DMA2D->CR & DMA2D_CR_START) != 0U)
+            {
+                osDelay(1U);
+            }
+            s_paused = 1U;
+            while (s_pause_requested != 0U)
+            {
+                osDelay(1U);
+            }
+            ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
+            s_paused = 0U;
+            if (ret != OV5640_DCMI_EOK)
+            {
+                return ret;
+            }
+        }
         ret = ov5640_dcmi_stream_poll();
         if (ret != OV5640_DCMI_EOK)
         {

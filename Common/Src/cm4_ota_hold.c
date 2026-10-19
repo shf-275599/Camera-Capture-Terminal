@@ -5,18 +5,22 @@
 #include "cm4_ota_hold.h"
 
 #include "stm32h7xx_hal.h"
+#include "boot_slot.h"
 
 #if defined(CORE_CM7)
-#ifndef CM4_OTA_HOLD_HSEM_ID
-/** 与 OpenAMP 使用的 HSEM_ID_0 一致，用于 WFE 唤醒 */
-#define CM4_OTA_HOLD_HSEM_ID  (0U)
-#endif
+uint8_t cm4_ota_running_slot(void)
+{
+  uint32_t value = *(volatile uint32_t *)CM4_OTA_RUNNING_ADDR;
+  return ((value & 0xFFFFFFFEUL) == CM4_OTA_RUNNING_MAGIC) ? (uint8_t)(value & 1U) : 255U;
+}
 #endif
 
+#if defined(CORE_CM7)
 static volatile uint32_t *const s_req =
     (volatile uint32_t *)CM4_OTA_HOLD_REQ_ADDR;
 static volatile uint32_t *const s_ack =
     (volatile uint32_t *)CM4_OTA_HOLD_ACK_ADDR;
+#endif
 
 #if defined(CORE_CM7)
 /**
@@ -27,7 +31,10 @@ int cm4_ota_hold_request(uint32_t timeout_ms)
 {
   uint32_t t0;
 
-  *s_ack = 0U;
+  if (*s_ack != 0U)
+  {
+    return -1;
+  }
   *s_req = CM4_OTA_HOLD_REQ_MAGIC;
   __DSB();
   __DMB();
@@ -35,8 +42,6 @@ int cm4_ota_hold_request(uint32_t timeout_ms)
   t0 = HAL_GetTick();
   while ((HAL_GetTick() - t0) < timeout_ms) {
     if (*s_ack == CM4_OTA_HOLD_ACK_MAGIC) {
-      /* 再等片刻，确保 CM4 已真正进入 STOP */
-      HAL_Delay(20);
       return 0;
     }
     HAL_Delay(1);
@@ -46,48 +51,59 @@ int cm4_ota_hold_request(uint32_t timeout_ms)
 }
 
 /**
- * @brief  清 REQ，HSEM take/release 产生事件唤醒 WFE
+ * @brief  清 REQ，RAM 轮询中的 CM4 随后恢复
  */
 void cm4_ota_hold_release(void)
 {
+  uint32_t start = HAL_GetTick();
   *s_req = 0U;
   __DSB();
   __DMB();
 
-  /* 用 HSEM0 脉冲唤醒 STOP 中的 CM4（WFE） */
-  __HAL_RCC_HSEM_CLK_ENABLE();
-  if (HAL_HSEM_FastTake(CM4_OTA_HOLD_HSEM_ID) != HAL_OK) {
-    HAL_HSEM_Release(CM4_OTA_HOLD_HSEM_ID, 0);
-    (void)HAL_HSEM_FastTake(CM4_OTA_HOLD_HSEM_ID);
+  while ((*s_ack != 0U) && ((HAL_GetTick() - start) < 3000U))
+  {
+    HAL_Delay(1U);
   }
-  HAL_HSEM_Release(CM4_OTA_HOLD_HSEM_ID, 0);
-
-  *s_ack = 0U;
   __DSB();
 }
 #endif /* CORE_CM7 */
 
 #if defined(CORE_CM4)
+void cm4_ota_publish_running_slot(void)
+{
+  uint8_t slot = cm4_boot_get_running_slot();
+  *(volatile uint32_t *)CM4_OTA_RUNNING_ADDR =
+      (slot < CM4_APP_SLOT_COUNT) ? (CM4_OTA_RUNNING_MAGIC | slot) : 0U;
+  __DMB();
+}
 /**
- * @brief  见 REQ 则 ACK 并 STOP；被唤醒后清 ACK
+ * @brief  在 RAM 中关中断等待 REQ 清除，期间持续喂狗
  * @retval 1 完成一次 hold；0 无请求
  */
-int cm4_ota_hold_service(void)
+int __RAM_FUNC cm4_ota_hold_service(void)
 {
-  if (*s_req != CM4_OTA_HOLD_REQ_MAGIC) {
+  uint32_t primask = __get_PRIMASK();
+  volatile uint32_t *req = (volatile uint32_t *)CM4_OTA_HOLD_REQ_ADDR;
+  volatile uint32_t *ack = (volatile uint32_t *)CM4_OTA_HOLD_ACK_ADDR;
+  if (*req != CM4_OTA_HOLD_REQ_MAGIC) {
     return 0;
   }
-
-  *s_ack = CM4_OTA_HOLD_ACK_MAGIC;
+  /* ACK 后只执行 RAM 代码，不取 Bank2 指令、不运行 Flash 中的中断。 */
+  __disable_irq();
+  if (*req != CM4_OTA_HOLD_REQ_MAGIC)
+  {
+    __set_PRIMASK(primask);
+    return 0;
+  }
+  *ack = CM4_OTA_HOLD_ACK_MAGIC;
   __DSB();
-  __DMB();
-
-  HAL_PWREx_ClearPendingEvent();
-  HAL_PWREx_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFE, PWR_D2_DOMAIN);
-
-  /* 被 CM7 abort 唤醒后清 ACK，继续业务 */
-  *s_ack = 0U;
+  while (*req == CM4_OTA_HOLD_REQ_MAGIC)
+  {
+    IWDG2->KR = 0xAAAAU;
+  }
+  *ack = 0U;
   __DSB();
+  __set_PRIMASK(primask);
   return 1;
 }
 #endif /* CORE_CM4 */

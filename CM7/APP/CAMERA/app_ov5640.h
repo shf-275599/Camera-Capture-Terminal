@@ -11,5 +11,7 @@ void App_OV5640_Thread_Start(void);
 void app_ov5640_init(void);
 void app_ov5640_capture_colorbar(void);
 uint8_t app_ov5640_run(void);
+int app_ov5640_pause(uint32_t timeout_ms);
+void app_ov5640_resume(void);
 
 #endif /* __APP_OV5640_H */
