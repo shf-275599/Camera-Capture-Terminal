@@ -240,12 +240,12 @@ static int flush_prog_buf(void)
  */
 static void ota_quiesce_system(void)
 {
-  if (app_camera_stream_is_active() != 0U)
-  {
-    app_camera_stream_end();
-  }
-  app_camera_preview_stop();
-  app_ota_coop_suspend_peers();
+  // if (app_camera_stream_is_active() != 0U)
+  // {
+  //   app_camera_stream_end();
+  // }
+  // app_camera_preview_stop();
+  // app_ota_coop_suspend_peers();
   /* 给 DMA/中断收尾一点时间 */
   osDelay(20);
 }
@@ -255,8 +255,8 @@ static void ota_quiesce_system(void)
  */
 static void ota_restore_system(void)
 {
-  app_ota_coop_resume_peers();
-  (void)app_camera_preview_start();
+  // app_ota_coop_resume_peers();
+  // (void)app_camera_preview_start();
 }
 
 /**
