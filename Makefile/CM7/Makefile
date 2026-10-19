@@ -79,6 +79,7 @@ C_SOURCES =  \
 ../../CM7/APP/OTA/app_ota.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
+../../Common/Src/cm4_ota_hold.c \
 ../../CM7/Core/Src/main.c \
 ../../CM7/Core/Src/stm32h7xx_it.c \
 ../../CM7/Core/Src/stm32h7xx_hal_msp.c \
