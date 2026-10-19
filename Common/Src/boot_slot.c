@@ -6,6 +6,28 @@
 extern uint32_t g_pfnVectors[];
 
 /**
+ * @brief  OTA 目标：非当前运行的空闲槽
+ * @param  running_index 当前运行槽索引
+ * @return uint8_t 非当前运行槽索引
+ */
+uint8_t boot_slot_inactive_index(uint8_t running_index)
+{
+    return (running_index == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX
+                                                   : CM7_APP_SLOT_A_INDEX;
+}
+
+/**
+ * @brief  CM4 目标：非当前运行的空闲槽
+ * @param  running_index 当前运行槽索引
+ * @return uint8_t 非当前运行槽索引
+ */
+uint8_t cm4_boot_slot_inactive_index(uint8_t running_index)
+{
+    return (running_index == CM4_APP_SLOT_A_INDEX) ? CM4_APP_SLOT_B_INDEX
+                                                   : CM4_APP_SLOT_A_INDEX;
+}
+
+/**
  * @brief   检查 slot_index 是否有效
  * @param   slot_index  slot_index
  * @return  uint8_t     0：无效；1：有效
@@ -75,7 +97,7 @@ uint8_t boot_get_slot_index_from_address(uint32_t address)
 uint8_t cm4_boot_get_slot_index_from_address(uint32_t address)
 {
     if ((address >= CM4_APP_SLOT_A_BASE) &&
-             (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE)))
+        (address < (CM4_APP_SLOT_A_BASE + CM4_APP_SLOT_A_SIZE)))
     {
         return CM4_APP_SLOT_A_INDEX;
     }
@@ -243,6 +265,15 @@ int cm4_boot_slot_is_valid(uint8_t slot_index)
  * @return  uint8_t     slot_index
  */
 uint8_t boot_get_running_slot(void)
+{
+    return boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
+}
+
+/**
+ * @brief   检测当前运行的 slot_index
+ * @return  uint8_t     slot_index
+ */
+uint8_t cm4_boot_get_running_slot(void)
 {
     return boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
 }

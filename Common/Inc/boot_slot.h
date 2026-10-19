@@ -79,11 +79,14 @@ uint32_t boot_slot_end_get(uint8_t slot_index);
 uint32_t boot_slot_stack_region_is_valid(uint8_t slot_index, uint32_t stack);
 uint8_t boot_get_slot_index_from_address(uint32_t address);
 uint8_t boot_get_running_slot(void);
+uint8_t boot_slot_inactive_index(uint8_t running_index);
 
 /* CM4 槽接口：索引仅表示 CM4 核内的 A/B，可直接用于 CM4 元数据数组 */
 int cm4_boot_slot_is_valid(uint8_t slot_index);
 uint32_t cm4_boot_slot_base_get(uint8_t slot_index);
 uint32_t cm4_boot_slot_end_get(uint8_t slot_index);
 uint8_t cm4_boot_get_slot_index_from_address(uint32_t address);
+uint8_t cm4_boot_get_running_slot(void);
+uint8_t cm4_boot_slot_inactive_index(uint8_t running_index);
 
 #endif
