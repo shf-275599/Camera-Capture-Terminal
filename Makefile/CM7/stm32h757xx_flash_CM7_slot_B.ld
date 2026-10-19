@@ -44,7 +44,8 @@ RAM (xrw)       : ORIGIN = 0x24000000, LENGTH = 512K
 RAM_D2 (xrw)    : ORIGIN = 0x30000000, LENGTH = 288K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 OPENAMP_RSC_TAB (xrw)  : ORIGIN = 0x38000000, LENGTH = 1K
-OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 63K
+OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 59K
+/* 0x3800F000..0x3800FFFF 留给 handoff、OTA hold 和运行槽报告。 */
 }
 /* Highest address of the user mode stack */
 _estack = 0x24080000;    /* end of RAM = start RAM + LENGTH */
@@ -163,6 +164,7 @@ SECTIONS
     _sdata = .;        /* create a global symbol at data start */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
+    *(.RamFunc .RamFunc.*) /* 随 .data 在启动时复制到可执行 RAM */
 
     . = ALIGN(4);
   } >RAM AT> FLASH

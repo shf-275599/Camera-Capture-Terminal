@@ -1,6 +1,6 @@
 /**
  * @file    bsp_flash_ram.c
- * @brief   在 DTCM (.RamFunc) 中执行的 Bank1/Bank2 Flash 擦写实现
+ * @brief   在可执行 RAM (.RamFunc) 中执行的 Bank1/Bank2 Flash 擦写实现
  *
  * 擦/写期间喂狗；program_buffer 按地址自动选择 Bank1 或 Bank2 控制器。
  */
@@ -45,12 +45,12 @@ static __RAM_FUNC int bsp_flash_ram_wait_bank1(void)
 
     err = FLASH->SR1 & FLASH_FLAG_ALL_ERRORS_BANK1;
     if (err != 0U) {
-        FLASH->SR1 = err;
+        FLASH->CCR1 = err;
         return -1;
     }
 
     if ((FLASH->SR1 & FLASH_FLAG_EOP_BANK1) != 0U) {
-        FLASH->SR1 = FLASH_FLAG_EOP_BANK1;
+        FLASH->CCR1 = FLASH_FLAG_EOP_BANK1;
     }
 
     return 0;
@@ -245,7 +245,7 @@ int __RAM_FUNC bsp_flash_ram_erase_sectors(uint32_t first_sector, uint32_t last_
         return -1;
     }
 
-    FLASH->SR1 = FLASH_FLAG_ALL_ERRORS_BANK1;
+    FLASH->CCR1 = FLASH_FLAG_ALL_ERRORS_BANK1;
 
     for (sector = first_sector; sector <= last_sector; sector++) {
         bsp_flash_ram_wdg_kick();

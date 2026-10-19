@@ -43,7 +43,8 @@ FLASH (rx)      : ORIGIN = 0x081A0000, LENGTH = 384K
  * 0x30000000..0x30024FFF for ETH descriptors, RX pool and the 128K LwIP heap. */
 RAM (xrw)      : ORIGIN = 0x10028000, LENGTH = 128K
 OPENAMP_RSC_TAB (xrw)  : ORIGIN = 0x38000000, LENGTH = 1K
-OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 63K
+OPEN_AMP_SHMEM (xrw) : ORIGIN = 0x38000400, LENGTH = 59K
+/* 0x3800F000..0x3800FFFF 留给 handoff、OTA hold 和运行槽报告。 */
 }
 /* Highest address of the user mode stack */
 _estack = 0x10048000;    /* end of RAM = start RAM + LENGTH */
@@ -139,6 +140,7 @@ SECTIONS
     _sdata = .;        /* create a global symbol at data start */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
+    *(.RamFunc .RamFunc.*) /* hold 等待期间禁止从 Bank2 取指 */
 
     . = ALIGN(4);
   } >RAM AT> FLASH
