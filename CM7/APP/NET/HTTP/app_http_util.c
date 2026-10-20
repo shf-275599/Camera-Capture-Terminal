@@ -6,6 +6,13 @@
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * @brief   比较两个字符串是否相等，忽略大小写
+ * @param   a  第一个字符串
+ * @param   length  字符串长度
+ * @param   b  第二个字符串
+ * @retval  0 不相等；1 相等
+ */
 static int http_name_equal(const char *a, size_t length, const char *b)
 {
     if (strlen(b) != length)
@@ -23,6 +30,14 @@ static int http_name_equal(const char *a, size_t length, const char *b)
     return 1;
 }
 
+/**
+ * @brief   从 HTTP 请求头中获取指定名称的值
+ * @param   request  已解析完成的 HTTP 请求及完整请求体
+ * @param   name  要获取的头字段名称
+ * @param   value  存储获取到的值的缓冲区
+ * @param   size  缓冲区大小
+ * @retval  0 成功；-1 失败
+ */
 int app_http_header_get(const app_http_request_t *request, const char *name, char *value, size_t size)
 {
     const char *line = strstr(request->header, "\r\n");
@@ -52,6 +67,13 @@ int app_http_header_get(const app_http_request_t *request, const char *name, cha
     return found ? 0 : 1;
 }
 
+/**
+ * @brief   从 HTTP 请求头中获取指定名称的值，将其转换为无符号 32 位整数
+ * @param   request  已解析完成的 HTTP 请求及完整请求体
+ * @param   name  要获取的头字段名称
+ * @param   value  存储获取到的值的指针
+ * @retval  0 成功；-1 失败
+ */
 int app_http_header_u32(const app_http_request_t *request, const char *name, uint32_t *value)
 {
     char text[24];
@@ -81,11 +103,20 @@ int app_http_header_u32(const app_http_request_t *request, const char *name, uin
     return 0;
 }
 
+/**
+ * @brief   初始化 HTTP 请求结构体
+ * @param   request  要初始化的 HTTP 请求结构体指针
+ */
 void app_http_request_init(app_http_request_t *request)
 {
     memset(request, 0, sizeof(*request));
 }
 
+/**
+ * @brief   解析 HTTP 请求头
+ * @param   request  要解析的 HTTP 请求结构体指针
+ * @retval  0 成功；-1 失败
+ */
 static int http_parse_header(app_http_request_t *request)
 {
     char version[16];
@@ -130,6 +161,13 @@ static int http_parse_header(app_http_request_t *request)
     return 0;
 }
 
+/**
+ * @brief   向 HTTP 请求结构体中添加数据
+ * @param   request  要添加数据的 HTTP 请求结构体指针
+ * @param   data  要添加的数据指针
+ * @param   length  要添加的数据长度
+ * @retval  0 成功；-1 失败
+ */
 int app_http_request_feed(app_http_request_t *request, const uint8_t *data, size_t length)
 {
     for (size_t i = 0U; i < length; i++)
@@ -157,6 +195,15 @@ int app_http_request_feed(app_http_request_t *request, const uint8_t *data, size
     return (request->header_complete && request->body_length == request->content_length) ? 1 : 0;
 }
 
+/**
+ * @brief   发送 HTTP 响应
+ * @param   conn  客户端连接
+ * @param   code  HTTP 劶态码
+ * @param   reason  响应原因
+ * @param   type  响应内容类型
+ * @param   body  响应体指针
+ * @retval  0 成功；-1 失败
+ */
 int app_http_reply(struct netconn *conn, int code, const char *reason, const char *type, const char *body)
 {
     char header[256];
@@ -170,6 +217,13 @@ int app_http_reply(struct netconn *conn, int code, const char *reason, const cha
     return app_http_send_all(conn, body, length);
 }
 
+/**
+ * @brief   发送 HTTP 响应体
+ * @param   conn  客户端连接
+ * @param   data  要发送的数据指针
+ * @param   length  要发送的数据长度
+ * @retval  0 成功；-1 失败
+ */
 int app_http_send_all(struct netconn *conn, const void *data, size_t length)
 {
     const uint8_t *bytes = data;

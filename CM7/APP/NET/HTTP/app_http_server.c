@@ -145,9 +145,10 @@ static void Http_Thread(void *argument)
     for (;;)
     {
         client_connection = NULL;
-        app_http_ota_poll(); // 轮询 OTA 控制锁
-        /* 接受连接 */
-        error = netconn_accept(listen_connection, &client_connection);
+        app_http_ota_poll(); // 处理 CM4 启动确认和 OTA 接收会话超时
+
+        /* HTTP 服务处理一个客户端的完整流程 */
+        error = netconn_accept(listen_connection, &client_connection); // 等待连接
         if (error != ERR_OK)
         {
             osDelay(100U);
@@ -155,7 +156,7 @@ static void Http_Thread(void *argument)
         }
         http_handle_client(client_connection); // 处理客户端请求
         netconn_close(client_connection);      // 关闭客户端连接
-        netconn_delete(client_connection);     // 删除客户端连接
+        netconn_delete(client_connection);     // 释放连接资源
     }
 }
 
@@ -168,33 +169,36 @@ static void http_handle_client(struct netconn *conn)
 {
     /* 读取 HTTP 请求 */
     int result = http_read_request(conn);
-    if (result != 0)
+    if (result != 0) // 如果读取失败
     {
-        app_http_ota_receive_failed();
+        app_http_ota_receive_failed(); // 接收或响应发送失败时，中止尚未完成的接收会话
         http_reply_text(conn,
                         -result,
                         "Request Rejected",
                         "text/plain; charset=utf-8",
-                        "bad request\r\n");
+                        "bad request\r\n"); // 回复 400 错误码
         return;
     }
 
-    app_http_ota_poll();
-    if (app_http_ota_dispatch(conn, &s_request) != 0)
-        return;
-    if (strcmp(s_request.method, "GET") != 0)
+    app_http_ota_poll(); // 处理 CM4 启动确认和 OTA 接收会话超时，等待、接收期间可能跨过超时点，执行前必须再检查
+
+    /* 分发 OTA 状态查询、开始、分块写入、结束和取消请求 */
+    if (app_http_ota_dispatch(conn, &s_request) != 0) // 如果未处理
+        return;                                       // 直接退出
+
+    /* 处理 GET 请求 */
+    if (strcmp(s_request.method, "GET") != 0) // 如果不是 GET 请求
     {
-        /* 提取路径失败，回复 405 错误码 */
         http_reply_text(conn,
                         405,
                         "Method Not Allowed",
                         "text/plain; charset=utf-8",
-                        "only GET is supported\r\n");
+                        "only GET is supported\r\n"); // 提取路径失败，回复 405 错误码
         return;
     }
 
     /* 处理 /status 请求 */
-    if (strcmp(s_request.path, "/status") == 0 && s_request.content_length == 0U)
+    if (strcmp(s_request.path, "/status") == 0 && s_request.content_length == 0U) // 如果是 /status 请求
     {
         /* 处理 /status 请求 */
         http_handle_status(conn);
@@ -205,7 +209,7 @@ static void http_handle_client(struct netconn *conn)
                     404,
                     "Not Found",
                     "text/plain; charset=utf-8",
-                    "not found\r\n");
+                    "not found\r\n"); // 回复 404 错误码
 }
 
 /**
@@ -260,17 +264,8 @@ static void http_handle_status(struct netconn *conn)
 }
 
 /**
- * @brief   获取请求路径
- * @param   request  HTTP 请求字符串
- * @param   path     存储路径的缓冲区
- * @param   path_size  路径缓冲区大小
- * @return  none
- */
-/**
  * @brief   读取客户端请求
  * @param   conn  客户端连接
- * @param   buffer  存储请求的缓冲区
- * @param   buffer_size  缓冲区大小
  * @return  none
  */
 static int http_read_request(struct netconn *conn)
@@ -279,11 +274,11 @@ static int http_read_request(struct netconn *conn)
     err_t error;
     uint32_t started = HAL_GetTick();
     int result = 0;
-    app_http_request_init(&s_request);
+    app_http_request_init(&s_request); // 初始化 HTTP 请求结构体
 
     /* 设置接收超时 */
-    netconn_set_recvtimeout(conn, 1000);
-    netconn_set_sendtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS);
+    netconn_set_recvtimeout(conn, 1000);                     // 设置接收超时时间为 1000ms
+    netconn_set_sendtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS); // 设置发送超时时间为 30000ms
 
     while (result == 0)
     {

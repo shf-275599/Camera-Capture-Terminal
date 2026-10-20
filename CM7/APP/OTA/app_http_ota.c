@@ -41,10 +41,10 @@ static void ota_reply(struct netconn *conn, int code, const char *reason, const 
  */
 void app_http_ota_receive_failed(void)
 {
-    if (s_receiving != 0U)
+    if (s_receiving != 0U) // 如果正在接收数据
     {
-        app_ota_abort();
-        s_receiving = 0U;
+        app_ota_abort();  // 中止 OTA 会话
+        s_receiving = 0U; // 清除接收标志
         LOG_WARN("HTTP-OTA", "receive failed, session aborted");
     }
 }
@@ -75,7 +75,7 @@ void app_http_ota_poll(void)
                 LOG_INFO("HTTP-OTA", "CM4 pending committed -> confirmed=%u", running);
             }
         }
-        app_ota_control_unlock();
+        app_ota_control_unlock(); // 释放控制锁
     }
     /* 状态查询不续期；无符号时间差允许 HAL tick 正常回绕。 */
     if (s_receiving != 0U &&
