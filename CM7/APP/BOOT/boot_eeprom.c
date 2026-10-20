@@ -36,79 +36,85 @@ static BL24C16F_HandleTypeDef s_ee_dev;
 static uint8_t s_ee_ready;
 
 /**
- * @brief  切换槽位线程
- * @note 该线程用于测试切换当前运行的槽位（A 或 B）。
+ * @brief 切换槽位线程
+ * @note  该线程用于测试切换当前运行的槽位（A 或 B）。
  */
 static void SwitchSlot_Thread(void *argument)
 {
-    static boot_eeprom_meta_t meta;
-    uint8_t armed = 0U;
-    uint8_t stable = 0U;
-    (void)argument;
+    static boot_eeprom_meta_t meta; // EEPROM 双备份启动元数据
+    uint8_t armed = 0U;             // 是否已确认切换槽位
+    uint8_t stable = 0U;            // 按键稳定计数
+    (void)argument;                 // 忽略参数
 
     LOG_INFO("CM7-Slot-A/B", "KEY0 ready, running_slot=%u base=0x%08lX",
              (unsigned int)boot_get_running_slot(),
              (unsigned long)boot_slot_base_get(boot_get_running_slot()));
     for (;;)
     {
-        if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_RESET)
+        if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_RESET) // 按键按下
         {
-            if (stable < 3U)
+            if (stable < 3U) // 按键稳定计数小于 3 次
             {
-                stable++;
+                stable++; // 按键稳定计数增加
             }
-            if (stable == 3U)
+            if (stable == 3U) // 按键稳定计数等于 3 次
             {
-                armed = 1U;
+                armed = 1U; // 确认切换槽位
             }
         }
-        else
+        else // 按键松开
         {
-            stable = 0U;
-            if (armed != 0U)
+            stable = 0U;     // 按键稳定计数重置
+            if (armed != 0U) // 确认切换槽位
             {
                 osDelay(40U);
-                if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_SET)
+                if (HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin) == GPIO_PIN_SET) // 按键松开
                 {
-                    uint8_t running_slot = boot_get_running_slot();
-                    uint8_t target = (running_slot == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX : CM7_APP_SLOT_A_INDEX;
-                    uint32_t size = CM7_APP_SLOT_A_SIZE;
-                    uint32_t crc = 0xFFFFFFFFU;
-                    const uint8_t *image = (const uint8_t *)boot_slot_base_get(target);
-                    armed = 0U;
-                    if (!app_ota_control_try_lock())
+                    uint8_t running_slot = boot_get_running_slot();                                                        // 获取当前运行槽位
+                    uint8_t target = (running_slot == CM7_APP_SLOT_A_INDEX) ? CM7_APP_SLOT_B_INDEX : CM7_APP_SLOT_A_INDEX; // 切换槽位
+                    uint32_t size = CM7_APP_SLOT_A_SIZE;                                                                   // 目标槽位大小
+                    uint32_t crc = 0xFFFFFFFFU;                                                                            // 目标槽位 CRC 值
+                    const uint8_t *image = (const uint8_t *)boot_slot_base_get(target);                                    // 目标槽位镜像指针
+                    armed = 0U;                                                                                            // 取消确认切换槽位
+
+                    /* 尝试获取 OTA 控制锁 */
+                    if (app_ota_control_try_lock() == 0U)
                     {
-                        LOG_WARN("CM7-Slot-A/B", "OTA busy, KEY0 ignored");
+                        LOG_WARN("CM7-Slot-A/B", "OTA busy, KEY0 ignored"); // OTA 控制锁已被其他任务占用，忽略按键
                         continue;
                     }
-                    if ((boot_slot_index_is_valid(running_slot) == 0U) ||
-                        (boot_eeprom_load(&meta) != 0) ||
-                        ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
-                        ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) ||
-                        (boot_slot_is_valid(target) == 0))
+                    /* 检查 EEPROM 元数据 */
+                    if ((boot_slot_index_is_valid(running_slot) == 0U) ||      // 当前运行槽位无效
+                        (boot_eeprom_load(&meta) != 0) ||                      // 读取 EEPROM 失败，只有为 0 时有效
+                        ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||         // 待机槽位标志位设置
+                        ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) || // CM4 待机槽位标志位设置
+                        (boot_slot_is_valid(target) == 0))                     // 目标槽位无效
                     {
                         LOG_ERROR("CM7-Slot-A/B", "switch rejected: check EEPROM, pending and target vector");
-                        app_ota_control_unlock();
+                        app_ota_control_unlock(); // 释放 OTA 控制锁
                         continue;
                     }
                     /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
-                    if (meta.confirmed_slot != running_slot)
+                    if (meta.confirmed_slot != running_slot) // 如果确认槽位与当前运行槽位不一致
                     {
+                        /* 切换槽位 */
                         if (boot_eeprom_select_boot_slot(&meta) != running_slot)
                         {
                             LOG_ERROR("CM7-Slot-A/B", "baseline running_slot mismatch");
-                            app_ota_control_unlock();
+                            app_ota_control_unlock(); // 失败则释放 OTA 控制锁
                             continue;
                         }
-                        meta.confirmed_slot = running_slot;
+                        meta.confirmed_slot = running_slot; // 更新确认槽位
+                        /* 保存 EEPROM */
                         if (boot_eeprom_save(&meta) != 0)
                         {
                             LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
-                            app_ota_control_unlock();
+                            app_ota_control_unlock(); // 失败则释放 OTA 控制锁
                             continue;
                         }
                         LOG_INFO("CM7-Slot-A/B", "baseline synced: confirmed=%u", (unsigned int)running_slot);
                     }
+                    /* 计算 CRC 值 */
                     for (uint32_t i = 0U; i < size; i++)
                     {
                         crc ^= image[i];
@@ -116,16 +122,18 @@ static void SwitchSlot_Thread(void *argument)
                         {
                             crc = (crc >> 1) ^ ((crc & 1U) ? 0xEDB88320U : 0U);
                         }
+                        /* 每 4096 字节喂狗 */
                         if ((i & 4095U) == 0U)
                         {
-                            HAL_IWDG_Refresh(&hiwdg1);
+                            HAL_IWDG_Refresh(&hiwdg1); // 喂狗
                             osDelay(1U);
                         }
                     }
-                    crc = ~crc;
+                    crc = ~crc; // 取反
                     LOG_INFO("CM7-Slot-A/B", "switch %u -> %u base=0x%08lX full_slot_size=%lu crc=0x%08lX",
                              (unsigned int)running_slot, (unsigned int)target,
                              (unsigned long)boot_slot_base_get(target), (unsigned long)size, (unsigned long)crc);
+                    /* 保存待机槽位 */
                     if (boot_eeprom_set_pending(&meta, target, size, crc, meta.app_version[target]) != 0)
                     {
                         LOG_ERROR("CM7-Slot-A/B", "pending save FAIL");
@@ -135,7 +143,7 @@ static void SwitchSlot_Thread(void *argument)
                     LOG_INFO("CM7-Slot-A/B", "pending saved: slot=%u trial=%u seq=%lu; reboot",
                              (unsigned int)meta.pending_slot, (unsigned int)meta.boot_trial, (unsigned long)meta.seq);
                     osDelay(100U);
-                    HAL_NVIC_SystemReset();
+                    HAL_NVIC_SystemReset(); // 重启系统
                 }
             }
         }
@@ -515,11 +523,11 @@ int boot_eeprom_load(boot_eeprom_meta_t *meta)
  */
 int boot_eeprom_save(boot_eeprom_meta_t *meta)
 {
-    boot_eeprom_meta_t c0;
-    boot_eeprom_meta_t c1;
-    uint16_t target;
-    int c0_ok = 0;
-    int c1_ok = 0;
+    boot_eeprom_meta_t c0; // 备份 0
+    boot_eeprom_meta_t c1; // 备份 1
+    uint16_t target;       // 目标地址
+    int c0_ok = 0;         // 备份 0 是否有效
+    int c1_ok = 0;         // 备份 1 是否有效
 
     if ((meta == NULL) || (s_ee_ready == 0U))
     {
@@ -535,11 +543,11 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
     }
 
     /* 强制刷新头字段，seq 自增并重算 CRC（seq 用于双备份新旧裁决） */
-    meta->magic = BOOT_EE_MAGIC;
-    meta->struct_ver = BOOT_EE_STRUCT_VER;
-    meta->length = (uint16_t)sizeof(boot_eeprom_meta_t);
-    meta->seq++;
-    meta->crc32 = boot_ee_crc32(meta);
+    meta->magic = BOOT_EE_MAGIC;                         // 魔数
+    meta->struct_ver = BOOT_EE_STRUCT_VER;               // 结构版本
+    meta->length = (uint16_t)sizeof(boot_eeprom_meta_t); // 结构长度
+    meta->seq++;                                         // 序号自增
+    meta->crc32 = boot_ee_crc32(meta);                   // 计算 CRC32
 
     /* 轮换写入：优先覆盖 seq 更旧或无效的那一份 */
     c0_ok = boot_ee_read_copy_as_v2(BOOT_EE_COPY0_ADDR, &c0);
@@ -551,23 +559,26 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
     }
     else if (c0_ok == 0)
     {
-        target = BOOT_EE_COPY0_ADDR;
+        target = BOOT_EE_COPY0_ADDR; // 备份 0 地址
     }
     else
     {
-        target = BOOT_EE_COPY1_ADDR;
+        target = BOOT_EE_COPY1_ADDR; // 备份 1 地址
     }
 
     if (boot_ee_copy_valid_v2(meta) == 0)
     {
         return -1;
     }
+
+    /* 写入备份 */
     if (BL24C16F_Write(&s_ee_dev, target, (const uint8_t *)meta, sizeof(*meta)) != HAL_OK)
     {
         LOG_ERROR("APP", "EEPROM save failed @ 0x%04X", (unsigned int)target);
         return -1;
     }
 
+    /* 校验写入 */
     if ((boot_ee_read_raw(target, (uint8_t *)&c0, sizeof(c0)) != 0) ||
         (boot_ee_copy_valid_v2(&c0) == 0) ||
         (memcmp(&c0, meta, sizeof(c0)) != 0))
@@ -575,6 +586,7 @@ int boot_eeprom_save(boot_eeprom_meta_t *meta)
         LOG_ERROR("APP", "EEPROM readback failed @ 0x%04X", (unsigned int)target);
         return -1;
     }
+
     return 0;
 }
 
@@ -705,23 +717,27 @@ int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                             uint32_t image_size, uint32_t image_crc32,
                             uint32_t version)
 {
-    boot_eeprom_meta_t previous;
-    if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT) ||
-        (slot_index == meta->confirmed_slot) ||
-        !boot_ee_image_valid(slot_index, 0, image_size, image_crc32, 1))
+    boot_eeprom_meta_t previous; // 备份当前元数据
+
+    if ((meta == NULL) || (slot_index >= CM7_APP_SLOT_COUNT) ||          // 检查槽索引是否有效
+        (slot_index == meta->confirmed_slot) ||                          // 检查是否与已确认槽位重复
+        !boot_ee_image_valid(slot_index, 0, image_size, image_crc32, 1)) // 检查镜像是否有效
     {
         return -1;
     }
 
-    previous = *meta;
-    meta->pending_slot = slot_index;
-    meta->app_size[slot_index] = image_size;
-    meta->app_crc[slot_index] = image_crc32;
-    meta->app_version[slot_index] = version;
-    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 confirmed */
-    meta->boot_trial = BOOT_EE_TRIAL_MAX;
-    meta->flags |= BOOT_EE_FLAG_PENDING;
+    previous = *meta; // 备份当前元数据
 
+    meta->pending_slot = slot_index;         // 设置 pending 槽索引
+    meta->app_size[slot_index] = image_size; // 记录镜像大小
+    meta->app_crc[slot_index] = image_crc32; // 记录镜像 CRC32
+    meta->app_version[slot_index] = version; // 记录镜像版本号
+
+    /* 预留 BOOT_EE_TRIAL_MAX 次试启动，期间未 commit 则自动回退 confirmed */
+    meta->boot_trial = BOOT_EE_TRIAL_MAX; // 重置试启动次数
+    meta->flags |= BOOT_EE_FLAG_PENDING;  // 重置 pending 标志
+
+    /* 保存元数据 */
     int ret = boot_eeprom_save(meta);
     if (ret != 0)
     {

@@ -76,13 +76,13 @@ static void Http_Thread(void *argument)
     }
 
     LOG_INFO("CM7", "HTTP: server listening on port %u",
-              (unsigned int)APP_HTTP_PORT);
-    netconn_set_recvtimeout(listen_connection, 250);
+             (unsigned int)APP_HTTP_PORT);
+    netconn_set_recvtimeout(listen_connection, APP_HTTP_RECV_TIMEOUT_MS); // 设置接收超时时间
 
     for (;;)
     {
         client_connection = NULL;
-        app_http_ota_poll();
+        app_http_ota_poll(); // 轮询 OTA 控制锁
         /* 接受连接 */
         error = netconn_accept(listen_connection, &client_connection);
         if (error != ERR_OK)
@@ -138,7 +138,8 @@ static void http_handle_client(struct netconn *conn)
     }
 
     app_http_ota_poll();
-    if (app_http_ota_dispatch(conn, &s_request) != 0) return;
+    if (app_http_ota_dispatch(conn, &s_request) != 0)
+        return;
     if (strcmp(s_request.method, "GET") != 0)
     {
         /* 提取路径失败，回复 405 错误码 */
@@ -252,7 +253,8 @@ static int http_read_request(struct netconn *conn)
         if (error != ERR_OK)
         {
             app_http_ota_poll();
-            if (error == ERR_TIMEOUT && HAL_GetTick() - started < 30000U) continue;
+            if (error == ERR_TIMEOUT && HAL_GetTick() - started < 30000U)
+                continue;
             return error == ERR_TIMEOUT ? -408 : -400;
         }
 
@@ -267,12 +269,14 @@ static int http_read_request(struct netconn *conn)
                 result = app_http_request_feed(&s_request, data, data_length);
             }
 
-            if (result < 0) break;
+            if (result < 0)
+                break;
         } while (netbuf_next(net_buffer) >= 0); // 处理下一个数据块
 
         netbuf_delete(net_buffer); // 释放接收缓冲区
         net_buffer = NULL;         // 重置指针
-        if (HAL_GetTick() - started >= 30000U && result == 0) return -408;
+        if (HAL_GetTick() - started >= 30000U && result == 0)
+            return -408;
     }
 
     return result == 1 ? 0 : result;

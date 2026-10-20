@@ -90,11 +90,11 @@
 /* USER CODE BEGIN PV */
 /* Private Variables 私有变量 */
 /* Boot */
-static boot_eeprom_meta_t ee;      // 保存 EEPROM 中的 confirmed、pending 等启动记录
-static volatile uint8_t running_slot;   // 当前运行的槽槽号
-static volatile uint8_t cm4_slot;  // CM4 启动的槽槽号
-static volatile uint32_t cm4_base; // CM4 启动的基地址
-static volatile int ee_ok;         // EEPROM 是否成功读取
+static boot_eeprom_meta_t ee;         // 保存 EEPROM 中的 confirmed、pending 等启动记录
+static volatile uint8_t running_slot; // 当前运行的槽槽号
+static volatile uint8_t cm4_slot;     // CM4 启动的槽槽号
+static volatile uint32_t cm4_base;    // CM4 启动的基地址
+static volatile int ee_ok;            // EEPROM 是否成功读取
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -107,10 +107,10 @@ static void ipc_share_region_clear(void)
   memset((void *)0x38000000, 0, 0x00010000); // 启动前清空 64KB SRAM4；后续会在这里写 CM4 handoff
 }
 
-static void app_boot_print_info(void);
-static void app_boot_eeprom_init(void);
-static void app_boot_eeprom_metadata_log(void);
-static void app_boot_eeprom_load(void);
+static void app_boot_print_info(void);          // 打印启动信息
+static void app_boot_eeprom_init(void);         // 初始化 EEPROM
+static void app_boot_eeprom_metadata_log(void); // 打印 EEPROM 元数据
+static void app_boot_eeprom_load(void);         // 从 EEPROM 加载启动记录
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -128,11 +128,12 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+
 /* USER CODE BEGIN Boot_Mode_Sequence_0 */
 #if defined(DUAL_CORE_BOOT_SYNC_SEQUENCE)
   int32_t timeout;
-#endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
-/* USER CODE END Boot_Mode_Sequence_0 */
+#endif
+  /* USER CODE END Boot_Mode_Sequence_0 */
 
 /* USER CODE BEGIN Boot_Mode_Sequence_1 */
 #if defined(DUAL_CORE_BOOT_SYNC_SEQUENCE)
@@ -144,10 +145,10 @@ int main(void)
   {
     // Error_Handler();
   }
-#endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
-       /* USER CODE END Boot_Mode_Sequence_1 */
-  /* MCU Configuration--------------------------------------------------------*/
+#endif
+  /* USER CODE END Boot_Mode_Sequence_1 */
 
+  /* MCU Configuration--------------------------------------------------------*/
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
@@ -160,6 +161,7 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+
 /* USER CODE BEGIN Boot_Mode_Sequence_2 */
 #if defined(DUAL_CORE_BOOT_SYNC_SEQUENCE)
   /* When system initialization is finished, Cortex-M7 will release Cortex-M4 by means of
@@ -170,8 +172,8 @@ int main(void)
   HAL_HSEM_FastTake(HSEM_ID_0);
   /*Release HSEM in order to notify the CPU2(CM4)*/
   HAL_HSEM_Release(HSEM_ID_0, 0);
-#endif /* DUAL_CORE_BOOT_SYNC_SEQUENCE */
-       /* USER CODE END Boot_Mode_Sequence_2 */
+#endif
+  /* USER CODE END Boot_Mode_Sequence_2 */
 
   /* USER CODE BEGIN SysInit */
 
@@ -194,9 +196,9 @@ int main(void)
     app_boot_print_info(); // 打印启动信息
     /* 从 EEPROM 读取启动记录，并通知 CM4 Stub 启动哪个应用槽 */
     running_slot = boot_get_running_slot(); // 根据当前运行地址判断 CM7 位于 A 槽还是 B 槽
-    cm4_slot = CM4_APP_SLOT_A_INDEX;   // EEPROM 不可用时，CM4 默认从 A 槽启动
-    cm4_base = CM4_APP_SLOT_A_BASE;    // CM4 默认应用的 Flash 起始地址
-    ee_ok = 0;                         // 记录本次是否读到有效的 EEPROM 启动记录
+    cm4_slot = CM4_APP_SLOT_A_INDEX;        // EEPROM 不可用时，CM4 默认从 A 槽启动
+    cm4_base = CM4_APP_SLOT_A_BASE;         // CM4 默认应用的 Flash 起始地址
+    ee_ok = 0;                              // 记录本次是否读到有效的 EEPROM 启动记录
     LOG_INFO("APP", "APP Boot ============================================================================");
     app_boot_eeprom_init();         // 初始化 EEPROM
     app_boot_eeprom_load();         // 从双备份读取启动记录；无有效副本时使用默认值
@@ -230,13 +232,14 @@ int main(void)
     LOG_INFO("APP", "Boot Down ===========================================================================");
   }
   HAL_IWDG_Refresh(&hiwdg1); // 喂狗，防初始化链累计超过 IWDG 超时
+  /* 初始化以太网接口 */
   MX_ETH_Init();
   {
     LOG_INFO("CM7", "ETH I/O init OK");
-    int32_t phy_status = eth_phy_init();
+    int32_t phy_status = eth_phy_init(); // 初始化 PHY
     if (phy_status != LAN8720_STATUS_OK)
     {
-      eth_phy_print_diag();
+      eth_phy_print_diag(); // 打印 PHY 状态：当前地址、最近 BCR，以及地址 0~3 的 ID/BCR/BSR
       LOG_ERROR("CM7", "PHY init failed: %s", eth_phy_link_state_str(phy_status));
     }
     else

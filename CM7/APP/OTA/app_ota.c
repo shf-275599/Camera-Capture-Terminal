@@ -27,7 +27,7 @@ typedef enum
 {
   APP_OTA_IDLE = 0, // 空闲
   APP_OTA_PREPARING,
-  APP_OTA_RECV,     // 已 begin，正在收/写镜像
+  APP_OTA_RECV, // 已 begin，正在收/写镜像
   APP_OTA_PENDING_REBOOT,
 } app_ota_state_t;
 
@@ -44,24 +44,32 @@ static uint8_t s_prog_buf[APP_OTA_PROG_CHUNK];
 static uint32_t s_prog_fill;     // prog_buf 已填字节
 static uint32_t s_prog_log_next; // 下一次进度日志阈值
 static uint8_t s_cm4_held;       // 1=已成功 hold CM4，abort 须释放
-static uint8_t s_control_locked;
+static uint8_t s_control_locked; // 1=已占用，0=未占用
 static uint8_t s_control_owned;
 
+/**
+ * @brief  尝试获取 OTA 控制锁（非阻塞）
+ * @return 1=锁空闲，成功获取，0=锁被其他任务占用，不可获取锁
+ */
 int app_ota_control_try_lock(void)
 {
-  int acquired;
-  taskENTER_CRITICAL();
-  acquired = (s_control_locked == 0U);
-  if (acquired) s_control_locked = 1U;
-  taskEXIT_CRITICAL();
-  return acquired;
+  int acquired = 0U;                   // 保存获取结果：0=不可获取锁，1=成功获取
+  taskENTER_CRITICAL();                // 进入临界区：防止“判断+修改”过程被其他任务打断
+  acquired = (s_control_locked == 0U); // lock 为 0 表示空闲，acquired 可以进行获取；lock 为 1 表示已被其他任务占用，acquired 为 0 不可获取
+  if (acquired)                        // 若空闲，则立即标记为已占用
+    s_control_locked = 1U;             // 成功获取锁，设置为已占用
+  taskEXIT_CRITICAL();                 // 退出临界区：恢复中断/任务调度
+  return acquired;                     // 返回是否成功获取锁
 }
 
+/**
+ * @brief  释放 OTA 控制锁
+ */
 void app_ota_control_unlock(void)
 {
-  taskENTER_CRITICAL();
-  s_control_locked = 0U;
-  taskEXIT_CRITICAL();
+  taskENTER_CRITICAL();  // 进入临界区：防止其他任务修改 s_control_locked
+  s_control_locked = 0U; // 释放锁，设置为未占用
+  taskEXIT_CRITICAL();   // 退出临界区：恢复中断/任务调度
 }
 
 /**
@@ -428,12 +436,12 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM4: Stub@0x%08lX + upload idle slot %c @ 0x%08lX (Bank2); "
-                  "CM7 holds CM4 then programs; abort incomplete session before restarting\r\n",
+                 "CM7 holds CM4 then programs; abort incomplete session before restarting\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,
                  (unsigned long)session_ver,
-                  (s_state != APP_OTA_IDLE)
+                 (s_state != APP_OTA_IDLE)
                      ? ((s_core == APP_OTA_CORE_CM4) ? "cm4" : "cm7")
                      : "none",
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
@@ -482,12 +490,12 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM7: upload bin linked for slot %c (base 0x%08lX); "
-                  "abort incomplete session before restarting\r\n",
+                 "abort incomplete session before restarting\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,
                  (unsigned long)session_ver,
-                  (s_state != APP_OTA_IDLE)
+                 (s_state != APP_OTA_IDLE)
                      ? ((s_core == APP_OTA_CORE_CM4) ? "cm4" : "cm7")
                      : "none",
                  (unsigned)((app_ota_is_busy() != 0) && (session_match == 0)),
@@ -560,9 +568,9 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
     return -8;
   }
   s_target_slot = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_inactive_index(running)
-                                           : boot_slot_inactive_index(running);
+                                             : boot_slot_inactive_index(running);
   s_target_base = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_base_get(s_target_slot)
-                                           : boot_slot_base_get(s_target_slot);
+                                             : boot_slot_base_get(s_target_slot);
   if (linked_base != s_target_base)
   {
     return -8;
