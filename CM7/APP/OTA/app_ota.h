@@ -35,6 +35,8 @@ extern "C"
   } app_ota_core_t;
 
   int app_ota_is_busy(void);
+  int app_ota_control_try_lock(void);
+  void app_ota_control_unlock(void);
   app_ota_core_t app_ota_session_core(void);
   uint32_t app_ota_image_size(void);
   uint32_t app_ota_written_bytes(void);

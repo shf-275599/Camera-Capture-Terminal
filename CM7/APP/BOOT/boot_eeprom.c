@@ -3,6 +3,7 @@
  * @brief   EEPROM 双备份启动元数据实现（CM7 + CM4）
  */
 #include "boot_eeprom.h"
+#include "app_ota.h"
 #include <string.h>
 #include "bl24c16f.h"
 #include "bsp_eeprom.h"
@@ -75,6 +76,11 @@ static void SwitchSlot_Thread(void *argument)
                     uint32_t crc = 0xFFFFFFFFU;
                     const uint8_t *image = (const uint8_t *)boot_slot_base_get(target);
                     armed = 0U;
+                    if (!app_ota_control_try_lock())
+                    {
+                        LOG_WARN("CM7-Slot-A/B", "OTA busy, KEY0 ignored");
+                        continue;
+                    }
                     if ((boot_slot_index_is_valid(running_slot) == 0U) ||
                         (boot_eeprom_load(&meta) != 0) ||
                         ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
@@ -82,6 +88,7 @@ static void SwitchSlot_Thread(void *argument)
                         (boot_slot_is_valid(target) == 0))
                     {
                         LOG_ERROR("CM7-Slot-A/B", "switch rejected: check EEPROM, pending and target vector");
+                        app_ota_control_unlock();
                         continue;
                     }
                     /* ST-Link 重刷镜像后旧 CRC 可能失效，按启动选择结果同步测试基线。 */
@@ -90,12 +97,14 @@ static void SwitchSlot_Thread(void *argument)
                         if (boot_eeprom_select_boot_slot(&meta) != running_slot)
                         {
                             LOG_ERROR("CM7-Slot-A/B", "baseline running_slot mismatch");
+                            app_ota_control_unlock();
                             continue;
                         }
                         meta.confirmed_slot = running_slot;
                         if (boot_eeprom_save(&meta) != 0)
                         {
                             LOG_ERROR("CM7-Slot-A/B", "baseline sync FAIL");
+                            app_ota_control_unlock();
                             continue;
                         }
                         LOG_INFO("CM7-Slot-A/B", "baseline synced: confirmed=%u", (unsigned int)running_slot);
@@ -120,6 +129,7 @@ static void SwitchSlot_Thread(void *argument)
                     if (boot_eeprom_set_pending(&meta, target, size, crc, meta.app_version[target]) != 0)
                     {
                         LOG_ERROR("CM7-Slot-A/B", "pending save FAIL");
+                        app_ota_control_unlock();
                         continue;
                     }
                     LOG_INFO("CM7-Slot-A/B", "pending saved: slot=%u trial=%u seq=%lu; reboot",

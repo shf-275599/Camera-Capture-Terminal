@@ -16,6 +16,8 @@
 #include "boot_slot.h"
 #include "app_ov5640.h"
 #include "mylog.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 #define APP_OTA_PROG_CHUNK (8192U)           // 编程缓冲粒度
 #define APP_OTA_CM4_HOLD_MS (3000U)          // 等待 CM4 ACK 超时
@@ -42,6 +44,25 @@ static uint8_t s_prog_buf[APP_OTA_PROG_CHUNK];
 static uint32_t s_prog_fill;     // prog_buf 已填字节
 static uint32_t s_prog_log_next; // 下一次进度日志阈值
 static uint8_t s_cm4_held;       // 1=已成功 hold CM4，abort 须释放
+static uint8_t s_control_locked;
+static uint8_t s_control_owned;
+
+int app_ota_control_try_lock(void)
+{
+  int acquired;
+  taskENTER_CRITICAL();
+  acquired = (s_control_locked == 0U);
+  if (acquired) s_control_locked = 1U;
+  taskEXIT_CRITICAL();
+  return acquired;
+}
+
+void app_ota_control_unlock(void)
+{
+  taskENTER_CRITICAL();
+  s_control_locked = 0U;
+  taskEXIT_CRITICAL();
+}
 
 /**
  * @brief  获取会话内已接收/缓冲的总字节（offset + fill）
@@ -327,6 +348,11 @@ void app_ota_abort(void)
   s_expected_crc = 0U;
   s_prog_log_next = 0U;
   ota_restore_system();
+  if (s_control_owned != 0U)
+  {
+    s_control_owned = 0U;
+    app_ota_control_unlock();
+  }
 }
 
 /**
@@ -402,7 +428,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM4: Stub@0x%08lX + upload idle slot %c @ 0x%08lX (Bank2); "
-                 "CM7 holds CM4 then programs; same size+ver resumes\r\n",
+                  "CM7 holds CM4 then programs; abort incomplete session before restarting\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,
@@ -456,7 +482,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM7: upload bin linked for slot %c (base 0x%08lX); "
-                 "same size+ver resumes written\r\n",
+                  "abort incomplete session before restarting\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,
@@ -563,6 +589,20 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   s_expected_crc = expected_crc32;
   s_core = core;
   s_state = APP_OTA_PREPARING;
+  if (!app_ota_control_try_lock())
+  {
+    s_state = APP_OTA_IDLE;
+    return -1;
+  }
+  s_control_owned = 1U;
+  /* 获取控制权后重新核对 EEPROM，防止 KEY0 刚完成切槽。 */
+  if (boot_eeprom_load(&ee) != 0 ||
+      (ee.flags & BOOT_EE_FLAG_PENDING) != 0U ||
+      (ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U)
+  {
+    app_ota_abort();
+    return -6;
+  }
   if (ota_quiesce_system() != 0)
   {
     app_ota_abort();
