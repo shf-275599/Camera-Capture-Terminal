@@ -3,6 +3,8 @@
  * @brief   创建 HTTP 任务、监听端口、接收连接、路由分发
  */
 #include "app_http_server.h"
+#include "app_http_util.h"
+#include "app_http_ota.h"
 #include "lwip/api.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
@@ -17,17 +19,15 @@
 #include <stdint.h>
 
 #define APP_HTTP_PORT 80U              // HTTP 服务器端口
-#define APP_HTTP_REQUEST_SIZE 1024U    // HTTP 请求缓冲区大小
 #define APP_HTTP_RECV_TIMEOUT_MS 5000U // HTTP 接收超时时间
 
 extern struct netif gnetif; // 网络接口结构体
 
-static char s_request[APP_HTTP_REQUEST_SIZE]; // HTTP 请求缓冲区
+static app_http_request_t s_request;
 
 static void http_handle_client(struct netconn *conn);
 static void http_handle_status(struct netconn *conn);
-static int http_get_request_path(const char *request, char *path, size_t path_size);
-static int http_read_request(struct netconn *conn, char *buffer, size_t buffer_size);
+static int http_read_request(struct netconn *conn);
 static void http_reply_text(struct netconn *conn, int status_code, const char *status_text,
                             const char *content_type, const char *body);
 static int http_send_all(struct netconn *conn, const void *data, size_t length);
@@ -76,11 +76,13 @@ static void Http_Thread(void *argument)
     }
 
     LOG_INFO("CM7", "HTTP: server listening on port %u",
-             (unsigned int)APP_HTTP_PORT);
+              (unsigned int)APP_HTTP_PORT);
+    netconn_set_recvtimeout(listen_connection, 250);
 
     for (;;)
     {
         client_connection = NULL;
+        app_http_ota_poll();
         /* 接受连接 */
         error = netconn_accept(listen_connection, &client_connection);
         if (error != ERR_OK)
@@ -122,22 +124,22 @@ void App_HTTP_Server_Thread_Start(void)
  */
 static void http_handle_client(struct netconn *conn)
 {
-    char path[64];
-
     /* 读取 HTTP 请求 */
-    if (http_read_request(conn, s_request, sizeof(s_request)) != 0)
+    int result = http_read_request(conn);
+    if (result != 0)
     {
-        /* 读取请求失败，回复 400 错误码 */
+        app_http_ota_receive_failed();
         http_reply_text(conn,
-                        400,
-                        "Bad Request",
+                        -result,
+                        "Request Rejected",
                         "text/plain; charset=utf-8",
                         "bad request\r\n");
         return;
     }
 
-    /* 提取请求路径 */
-    if (http_get_request_path(s_request, path, sizeof(path)) != 0)
+    app_http_ota_poll();
+    if (app_http_ota_dispatch(conn, &s_request) != 0) return;
+    if (strcmp(s_request.method, "GET") != 0)
     {
         /* 提取路径失败，回复 405 错误码 */
         http_reply_text(conn,
@@ -149,7 +151,7 @@ static void http_handle_client(struct netconn *conn)
     }
 
     /* 处理 /status 请求 */
-    if (strcmp(path, "/status") == 0)
+    if (strcmp(s_request.path, "/status") == 0 && s_request.content_length == 0U)
     {
         /* 处理 /status 请求 */
         http_handle_status(conn);
@@ -221,51 +223,6 @@ static void http_handle_status(struct netconn *conn)
  * @param   path_size  路径缓冲区大小
  * @return  none
  */
-static int http_get_request_path(const char *request,
-                                 char *path,
-                                 size_t path_size)
-{
-    const char *path_start;
-    const char *path_end;
-    size_t path_length;
-
-    /* 检查请求是否为 GET 请求 */
-    if (strncmp(request, "GET ", 4U) != 0)
-    {
-        return -1;
-    }
-
-    path_start = request + 4U;          // 跳过 "GET "
-    path_end = strchr(path_start, ' '); // 查找路径结束位置
-
-    /* 检查路径是否有效 */
-    if (path_end == NULL)
-    {
-        return -1;
-    }
-
-    /* 计算路径长度 */
-    path_length = (size_t)(path_end - path_start);
-    /* 检查路径长度是否有效 */
-    if ((path_length == 0U) || (path_length >= path_size))
-    {
-        return -1;
-    }
-
-    /* 复制路径到缓冲区 */
-    memcpy(path, path_start, path_length);
-    path[path_length] = '\0';
-
-    /* 检查路径是否包含查询参数 */
-    path_end = strchr(path, '?');
-    if (path_end != NULL)
-    {
-        path[(size_t)(path_end - path)] = '\0'; // 截断路径，移除查询参数
-    }
-
-    return 0;
-}
-
 /**
  * @brief   读取客户端请求
  * @param   conn  客户端连接
@@ -273,18 +230,19 @@ static int http_get_request_path(const char *request,
  * @param   buffer_size  缓冲区大小
  * @return  none
  */
-static int http_read_request(struct netconn *conn,
-                             char *buffer,
-                             size_t buffer_size)
+static int http_read_request(struct netconn *conn)
 {
     struct netbuf *net_buffer = NULL;
     err_t error;
-    size_t received = 0U;
+    uint32_t started = HAL_GetTick();
+    int result = 0;
+    app_http_request_init(&s_request);
 
     /* 设置接收超时 */
-    netconn_set_recvtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS);
+    netconn_set_recvtimeout(conn, 1000);
+    netconn_set_sendtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS);
 
-    while (received + 1U < buffer_size)
+    while (result == 0)
     {
         void *data;
         u16_t data_length;
@@ -293,7 +251,9 @@ static int http_read_request(struct netconn *conn,
         error = netconn_recv(conn, &net_buffer);
         if (error != ERR_OK)
         {
-            return -1;
+            app_http_ota_poll();
+            if (error == ERR_TIMEOUT && HAL_GetTick() - started < 30000U) continue;
+            return error == ERR_TIMEOUT ? -408 : -400;
         }
 
         do
@@ -304,36 +264,18 @@ static int http_read_request(struct netconn *conn,
             /* 处理数据 */
             if (netbuf_data(net_buffer, &data, &data_length) == ERR_OK)
             {
-                size_t copy_length = data_length;
-
-                /* 检查是否超出了缓冲区大小 */
-                if ((received + copy_length + 1U) > buffer_size)
-                {
-                    copy_length = buffer_size - received - 1U;
-                }
-
-                /* 复制数据到缓冲区 */
-                if (copy_length > 0U)
-                {
-                    memcpy(buffer + received, data, copy_length);
-                    received += copy_length;
-                    buffer[received] = '\0';
-                }
+                result = app_http_request_feed(&s_request, data, data_length);
             }
 
-            /* 检查是否接收完整 */
-            if (strstr(buffer, "\r\n\r\n") != NULL)
-            {
-                netbuf_delete(net_buffer); // 释放接收缓冲区
-                return 0;
-            }
+            if (result < 0) break;
         } while (netbuf_next(net_buffer) >= 0); // 处理下一个数据块
 
         netbuf_delete(net_buffer); // 释放接收缓冲区
         net_buffer = NULL;         // 重置指针
+        if (HAL_GetTick() - started >= 30000U && result == 0) return -408;
     }
 
-    return -1;
+    return result == 1 ? 0 : result;
 }
 
 /**
@@ -396,7 +338,7 @@ static void http_reply_text(struct netconn *conn,
 static int http_send_all(struct netconn *conn, const void *data, size_t length)
 {
     /* 发送数据 */
-    if (netconn_write(conn, data, length, NETCONN_COPY) != ERR_OK)
+    if (app_http_send_all(conn, data, length) != 0)
     {
         return -1;
     }

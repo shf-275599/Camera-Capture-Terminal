@@ -77,6 +77,7 @@ C_SOURCES =  \
 ../../CM7/APP/NET/HTTP/app_http_util.c \
 ../../CM7/APP/BOOT/boot_eeprom.c \
 ../../CM7/APP/OTA/app_ota.c \
+../../CM7/APP/OTA/app_http_ota.c \
 ../../Common/Src/boot_slot.c \
 ../../Common/Src/cm4_boot_handoff.c \
 ../../Common/Src/cm4_ota_hold.c \
@@ -430,6 +431,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 
 $(BUILD_DIR)/init.o: ../../Middlewares/Third_Party/LwIP/src/core/init.c
 $(BUILD_DIR)/sys.o: ../../Middlewares/Third_Party/LwIP/src/core/sys.c
+$(BUILD_DIR)/app_http_ota.o: ../../CM7/APP/OTA/app_http_ota.c
 $(BUILD_DIR)/metal_init.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c
 $(BUILD_DIR)/metal_sys.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c
 $(BUILD_DIR)/metal_init.o $(BUILD_DIR)/metal_sys.o: Makefile | $(BUILD_DIR)
