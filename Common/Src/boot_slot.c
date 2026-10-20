@@ -275,5 +275,5 @@ uint8_t boot_get_running_slot(void)
  */
 uint8_t cm4_boot_get_running_slot(void)
 {
-    return boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
+    return cm4_boot_get_slot_index_from_address((uint32_t)g_pfnVectors);
 }
