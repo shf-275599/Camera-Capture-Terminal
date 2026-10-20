@@ -25,12 +25,75 @@ extern struct netif gnetif; // 网络接口结构体
 
 static app_http_request_t s_request;
 
+/**
+ * @brief   HTTP 服务器任务
+ * @param   none
+ * @return  none
+ */
+static void Http_Thread(void *argument);
+
+/**
+ * @brief   处理客户端请求
+ * @param   conn  客户端连接
+ * @return  none
+ */
 static void http_handle_client(struct netconn *conn);
+
+/**
+ * @brief   处理 HTTP 状态码
+ * @param   conn  客户端连接
+ * @return  none
+ */
 static void http_handle_status(struct netconn *conn);
+
+/**
+ * @brief   读取 HTTP 请求
+ * @param   conn  客户端连接
+ * @return  int 0=需要更多数据，1=请求完整，负值为应返回的 HTTP 状态码。
+ */
 static int http_read_request(struct netconn *conn);
+
+/**
+ * @brief   发送 HTTP 响应
+ * @param   conn  客户端连接
+ * @param   status_code  HTTP 状态码
+ * @param   status_text  HTTP 状态文本
+ * @param   content_type  内容类型
+ * @param   body  响应体
+ * @return  none
+ */
 static void http_reply_text(struct netconn *conn, int status_code, const char *status_text,
                             const char *content_type, const char *body);
+
+/**
+ * @brief   发送所有数据
+ * @param   conn  客户端连接
+ * @param   data  数据指针
+ * @param   length  数据长度
+ * @return  int 0=成功，-1=失败
+ */
 static int http_send_all(struct netconn *conn, const void *data, size_t length);
+
+/**
+ * @brief   启动 HTTP 服务器
+ * @param   none
+ * @return  none
+ */
+void App_HTTP_Server_Thread_Start(void)
+{
+    BaseType_t xReturn = pdPASS;
+    xReturn = xTaskCreate((TaskFunction_t)Http_Thread,
+                          (char *)"Http_Thread",
+                          (uint16_t)1024,
+                          (void *)NULL,
+                          (uint8_t)5,
+                          (TaskHandle_t *)NULL);
+    if (xReturn != pdPASS)
+    {
+        LOG_ERROR("CM7", "HTTP: Http_Thread creation failed");
+        return;
+    }
+}
 
 /**
  * @brief   HTTP 服务器任务
@@ -93,27 +156,6 @@ static void Http_Thread(void *argument)
         http_handle_client(client_connection); // 处理客户端请求
         netconn_close(client_connection);      // 关闭客户端连接
         netconn_delete(client_connection);     // 删除客户端连接
-    }
-}
-
-/**
- * @brief   启动 HTTP 服务器
- * @param   none
- * @return  none
- */
-void App_HTTP_Server_Thread_Start(void)
-{
-    BaseType_t xReturn = pdPASS;
-    xReturn = xTaskCreate((TaskFunction_t)Http_Thread,
-                          (char *)"Http_Thread",
-                          (uint16_t)1024,
-                          (void *)NULL,
-                          (uint8_t)5,
-                          (TaskHandle_t *)NULL);
-    if (xReturn != pdPASS)
-    {
-        LOG_ERROR("CM7", "HTTP: Http_Thread creation failed");
-        return;
     }
 }
 
