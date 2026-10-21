@@ -66,7 +66,7 @@ static void ota_log_write_progress(int force)
     return;
   }
 
-  LOG_INFO("[OTA]", " write progress %lu / %lu (%lu%%) @ 0x%08lX",
+  LOG_INFO("OTA", " write progress %lu / %lu (%lu%%) @ 0x%08lX",
            (unsigned long)done,
            (unsigned long)s_image_size,
            (unsigned long)((s_image_size != 0U) ? ((done * 100UL) / s_image_size) : 0UL),
@@ -143,31 +143,31 @@ static int erase_inactive_slot(uint8_t slot)
 {
   if (slot == CM7_APP_SLOT_A_INDEX)
   {
-    LOG_INFO("[OTA]", " erase CM7 slot A: S1~S3");
+    LOG_INFO("OTA", " erase CM7 slot A: S1~S3");
     if (bsp_flash_ram_erase_sectors(FLASH_SECTOR_1, FLASH_SECTOR_3) != 0)
     {
-      LOG_ERROR("[OTA]", " erase S1~S3 FAIL");
+      LOG_ERROR("OTA", " erase S1~S3 FAIL");
       return -1;
     }
     cache_invalidate_range(CM7_APP_SLOT_A_BASE, CM7_APP_SLOT_A_SIZE);
-    LOG_INFO("[OTA]", " erase CM7 slot A done");
+    LOG_INFO("OTA", " erase CM7 slot A done");
     return 0;
   }
 
   if (slot == CM7_APP_SLOT_B_INDEX)
   {
-    LOG_INFO("[OTA]", " erase CM7 slot B: S5~S7");
+    LOG_INFO("OTA", " erase CM7 slot B: S5~S7");
     if (bsp_flash_ram_erase_sectors(FLASH_SECTOR_5, FLASH_SECTOR_7) != 0)
     {
-      LOG_ERROR("[OTA]", " erase S5~S7 FAIL");
+      LOG_ERROR("OTA", " erase S5~S7 FAIL");
       return -1;
     }
     cache_invalidate_range(CM7_APP_SLOT_B_BASE, CM7_APP_SLOT_B_SIZE);
-    LOG_INFO("[OTA]", " erase CM7 slot B done");
+    LOG_INFO("OTA", " erase CM7 slot B done");
     return 0;
   }
 
-  LOG_ERROR("[OTA]", " erase CM7: invalid slot %u", (unsigned)slot);
+  LOG_ERROR("OTA", " erase CM7: invalid slot %u", (unsigned)slot);
   return -1;
 }
 
@@ -181,31 +181,31 @@ static int erase_cm4_inactive_slot(uint8_t slot)
 {
   if (slot == CM4_APP_SLOT_A_INDEX)
   {
-    LOG_INFO("[OTA]", " erase CM4 slot A: Bank2 S1~S3");
+    LOG_INFO("OTA", " erase CM4 slot A: Bank2 S1~S3");
     if (bsp_flash_ram_erase_bank2_sectors(FLASH_SECTOR_1, FLASH_SECTOR_3) != 0)
     {
-      LOG_ERROR("[OTA]", " erase Bank2 S1~S3 FAIL");
+      LOG_ERROR("OTA", " erase Bank2 S1~S3 FAIL");
       return -1;
     }
     cache_invalidate_range(CM4_APP_SLOT_A_BASE, CM4_APP_SLOT_A_SIZE);
-    LOG_INFO("[OTA]", " erase CM4 slot A done");
+    LOG_INFO("OTA", " erase CM4 slot A done");
     return 0;
   }
 
   if (slot == CM4_APP_SLOT_B_INDEX)
   {
-    LOG_INFO("[OTA]", " erase CM4 slot B: Bank2 S5~S7");
+    LOG_INFO("OTA", " erase CM4 slot B: Bank2 S5~S7");
     if (bsp_flash_ram_erase_bank2_sectors(FLASH_SECTOR_5, FLASH_SECTOR_7) != 0)
     {
-      LOG_ERROR("[OTA]", " erase Bank2 S5~S7 FAIL");
+      LOG_ERROR("OTA", " erase Bank2 S5~S7 FAIL");
       return -1;
     }
     cache_invalidate_range(CM4_APP_SLOT_B_BASE, CM4_APP_SLOT_B_SIZE);
-    LOG_INFO("[OTA]", " erase CM4 slot B done");
+    LOG_INFO("OTA", " erase CM4 slot B done");
     return 0;
   }
 
-  LOG_ERROR("[OTA]", " erase CM4: invalid slot %u", (unsigned)slot);
+  LOG_ERROR("OTA", " erase CM4: invalid slot %u", (unsigned)slot);
   return -1;
 }
 
@@ -226,7 +226,7 @@ static int flush_prog_buf(void)
   addr = s_target_base + s_offset;
   if (bsp_flash_ram_program_buffer(addr, s_prog_buf, s_prog_fill) != 0)
   {
-    LOG_ERROR("[OTA]", " FLASH program FAIL @ 0x%08lX len=%lu written=%lu/%lu",
+    LOG_ERROR("OTA", " FLASH program FAIL @ 0x%08lX len=%lu written=%lu/%lu",
               (unsigned long)addr,
               (unsigned long)s_prog_fill,
               (unsigned long)s_offset,
@@ -306,7 +306,7 @@ void app_ota_abort(void)
   }
   if (s_state != APP_OTA_IDLE)
   {
-    LOG_ERROR("[OTA]", " abort: core=%s written=%lu/%lu target=%u",
+    LOG_ERROR("OTA", " abort: core=%s written=%lu/%lu target=%u",
               (s_core == APP_OTA_CORE_CM4) ? "CM4" : "CM7",
               (unsigned long)ota_written_bytes_internal(),
               (unsigned long)s_image_size,
@@ -316,7 +316,7 @@ void app_ota_abort(void)
   {
     cm4_ota_hold_release();
     s_cm4_held = 0U;
-    LOG_INFO("[OTA]", " CM4 hold released");
+    LOG_INFO("OTA", " CM4 hold released");
   }
   s_state = APP_OTA_IDLE;
   s_core = APP_OTA_CORE_CM7;
@@ -514,7 +514,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   /* 检查是否正在忙 */
   if (s_state != APP_OTA_IDLE)
   {
-    LOG_ERROR("[OTA]", " begin rejected: busy (state=%d)", (int)s_state);
+    LOG_ERROR("OTA", " begin rejected: busy (state=%d)", (int)s_state);
     return -1;
   }
   /* 检查核心是否有效 */
@@ -553,7 +553,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   /* 检查镜像尺寸是否在有效范围内 */
   if ((image_size < 8U) || (image_size > max_size))
   {
-    LOG_ERROR("[OTA]", " begin rejected: core=%s size=%lu max=%lu",
+    LOG_ERROR("OTA", " begin rejected: core=%s size=%lu max=%lu",
               (core == APP_OTA_CORE_CM4) ? "CM4" : "CM7",
               (unsigned long)image_size,
               (unsigned long)max_size);
@@ -580,7 +580,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   if (core == APP_OTA_CORE_CM4)
   {
     /* —— CM4：hold → 擦 Bank2 空闲槽 —— */
-    LOG_INFO("[OTA]", " begin CM4 size=%lu ver=0x%08lX active=%u(%c) -> target=%u(%c) base=0x%08lX",
+    LOG_INFO("OTA", " begin CM4 size=%lu ver=0x%08lX active=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
              (unsigned long)version,
              (unsigned)running,
@@ -589,30 +589,30 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
              (s_target_slot == CM4_APP_SLOT_A_INDEX) ? 'A' : 'B',
              (unsigned long)s_target_base);
 
-    LOG_INFO("[OTA]", " quiesce system (stop cam / suspend peers)");
+    LOG_INFO("OTA", " quiesce system (stop cam / suspend peers)");
 
-    LOG_INFO("[OTA]", " hold CM4 before Bank2 erase");
+    LOG_INFO("OTA", " hold CM4 before Bank2 erase");
     s_cm4_held = 1U; // 请求发出后，无论 ACK 是否到达都必须清理
     /* 尝试 hold CM4 */
     if (cm4_ota_hold_request(APP_OTA_CM4_HOLD_MS) != 0)
     {
-      LOG_ERROR("[OTA]", " CM4 hold timeout");
+      LOG_ERROR("OTA", " CM4 hold timeout");
       app_ota_abort();
       return -11;
     }
-    LOG_INFO("[OTA]", " CM4 held (ACK ok)");
+    LOG_INFO("OTA", " CM4 held (ACK ok)");
     /* 尝试擦除 CM4 空闲槽 */
     if (erase_cm4_inactive_slot(s_target_slot) != 0)
     {
       app_ota_abort();
-      LOG_ERROR("[OTA]", " CM4 erase fail, abort");
+      LOG_ERROR("OTA", " CM4 erase fail, abort");
       return -3;
     }
   }
   else
   {
     /* —— CM7：擦 Bank1 空闲槽 —— */
-    LOG_INFO("[OTA]", " begin CM7 size=%lu ver=0x%08lX running=%u(%c) -> target=%u(%c) base=0x%08lX",
+    LOG_INFO("OTA", " begin CM7 size=%lu ver=0x%08lX running=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
              (unsigned long)version,
              (unsigned)running,
@@ -621,18 +621,18 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
              (s_target_slot == CM7_APP_SLOT_A_INDEX) ? 'A' : 'B',
              (unsigned long)s_target_base);
 
-    LOG_INFO("[OTA]", " quiesce system (stop cam / suspend peers)");
+    LOG_INFO("OTA", " quiesce system (stop cam / suspend peers)");
     /* 尝试擦除 CM7 空闲槽 */
     if (erase_inactive_slot(s_target_slot) != 0)
     {
       app_ota_abort();
-      LOG_ERROR("[OTA]", " erase fail, abort");
+      LOG_ERROR("OTA", " erase fail, abort");
       return -3;
     }
   }
 
   s_state = APP_OTA_RECV; // 记录状态为接收
-  LOG_INFO("[OTA]", " erase OK, waiting for body");
+  LOG_INFO("OTA", " erase OK, waiting for body");
   return 0;
 }
 
@@ -647,18 +647,18 @@ int app_ota_write(const uint8_t *data, uint32_t len)
 
   if (s_state != APP_OTA_RECV)
   {
-    LOG_ERROR("[OTA]", " write rejected: not in RECV (state=%d)", (int)s_state);
+    LOG_ERROR("OTA", " write rejected: not in RECV (state=%d)", (int)s_state);
     return -1;
   }
   if ((data == NULL) && (len > 0U))
   {
-    LOG_ERROR("[OTA]", " write rejected: null data len=%lu", (unsigned long)len);
+    LOG_ERROR("OTA", " write rejected: null data len=%lu", (unsigned long)len);
     return -1;
   }
   uint32_t received = ota_written_bytes_internal();
   if ((received > s_image_size) || (len > s_image_size - received))
   {
-    LOG_ERROR("[OTA]", " write overflow: got+=%lu would=%lu limit=%lu",
+    LOG_ERROR("OTA", " write overflow: got+=%lu would=%lu limit=%lu",
               (unsigned long)len,
               (unsigned long)(s_offset + s_prog_fill + len),
               (unsigned long)s_image_size);
@@ -701,13 +701,13 @@ int app_ota_finish(void)
   /* 校验状态 */
   if (s_state != APP_OTA_RECV)
   {
-    LOG_ERROR("[OTA]", " finish rejected: not in RECV (state=%d)", (int)s_state);
+    LOG_ERROR("OTA", " finish rejected: not in RECV (state=%d)", (int)s_state);
     return -1;
   }
   /* 校验写入大小 */
   if ((s_offset + s_prog_fill) != s_image_size)
   {
-    LOG_ERROR("[OTA]", " finish size mismatch: written=%lu expect=%lu",
+    LOG_ERROR("OTA", " finish size mismatch: written=%lu expect=%lu",
               (unsigned long)(s_offset + s_prog_fill),
               (unsigned long)s_image_size);
     app_ota_abort();
@@ -742,7 +742,7 @@ int app_ota_finish(void)
       uint32_t sp = *(__IO uint32_t *)s_target_base;
       uint32_t pc = *(__IO uint32_t *)(s_target_base + 4U);
       app_ota_abort();
-      LOG_ERROR("[OTA]", " CM4 slot invalid after write: SP=0x%08lX Reset=0x%08lX",
+      LOG_ERROR("OTA", " CM4 slot invalid after write: SP=0x%08lX Reset=0x%08lX",
                 (unsigned long)sp, (unsigned long)pc);
       return -4;
     }
@@ -758,10 +758,10 @@ int app_ota_finish(void)
       app_ota_abort();
       return -5;
     }
-    LOG_INFO("[OTA]", " EEPROM CM4 pending set: slot=%u trial pending",
+    LOG_INFO("OTA", " EEPROM CM4 pending set: slot=%u trial pending",
              (unsigned)s_target_slot);
 
-    LOG_INFO("[OTA]", " finish ok CM4 slot=%u(%c) size=%lu crc=0x%08lX ver=0x%08lX -> reboot",
+    LOG_INFO("OTA", " finish ok CM4 slot=%u(%c) size=%lu crc=0x%08lX ver=0x%08lX -> reboot",
              (unsigned)s_target_slot,
              (s_target_slot == CM4_APP_SLOT_A_INDEX) ? 'A' : 'B',
              (unsigned long)s_image_size,
@@ -777,7 +777,7 @@ int app_ota_finish(void)
       uint32_t sp = *(__IO uint32_t *)s_target_base;
       uint32_t pc = *(__IO uint32_t *)(s_target_base + 4U);
       app_ota_abort();
-      LOG_ERROR("[OTA]", " CM7 slot invalid after write: SP=0x%08lX Reset=0x%08lX",
+      LOG_ERROR("OTA", " CM7 slot invalid after write: SP=0x%08lX Reset=0x%08lX",
                 (unsigned long)sp, (unsigned long)pc);
       return -4;
     }
@@ -793,10 +793,10 @@ int app_ota_finish(void)
       app_ota_abort();
       return -5;
     }
-    LOG_INFO("[OTA]", " EEPROM pending set: slot=%u trial pending",
+    LOG_INFO("OTA", " EEPROM pending set: slot=%u trial pending",
              (unsigned)s_target_slot);
 
-    LOG_INFO("[OTA]", " finish ok CM7 slot=%u(%c) size=%lu crc=0x%08lX ver=0x%08lX -> reboot pending",
+    LOG_INFO("OTA", " finish ok CM7 slot=%u(%c) size=%lu crc=0x%08lX ver=0x%08lX -> reboot pending",
              (unsigned)s_target_slot,
              (s_target_slot == CM7_APP_SLOT_A_INDEX) ? 'A' : 'B',
              (unsigned long)s_image_size,
