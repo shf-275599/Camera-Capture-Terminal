@@ -204,12 +204,12 @@ static void http_handle_client(struct netconn *conn)
         http_handle_status(conn);
         return;
     }
-
+    /* 回复 404 错误码 */
     http_reply_text(conn,
                     404,
                     "Not Found",
                     "text/plain; charset=utf-8",
-                    "not found\r\n"); // 回复 404 错误码
+                    "not found\r\n");
 }
 
 /**

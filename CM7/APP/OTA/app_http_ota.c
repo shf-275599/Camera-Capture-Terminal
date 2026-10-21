@@ -95,16 +95,16 @@ void app_http_ota_poll(void)
  */
 int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *request)
 {
-    app_ota_core_t core = APP_OTA_CORE_CM7;
-    char text[1024];
-    char core_name[16];
-    int result;
-    int is_status = strcmp(request->path, "/ota/status") == 0;
-    int is_begin = strcmp(request->path, "/ota/begin") == 0;
-    int is_chunk = strcmp(request->path, "/ota/chunk") == 0;
-    int is_end = strcmp(request->path, "/ota/end") == 0;
-    int is_abort = strcmp(request->path, "/ota/abort") == 0;
-    if (!is_status && !is_begin && !is_chunk && !is_end && !is_abort)
+    app_ota_core_t core = APP_OTA_CORE_CM7;                           // 默认 CM7 核心
+    char text[1024];                                                  // 响应体缓冲区
+    char core_name[16];                                               // 核心名称缓冲区
+    int result;                                                       // 操作结果
+    int is_status = strcmp(request->path, "/ota/status") == 0;        // 是否状态查询
+    int is_begin = strcmp(request->path, "/ota/begin") == 0;          // 是否开始
+    int is_chunk = strcmp(request->path, "/ota/chunk") == 0;          // 是否分块写入
+    int is_end = strcmp(request->path, "/ota/end") == 0;              // 是否结束
+    int is_abort = strcmp(request->path, "/ota/abort") == 0;          // 是否取消
+    if (!is_status && !is_begin && !is_chunk && !is_end && !is_abort) // 如果不是 OTA 路径
         return 0;
     /* 仅状态查询使用 GET，其余管理接口使用 POST。 */
     if (strcmp(request->method, is_status ? "GET" : "POST") != 0)
@@ -121,26 +121,27 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
     /* 查询和 begin 显式指定核心；后续操作沿用当前唯一会话。 */
     if (is_status || is_begin)
     {
-        result = app_http_header_get(request, "X-Ota-Core", core_name, sizeof(core_name));
-        if (result != 0 || (strcmp(core_name, "cm7") != 0 && strcmp(core_name, "cm4") != 0))
+        result = app_http_header_get(request, "X-Ota-Core", core_name, sizeof(core_name));   // 获取 HTTP 请求头字段值（核心）
+        if (result != 0 || (strcmp(core_name, "cm7") != 0 && strcmp(core_name, "cm4") != 0)) // 如果获取失败或核心名称不是 cm7 或 cm4
         {
             ota_reply(conn, 400, "Bad Request", "X-Ota-Core must be cm7 or cm4\n");
             return 1;
         }
-        core = strcmp(core_name, "cm4") == 0 ? APP_OTA_CORE_CM4 : APP_OTA_CORE_CM7;
+        core = strcmp(core_name, "cm4") == 0 ? APP_OTA_CORE_CM4 : APP_OTA_CORE_CM7; // 根据核心名称设置核心
     }
-    if (is_status)
+    if (is_status) // 如果是状态查询接口
     {
-        result = app_ota_format_status(text, sizeof(text), core);
+        result = app_ota_format_status(text, sizeof(text), core); // 格式化状态查询响应
         if (result < 0)
             ota_reply(conn, 503, "Service Unavailable", "running slot unavailable\n");
         else
             ota_reply(conn, 200, "OK", text);
         return 1;
     }
-    if (is_begin)
+    if (is_begin) // 如果是开始接口
     {
         uint32_t size, version, crc, base;
+        /* 获取 HTTP 请求头字段值 */
         if (app_http_header_u32(request, "X-Fw-Size", &size) != 0 ||
             app_http_header_u32(request, "X-Fw-Version", &version) != 0 ||
             app_http_header_u32(request, "X-Fw-Crc32", &crc) != 0 ||
@@ -149,6 +150,7 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
             ota_reply(conn, 400, "Bad Request", "size/version/crc32/base required as u32\n");
             return 1;
         }
+        /* 检查是否正在忙 */
         if (app_ota_is_busy())
         {
             ota_reply(conn, 409, "Conflict", "OTA busy\n");
@@ -156,6 +158,7 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
         }
         /* 底层完成目标槽保护、相机暂停、必要的 CM4 hold 和擦除。 */
         result = app_ota_begin(size, version, core, crc, base);
+        /* 检查开始结果 */
         if (result != 0)
         {
             snprintf(text, sizeof(text), "begin failed rc=%d\n", result);
@@ -166,10 +169,12 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
         /* 擦除成功后才计时；ready 响应失败时立即取消会话。 */
         s_started = s_activity = HAL_GetTick();
         s_receiving = 1U;
+        /* 回复 ready 响应 */
         if (app_http_reply(conn, 200, "OK", "text/plain; charset=utf-8", "OTA ready\n") != 0)
             app_http_ota_receive_failed();
         return 1;
     }
+    /* 处理取消请求 */
     if (is_abort)
     {
         /* pending 已保存的阶段不可撤销，不能回复“已取消”。 */
@@ -183,12 +188,12 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
         ota_reply(conn, 200, "OK", "OTA aborted\n");
         return 1;
     }
-    if (s_receiving == 0U)
+    if (s_receiving == 0U) // 如果没有接收会话
     {
         ota_reply(conn, 409, "Conflict", "no receiving session\n");
         return 1;
     }
-    if (is_chunk)
+    if (is_chunk) // 如果是 chunk 接口
     {
         uint32_t offset;
         if (app_http_header_u32(request, "X-Offset", &offset) != 0 || request->body_length == 0U)

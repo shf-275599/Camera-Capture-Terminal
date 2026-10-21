@@ -545,39 +545,46 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   uint8_t running;
   uint32_t max_size;
 
+  /* 检查是否正在忙 */
   if (s_state != APP_OTA_IDLE)
   {
     LOG_ERROR("[OTA]", " begin rejected: busy (state=%d)", (int)s_state);
     return -1;
   }
-
+  /* 检查核心是否有效 */
   if ((core != APP_OTA_CORE_CM7) && (core != APP_OTA_CORE_CM4))
   {
     return -2;
   }
+  /* 检查 EEPROM 状态 */
   if ((boot_eeprom_load(&ee) != 0) ||
       ((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
       ((ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U))
   {
     return -6;
   }
+  /* 检查运行槽是否有效 */
   running = (core == APP_OTA_CORE_CM4) ? cm4_ota_running_slot() : boot_get_running_slot();
+  /* 检查运行槽是否与确认槽匹配 */
   if ((running >= 2U) ||
       (running != ((core == APP_OTA_CORE_CM4) ? ee.cm4_confirmed_slot : ee.confirmed_slot)))
   {
     return -8;
   }
+  /* 检查目标槽是否与链接基址匹配 */
   s_target_slot = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_inactive_index(running)
                                              : boot_slot_inactive_index(running);
   s_target_base = (core == APP_OTA_CORE_CM4) ? cm4_boot_slot_base_get(s_target_slot)
                                              : boot_slot_base_get(s_target_slot);
+  /* 检查链接基址是否与目标槽基址匹配 */
   if (linked_base != s_target_base)
   {
     return -8;
   }
-
+  /* 检查镜像尺寸是否有效 */
   max_size = (core == APP_OTA_CORE_CM4) ? APP_OTA_MAX_IMAGE_SIZE_CM4
                                         : APP_OTA_MAX_IMAGE_SIZE;
+  /* 检查镜像尺寸是否在有效范围内 */
   if ((image_size < 8U) || (image_size > max_size))
   {
     LOG_ERROR("[OTA]", " begin rejected: core=%s size=%lu max=%lu",
@@ -587,40 +594,41 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
     return -2;
   }
 
-  s_image_size = image_size;
-  s_version = version;
-  s_offset = 0U;
-  s_prog_fill = 0U;
-  s_prog_log_next = APP_OTA_PROG_LOG_STEP;
-  s_crc = 0xFFFFFFFFUL;
-  s_cm4_held = 0U;
-  s_expected_crc = expected_crc32;
-  s_core = core;
-  s_state = APP_OTA_PREPARING;
+  s_image_size = image_size;               // 记录镜像尺寸
+  s_version = version;                     // 记录版本号
+  s_offset = 0U;                           // 记录偏移量
+  s_prog_fill = 0U;                        // 记录进度填充
+  s_prog_log_next = APP_OTA_PROG_LOG_STEP; // 记录进度日志下一个位置
+  s_crc = 0xFFFFFFFFUL;                    // 记录 CRC32 值
+  s_cm4_held = 0U;                         // 记录 CM4 是否被 hold
+  s_expected_crc = expected_crc32;         // 记录预期 CRC32 值
+  s_core = core;                           // 记录核心
+  s_state = APP_OTA_PREPARING;             // 记录状态为准备中
+  /* 尝试获取控制权 */
   if (!app_ota_control_try_lock())
   {
     s_state = APP_OTA_IDLE;
     return -1;
   }
-  s_control_owned = 1U;
+  s_control_owned = 1U; // 记录控制权已被获取
   /* 获取控制权后重新核对 EEPROM，防止 KEY0 刚完成切槽。 */
   if (boot_eeprom_load(&ee) != 0 ||
       (ee.flags & BOOT_EE_FLAG_PENDING) != 0U ||
       (ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U)
   {
-    app_ota_abort();
+    app_ota_abort(); // 释放控制权
     return -6;
   }
+  /* 尝试静默系统 */
   if (ota_quiesce_system() != 0)
   {
     app_ota_abort();
     return -9;
   }
-
+  /* 检查核心是否为 CM4 */
   if (core == APP_OTA_CORE_CM4)
   {
     /* —— CM4：hold → 擦 Bank2 空闲槽 —— */
-
     LOG_INFO("[OTA]", " begin CM4 size=%lu ver=0x%08lX active=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
              (unsigned long)version,
@@ -634,6 +642,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
 
     LOG_INFO("[OTA]", " hold CM4 before Bank2 erase");
     s_cm4_held = 1U; // 请求发出后，无论 ACK 是否到达都必须清理
+    /* 尝试 hold CM4 */
     if (cm4_ota_hold_request(APP_OTA_CM4_HOLD_MS) != 0)
     {
       LOG_ERROR("[OTA]", " CM4 hold timeout");
@@ -641,7 +650,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
       return -11;
     }
     LOG_INFO("[OTA]", " CM4 held (ACK ok)");
-
+    /* 尝试擦除 CM4 空闲槽 */
     if (erase_cm4_inactive_slot(s_target_slot) != 0)
     {
       app_ota_abort();
@@ -652,7 +661,6 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   else
   {
     /* —— CM7：擦 Bank1 空闲槽 —— */
-
     LOG_INFO("[OTA]", " begin CM7 size=%lu ver=0x%08lX running=%u(%c) -> target=%u(%c) base=0x%08lX",
              (unsigned long)image_size,
              (unsigned long)version,
@@ -663,7 +671,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
              (unsigned long)s_target_base);
 
     LOG_INFO("[OTA]", " quiesce system (stop cam / suspend peers)");
-
+    /* 尝试擦除 CM7 空闲槽 */
     if (erase_inactive_slot(s_target_slot) != 0)
     {
       app_ota_abort();
@@ -672,7 +680,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
     }
   }
 
-  s_state = APP_OTA_RECV;
+  s_state = APP_OTA_RECV; // 记录状态为接收
   LOG_INFO("[OTA]", " erase OK, waiting for body");
   return 0;
 }
@@ -739,12 +747,13 @@ int app_ota_finish(void)
 {
   boot_eeprom_meta_t ee;
   uint32_t image_crc;
-
+  /* 校验状态 */
   if (s_state != APP_OTA_RECV)
   {
     LOG_ERROR("[OTA]", " finish rejected: not in RECV (state=%d)", (int)s_state);
     return -1;
   }
+  /* 校验写入大小 */
   if ((s_offset + s_prog_fill) != s_image_size)
   {
     LOG_ERROR("[OTA]", " finish size mismatch: written=%lu expect=%lu",
@@ -753,19 +762,19 @@ int app_ota_finish(void)
     app_ota_abort();
     return -2;
   }
-
+  /* 校验 CRC32 */
   if (s_prog_fill > 0U)
   {
-    s_crc = crc32_update(s_crc, s_prog_buf, s_prog_fill);
+    s_crc = crc32_update(s_crc, s_prog_buf, s_prog_fill); // 更新 CRC32 校验和
     if (flush_prog_buf() != 0)
     {
       app_ota_abort();
       return -3;
     }
   }
-
-  ota_log_write_progress(1);
-  image_crc = crc32_finish(s_crc);
+  ota_log_write_progress(1);       // 按步长打印写 Flash 进度
+  image_crc = crc32_finish(s_crc); // 计算 CRC32 校验和
+  /* 校验 CRC32 */
   if (image_crc != s_expected_crc)
   {
     LOG_ERROR("OTA", "CRC mismatch received=0x%08lX expected=0x%08lX",
@@ -773,7 +782,7 @@ int app_ota_finish(void)
     app_ota_abort();
     return -7;
   }
-
+  /* 校验 CM4 向量表 */
   if (s_core == APP_OTA_CORE_CM4)
   {
     /* 校验 CM4 向量表后写 cm4_pending；复位后 prepare_cm4_boot 试跑新槽 */
@@ -808,6 +817,7 @@ int app_ota_finish(void)
              (unsigned long)image_crc,
              (unsigned long)s_version);
   }
+  /* 校验 CM7 向量表 */
   else
   {
     /* 校验 CM7 向量表后写 CM7 pending */
@@ -843,7 +853,7 @@ int app_ota_finish(void)
              (unsigned long)s_version);
   }
 
-  s_state = APP_OTA_PENDING_REBOOT;
+  s_state = APP_OTA_PENDING_REBOOT; // 切换到待复位状态
   /* 即将复位：CM4 hold / peer 挂起可保持 */
   return 0;
 }
