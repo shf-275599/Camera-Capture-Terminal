@@ -38,7 +38,6 @@
 #include "mylog.h"
 #include "usart.h"
 #include "iwdg.h"
-#include "boot_eeprom.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -120,7 +119,6 @@ void MX_FREERTOS_Init(void)
   USART_Rx_Thread_Start();
   App_IPC_Thread_Start();
   App_OV5640_Thread_Start();
-  EEPROM_Thread_Start();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

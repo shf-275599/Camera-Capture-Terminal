@@ -611,7 +611,7 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
     return -1;
   }
   s_control_owned = 1U; // 记录控制权已被获取
-  /* 获取控制权后重新核对 EEPROM，防止 KEY0 刚完成切槽。 */
+  /* 获取控制权后重新核对 EEPROM 启动记录。 */
   if (boot_eeprom_load(&ee) != 0 ||
       (ee.flags & BOOT_EE_FLAG_PENDING) != 0U ||
       (ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U)

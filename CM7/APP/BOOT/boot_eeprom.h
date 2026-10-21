@@ -56,8 +56,6 @@ typedef struct __attribute__((packed))
 
 } boot_eeprom_meta_t; // EEPROM 双备份启动元数据
 
-void EEPROM_Thread_Start(void);
-
 /**
  * @brief  初始化 I2C EEPROM 驱动句柄
  * @retval 0 设备应答，-1 失败

@@ -50,7 +50,7 @@ POST 必须有 Content-Length；不支持 Transfer-Encoding 和 Expect: 100-cont
 
 成功 end 后 pending 已保存，不能通过 abort 撤销，设备返回响应后复位。响应丢失时先查询启动状态，不能把网络异常直接当作升级失败。
 
-KEY0 切槽与 OTA 使用同一控制锁。任何一核存在 pending 时拒绝新升级。CM4 实际运行槽与 pending 匹配后，由 HTTP 管理任务执行最小自动提交；此判据仅证明 CM4 任务已运行并上报槽号，不代表完整业务自检。
+KEY0 手动切槽功能已移除，槽位切换由 OTA pending、复位试启动及确认/回退流程管理。任何一核存在 pending 时拒绝新升级。CM4 实际运行槽与 pending 匹配后，由 HTTP 管理任务执行最小自动提交；此判据仅证明 CM4 任务已运行并上报槽号，不代表完整业务自检。
 
 ## 本轮实测
 

@@ -59,7 +59,7 @@ void app_http_ota_poll(void)
     uint32_t now = HAL_GetTick();
     /* CM4 任务上报实际运行槽后，由同一管理任务确认本轮启动。 */
     uint8_t running = cm4_ota_running_slot();
-    /* 与 KEY0、OTA 共用控制锁，避免同时修改启动记录。 */
+    /* 与 OTA 共用控制锁，避免同时修改启动记录。 */
     if (s_cm4_boot_checked == 0U && running < CM4_APP_SLOT_COUNT &&
         !app_ota_is_busy() && app_ota_control_try_lock())
     {
