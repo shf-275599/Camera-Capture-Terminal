@@ -79,7 +79,8 @@ void app_http_ota_poll(void)
     if (s_receiving != 0U &&
         ((now - s_activity >= HTTP_OTA_IDLE_MS) || (now - s_started >= HTTP_OTA_TOTAL_MS)))
     {
-        LOG_WARN("HTTP-OTA", "session timeout");
+        LOG_WARN("HTTP-OTA", "session timeout total=%lu idle=%lu",
+                 (unsigned long)(now - s_started), (unsigned long)(now - s_activity));
         app_ota_abort();
         s_receiving = 0U;
     }
