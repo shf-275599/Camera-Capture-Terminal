@@ -241,7 +241,7 @@ static int flush_prog_buf(void)
 }
 
 /**
- * @brief  停相机 DMA/预览并挂起其它业务线程，再允许擦写 Flash
+ * @brief  停外部设备 DMA/预览并挂起其它业务线程，再允许擦写 Flash
  * @note   保持中断开启：Eth/tcpip/SysTick 需继续工作；勿长关 __disable_irq
  */
 static int ota_quiesce_system(void)
@@ -302,7 +302,7 @@ int app_ota_session_matches(uint32_t image_size, uint32_t version, app_ota_core_
 }
 
 /**
- * @brief  中止本次 OTA：若持有 CM4 hold 则释放，并恢复相机与协作任务
+ * @brief  中止本次 OTA：若持有 CM4 hold 则释放，并恢复外部设备与协作任务
  * @note   已擦写的 Flash 不回滚；pending 不会被置位
  */
 void app_ota_abort(void)

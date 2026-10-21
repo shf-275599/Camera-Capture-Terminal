@@ -167,7 +167,7 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
             ota_reply(conn, 409, "Conflict", "OTA busy\n");
             return 1;
         }
-        /* 底层完成目标槽保护、相机暂停、必要的 CM4 hold 和擦除。 */
+        /* 底层完成目标槽保护、外部设备暂停、必要的 CM4 hold 和擦除。 */
         result = app_ota_begin(size, version, core, crc, base);
         /* 检查开始结果 */
         if (result != 0)
