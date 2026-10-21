@@ -64,6 +64,10 @@ extern "C"
    */
   uint32_t app_ota_session_version(void);
 
+  /** 检查接收中的会话是否属于同一发布镜像（不修改会话或擦除 Flash）。 */
+  int app_ota_session_matches(uint32_t image_size, uint32_t version, app_ota_core_t core,
+                              uint32_t expected_crc32, uint32_t linked_base);
+
   /**
    * @brief  格式化 OTA 会话状态为字符串
    * @param buf 输出缓冲区

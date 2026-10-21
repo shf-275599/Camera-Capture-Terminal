@@ -35,17 +35,16 @@ static void ota_reply(struct netconn *conn, int code, const char *reason, const 
 }
 
 /**
- * @brief 中止正在接收的 OTA 会话并清除 HTTP 层接收标志
+ * @brief 连接失败时保留接收会话，等待客户端重连或会话超时
  * @retval 无
- * @note  abort 负责恢复相机并释放 CM4 hold。
+ * @note  未完整接收的请求体尚未交给 app_ota_write，不推进偏移或刷新计时。
  */
 void app_http_ota_receive_failed(void)
 {
     if (s_receiving != 0U) // 如果正在接收数据
     {
-        app_ota_abort();  // 中止 OTA 会话
-        s_receiving = 0U; // 清除接收标志
-        LOG_WARN("HTTP-OTA", "receive failed, session aborted");
+        LOG_WARN("HTTP-OTA", "connection failed, session kept written=%lu",
+                 (unsigned long)app_ota_written_bytes());
     }
 }
 
@@ -81,7 +80,8 @@ void app_http_ota_poll(void)
         ((now - s_activity >= HTTP_OTA_IDLE_MS) || (now - s_started >= HTTP_OTA_TOTAL_MS)))
     {
         LOG_WARN("HTTP-OTA", "session timeout");
-        app_http_ota_receive_failed();
+        app_ota_abort();
+        s_receiving = 0U;
     }
 }
 
@@ -152,6 +152,15 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
         /* 检查是否正在忙 */
         if (app_ota_is_busy())
         {
+            if (s_receiving != 0U && app_ota_session_matches(size, version, core, crc, base))
+            {
+                /* 重复 begin 不擦除、不重置 CRC，也不延长会话时限。 */
+                snprintf(text, sizeof(text), "OTA resume written=%lu\n",
+                         (unsigned long)app_ota_written_bytes());
+                if (app_http_reply(conn, 200, "OK", "text/plain; charset=utf-8", text) != 0)
+                    app_http_ota_receive_failed();
+                return 1;
+            }
             ota_reply(conn, 409, "Conflict", "OTA busy\n");
             return 1;
         }
@@ -165,11 +174,11 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
             ota_reply(conn, code, code == 413 ? "Payload Too Large" : (code == 409 ? "Conflict" : "Service Unavailable"), text);
             return 1;
         }
-        /* 擦除成功后才计时；ready 响应失败时立即取消会话。 */
+        /* 擦除成功后才计时；ready 响应丢失时可重复 begin 查询偏移。 */
         s_started = s_activity = HAL_GetTick();
         s_receiving = 1U;
         /* 回复 ready 响应 */
-        if (app_http_reply(conn, 200, "OK", "text/plain; charset=utf-8", "OTA ready\n") != 0)
+        if (app_http_reply(conn, 200, "OK", "text/plain; charset=utf-8", "OTA ready written=0\n") != 0)
             app_http_ota_receive_failed();
         return 1;
     }
@@ -210,7 +219,8 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
         result = app_ota_write(request->body, request->body_length);
         if (result != 0)
         {
-            app_http_ota_receive_failed();
+            app_ota_abort();
+            s_receiving = 0U;
             snprintf(text, sizeof(text), "write failed rc=%d\n", result);
             ota_reply(conn, 500, "Internal Server Error", text);
             return 1;

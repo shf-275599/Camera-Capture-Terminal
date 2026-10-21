@@ -1,12 +1,13 @@
 ﻿$ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $firmwarePath = Join-Path $root 'Makefile/CM7/build_B/BaseProject_CM7_B.bin'
-$job = Start-Job -ArgumentList $firmwarePath -ScriptBlock {
-    param($firmwarePath)
+foreach ($resumeOffset in @(0, 8192)) {
+$job = Start-Job -ArgumentList $firmwarePath,$resumeOffset -ScriptBlock {
+    param($firmwarePath, $resumeOffset)
     $ErrorActionPreference = 'Stop'
     $image = [IO.File]::ReadAllBytes($firmwarePath)
-    $offset = 0
-    $begun = $false
+    $offset = $resumeOffset
+    $begun = $resumeOffset -gt 0
     $listener = [Net.HttpListener]::new()
     $listener.Prefixes.Add('http://127.0.0.1:18757/')
     $listener.Start()
@@ -20,12 +21,13 @@ $job = Start-Job -ArgumentList $firmwarePath -ScriptBlock {
             $body = 'OK'
             $done = $false
             switch ($request.Url.AbsolutePath) {
-                '/ota/status' { $body = "busy=0`nother_core_busy=0`nrunning=0`n" }
+                '/ota/status' { $body = "busy=$([int]$begun)`nother_core_busy=0`nrunning=0`n" }
                 '/ota/begin' {
                     if ($request.Headers['X-Fw-Size'] -ne "$($image.Length)" -or
                         $request.Headers['X-Fw-Base'] -ne '0x080A0000' -or
                         $request.Headers['X-Ota-Core'] -ne 'cm7') { throw 'begin 元数据错误。' }
                     $begun = $true
+                    $body = "OTA ready written=$offset"
                 }
                 '/ota/chunk' {
                     if (-not $begun -or [int]$request.Headers['X-Offset'] -ne $offset) { throw 'offset 错误。' }
@@ -72,3 +74,4 @@ try {
     }
     'CRC32 PASS'
 } finally { Stop-Job $job; Remove-Job $job }
+}

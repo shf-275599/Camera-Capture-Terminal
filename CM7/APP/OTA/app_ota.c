@@ -293,6 +293,14 @@ uint32_t app_ota_session_version(void)
   return (s_state != APP_OTA_IDLE) ? s_version : 0U;
 }
 
+int app_ota_session_matches(uint32_t image_size, uint32_t version, app_ota_core_t core,
+                            uint32_t expected_crc32, uint32_t linked_base)
+{
+  return (s_state == APP_OTA_RECV) && (s_core == core) &&
+         (s_image_size == image_size) && (s_version == version) &&
+         (s_expected_crc == expected_crc32) && (s_target_base == linked_base);
+}
+
 /**
  * @brief  中止本次 OTA：若持有 CM4 hold 则释放，并恢复相机与协作任务
  * @note   已擦写的 Flash 不回滚；pending 不会被置位
@@ -402,7 +410,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM4: Stub@0x%08lX + upload idle slot %c @ 0x%08lX (Bank2); "
-                 "CM7 holds CM4 then programs; abort incomplete session before restarting\r\n",
+                  "CM7 holds CM4 then programs; repeat matching begin to resume\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,
@@ -456,7 +464,7 @@ int app_ota_format_status(char *buf, size_t buflen, app_ota_core_t core)
                  "size_a=%lu\r\n"
                  "size_b=%lu\r\n"
                  "hint=CM7: upload bin linked for slot %c (base 0x%08lX); "
-                 "abort incomplete session before restarting\r\n",
+                  "repeat begin with matching core/size/version/crc32/base to resume\r\n",
                  busy_for_core,
                  (unsigned long)written,
                  (unsigned long)image_size,

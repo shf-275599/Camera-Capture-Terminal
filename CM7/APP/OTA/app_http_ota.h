@@ -1,6 +1,6 @@
 /**
  * @file    app_http_ota.h
- * @brief   HTTP OTA 路由、会话超时和接收失败清理接口
+ * @brief   HTTP OTA 路由、会话超时和连接中断续传接口
  * @note    所有接口由同一 HTTP 任务串行调用。
  */
 #ifndef APP_HTTP_OTA_H
@@ -25,9 +25,9 @@ int app_http_ota_dispatch(struct netconn *conn, const app_http_request_t *reques
 void app_http_ota_poll(void);
 
 /**
- * @brief  接收或响应发送失败时，中止尚未完成的接收会话
+ * @brief  接收或响应发送失败时，保留尚未完成的接收会话
  * @retval 无
- * @note   恢复资源由 app_ota_abort 完成；无接收会话时不执行操作。
+ * @note   不推进偏移或刷新计时；主动取消、写入失败或超时才释放资源。
  */
 void app_http_ota_receive_failed(void);
 

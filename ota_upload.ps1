@@ -65,7 +65,7 @@ try {
     foreach ($line in ($statusText -split "`r?`n")) {
         if ($line -match '^([^=]+)=(.*)$') { $status[$matches[1]] = $matches[2] }
     }
-    if ($status['busy'] -ne '0' -or $status['other_core_busy'] -ne '0') { throw '设备已有 OTA 会话。' }
+    if ($status['other_core_busy'] -ne '0') { throw '设备另一核已有 OTA 会话。' }
     if ($status['running'] -notin @('0', '1')) { throw '设备实际运行槽不可用。' }
     $target = 1 - [int]$status['running']
     $bases = if ($Core -eq 'cm7') { @([uint32]0x08020000, [uint32]0x080A0000) } else { @([uint32]0x08120000, [uint32]0x081A0000) }
@@ -76,13 +76,20 @@ try {
     }
     $crc = [LocalOtaCrc32]::Compute($image)
     Write-Host ('目标 {0} 槽 {1}，地址 0x{2:X8}，长度 {3}，CRC32 0x{4:X8}' -f $Core, $target, $targetBase, $image.Length, $crc)
-    # begin 的响应也可能丢失，失败时尝试取消已创建的会话。
+    # 同一镜像重复 begin 返回当前偏移；响应丢失时保留会话供重跑续传。
     $begun = $true
-    $null = Send-OtaRequest 'POST' '/ota/begin' @{
+    $beginReply = Send-OtaRequest 'POST' '/ota/begin' @{
         'X-Ota-Core' = $Core; 'X-Fw-Size' = $image.Length; 'X-Fw-Version' = $Version
         'X-Fw-Crc32' = ('0x{0:X8}' -f $crc); 'X-Fw-Base' = ('0x{0:X8}' -f $targetBase)
     }
-    for ($offset = 0; $offset -lt $image.Length;) {
+    if ($beginReply -match '\bwritten=(\d+)') {
+        $offset = [uint32]::Parse($matches[1])
+    } elseif ($status['busy'] -eq '0' -and $beginReply.Trim() -eq 'OTA ready') {
+        $offset = [uint32]0 # 兼容尚未部署续传功能的旧固件首次上传。
+    } else { throw 'begin 未返回续传偏移。' }
+    if ($offset -gt $image.Length) { throw '设备返回的续传偏移超出镜像长度。' }
+    Write-Host "从偏移 $offset 继续上传。"
+    for (; $offset -lt $image.Length;) {
         $count = [Math]::Min(8192, $image.Length - $offset)
         $chunk = [byte[]]::new($count)
         [Array]::Copy($image, $offset, $chunk, 0, $count)
@@ -98,7 +105,7 @@ try {
 }
 catch {
     if ($begun -and -not $ending) {
-        try { $null = Send-OtaRequest 'POST' '/ota/abort' @{} } catch { Write-Warning '取消请求未确认，设备会话将按超时清理。' }
+        Write-Warning '上传未完成；可在空闲 60 秒、会话总计 10 分钟内重跑同一命令续传，超时后会话自动清理。'
     }
     if ($ending) { Write-Warning 'end 阶段结果未确认，请先查询设备启动日志和 OTA 状态，避免直接重传。' }
     throw

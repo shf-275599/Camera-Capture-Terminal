@@ -171,7 +171,7 @@ static void http_handle_client(struct netconn *conn)
     int result = http_read_request(conn);
     if (result != 0) // 如果读取失败
     {
-        app_http_ota_receive_failed(); // 接收或响应发送失败时，中止尚未完成的接收会话
+        app_http_ota_receive_failed(); // 请求未收完整时保留会话，重连后按已接收偏移续传
         http_reply_text(conn,
                         -result,
                         "Request Rejected",

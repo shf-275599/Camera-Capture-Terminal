@@ -36,7 +36,11 @@ try {
     $null = Check-Request POST '/ota/begin' $headers @() 413
     $headers['X-Fw-Size'] = '8'
     $null = Check-Request POST '/ota/begin' $headers @() 200
+    $resume = Check-Request POST '/ota/begin' $headers @() 200
+    if ($resume -notmatch 'written=0') { throw '重复 begin 未返回当前偏移。' }
+    $headers['X-Fw-Crc32'] = '1'
     $null = Check-Request POST '/ota/begin' $headers @() 409
+    $headers['X-Fw-Crc32'] = '0'
     $null = Check-Request POST '/ota/chunk' @{'X-Offset'='1'} ([byte[]](1,2)) 409
     $tcp = [Net.Sockets.TcpClient]::new($Device, 80)
     try {
@@ -49,9 +53,20 @@ try {
         if ([Text.Encoding]::ASCII.GetString($reply, 0, $count) -notmatch '^HTTP/1.1 413 ') { throw '超限请求未返回 413。' }
         'PASS oversized header HTTP 413'
     } finally { $tcp.Dispose() }
-    $null = Check-Request POST '/ota/chunk' @{'X-Offset'='0'} ([byte[]](1,2)) 409
-    $null = Check-Request POST '/ota/begin' $headers @() 200
-    $null = Check-Request POST '/ota/chunk' @{'X-Offset'='0'} ([byte[]](1,2,3,4,5,6,7,8)) 200
+    # 半块请求断开后，完整请求体尚未交给 OTA，偏移应保持为 0。
+    $tcp = [Net.Sockets.TcpClient]::new($Device, 80)
+    try {
+        $stream = $tcp.GetStream()
+        $head = [Text.Encoding]::ASCII.GetBytes("POST /ota/chunk HTTP/1.1`r`nHost: device`r`nContent-Length: 8`r`nX-Offset: 0`r`n`r`n")
+        $stream.Write($head, 0, $head.Length)
+        $stream.Write(([byte[]](1,2,3)), 0, 3)
+    } finally { $tcp.Dispose() }
+    $resume = Check-Request POST '/ota/begin' $headers @() 200
+    if ($resume -notmatch 'written=0') { throw '半块断线改变了接收偏移。' }
+    $null = Check-Request POST '/ota/chunk' @{'X-Offset'='0'} ([byte[]](1,2)) 200
+    $resume = Check-Request POST '/ota/begin' $headers @() 200
+    if ($resume -notmatch 'written=2') { throw '续传偏移错误。' }
+    $null = Check-Request POST '/ota/chunk' @{'X-Offset'='2'} ([byte[]](3,4,5,6,7,8)) 200
     $null = Check-Request POST '/ota/end' @{} @() 500
     $null = Check-Request POST '/ota/abort' @{} @() 200
     $status = Check-Request GET '/ota/status' @{'X-Ota-Core'='cm7'} @() 200
