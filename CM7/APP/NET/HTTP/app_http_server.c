@@ -176,7 +176,8 @@ static void http_handle_client(struct netconn *conn)
                         -result,
                         "Request Rejected",
                         "text/plain; charset=utf-8",
-                        "bad request\r\n"); // 回复 400 错误码
+                        "bad request\r\n");
+        /* 回复错误码，由 result 决定，可能是 400，也可能是 408 超时、413 请求体过大等 */
         return;
     }
 
