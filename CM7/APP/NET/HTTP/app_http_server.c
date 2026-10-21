@@ -136,11 +136,11 @@ static void Http_Thread(void *argument)
                   (unsigned int)APP_HTTP_PORT, (int)error);
         netconn_delete(listen_connection); // 删除监听连接
         return;
-    }
+    } // 监听成功
 
     LOG_INFO("CM7", "HTTP: server listening on port %u",
              (unsigned int)APP_HTTP_PORT);
-    netconn_set_recvtimeout(listen_connection, APP_HTTP_RECV_TIMEOUT_MS); // 设置接收超时时间
+    netconn_set_recvtimeout(listen_connection, APP_HTTP_RECV_TIMEOUT_MS); // 设置接收超时时间：5000ms
 
     for (;;)
     {
@@ -183,7 +183,7 @@ static void http_handle_client(struct netconn *conn)
     app_http_ota_poll(); // 处理 CM4 启动确认和 OTA 接收会话超时，等待、接收期间可能跨过超时点，执行前必须再检查
 
     /* 分发 OTA 状态查询、开始、分块写入、结束和取消请求 */
-    if (app_http_ota_dispatch(conn, &s_request) != 0) // 如果未处理
+    if (app_http_ota_dispatch(conn, &s_request) != 0) // OTA 路由已经处理了该请求
         return;                                       // 直接退出
 
     /* 处理 GET 请求 */

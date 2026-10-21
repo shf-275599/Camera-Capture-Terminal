@@ -51,38 +51,40 @@ void app_http_ota_receive_failed(void)
 /**
  * @brief 处理 CM4 启动确认和 OTA 接收会话超时
  * @retval 无
- * @note  本轮 CM4 检查完成后不再重复提交；EEPROM 失败时保留后续重试机会。
+ * @note  由 HTTP 任务反复调用，与 OTA 请求串行执行：
+ *        1. 无升级会话时，确认 CM4 实际运行的 pending 槽；EEPROM 失败则后续重试。
+ *        2. 接收会话空闲达 60 秒或总时长达 10 分钟时，取消升级并释放资源。
+ *        本函数不接收固件数据，也不因轮询或状态查询延长会话时限。
  */
 void app_http_ota_poll(void)
 {
     uint32_t now = HAL_GetTick();
     /* CM4 任务上报实际运行槽后，由同一管理任务确认本轮启动。 */
     uint8_t running = cm4_ota_running_slot();
-    /* 与 OTA 请求在同一 HTTP 任务中串行执行，仅在会话空闲时确认。 */
-    if (s_cm4_boot_checked == 0U && running < CM4_APP_SLOT_COUNT &&
-        !app_ota_is_busy())
+    /* 无升级会话时，确认 CM4 实际运行的 pending 槽；EEPROM 失败则后续重试。 */
+    if (s_cm4_boot_checked == 0U && running < CM4_APP_SLOT_COUNT && !app_ota_is_busy())
     {
         boot_eeprom_meta_t meta;
         if (boot_eeprom_load(&meta) == 0)
         {
             /* 无待确认镜像时结束检查；有 pending 时只确认实际运行的候选槽。 */
             if ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) == 0U)
-                s_cm4_boot_checked = 1U;
+                s_cm4_boot_checked = 1U; // 无 pending 时直接确认
+            /* 确认实际运行槽位的 pending 时，提交并更新状态。 */
             else if (meta.cm4_pending_slot == running && boot_eeprom_commit_cm4_pending(&meta) == 0)
             {
-                s_cm4_boot_checked = 1U;
+                s_cm4_boot_checked = 1U; // 确认 pending 时更新状态
                 LOG_INFO("HTTP-OTA", "CM4 pending committed -> confirmed=%u", running);
             }
         }
     }
-    /* 状态查询不续期；无符号时间差允许 HAL tick 正常回绕。 */
-    if (s_receiving != 0U &&
-        ((now - s_activity >= HTTP_OTA_IDLE_MS) || (now - s_started >= HTTP_OTA_TOTAL_MS)))
+    /* 会话超时处理 */
+    if (s_receiving != 0U && ((now - s_activity >= HTTP_OTA_IDLE_MS) || (now - s_started >= HTTP_OTA_TOTAL_MS)))
     {
         LOG_WARN("HTTP-OTA", "session timeout total=%lu idle=%lu",
                  (unsigned long)(now - s_started), (unsigned long)(now - s_activity));
-        app_ota_abort();
-        s_receiving = 0U;
+        app_ota_abort();  // 取消当前会话
+        s_receiving = 0U; // 重置接收状态
     }
 }
 
