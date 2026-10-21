@@ -16,8 +16,6 @@
 #include "boot_slot.h"
 #include "app_ov5640.h"
 #include "mylog.h"
-#include "FreeRTOS.h"
-#include "task.h"
 
 #define APP_OTA_PROG_CHUNK (8192U)           // 编程缓冲粒度
 #define APP_OTA_CM4_HOLD_MS (3000U)          // 等待 CM4 ACK 超时
@@ -44,33 +42,6 @@ static uint8_t s_prog_buf[APP_OTA_PROG_CHUNK];
 static uint32_t s_prog_fill;     // prog_buf 已填字节
 static uint32_t s_prog_log_next; // 下一次进度日志阈值
 static uint8_t s_cm4_held;       // 1=已成功 hold CM4，abort 须释放
-static uint8_t s_control_locked; // 1=已占用，0=未占用
-static uint8_t s_control_owned;
-
-/**
- * @brief  尝试获取 OTA 控制锁（非阻塞）
- * @return 1=锁空闲，成功获取，0=锁被其他任务占用，不可获取锁
- */
-int app_ota_control_try_lock(void)
-{
-  int acquired = 0U;                   // 保存获取结果：0=不可获取锁，1=成功获取
-  taskENTER_CRITICAL();                // 进入临界区：防止“判断+修改”过程被其他任务打断
-  acquired = (s_control_locked == 0U); // lock 为 0 表示空闲，acquired 可以进行获取；lock 为 1 表示已被其他任务占用，acquired 为 0 不可获取
-  if (acquired)                        // 若空闲，则立即标记为已占用
-    s_control_locked = 1U;             // 成功获取锁，设置为已占用
-  taskEXIT_CRITICAL();                 // 退出临界区：恢复中断/任务调度
-  return acquired;                     // 返回是否成功获取锁
-}
-
-/**
- * @brief  释放 OTA 控制锁
- */
-void app_ota_control_unlock(void)
-{
-  taskENTER_CRITICAL();  // 进入临界区：防止其他任务修改 s_control_locked
-  s_control_locked = 0U; // 释放锁，设置为未占用
-  taskEXIT_CRITICAL();   // 退出临界区：恢复中断/任务调度
-}
 
 /**
  * @brief  获取会话内已接收/缓冲的总字节（offset + fill）
@@ -356,11 +327,6 @@ void app_ota_abort(void)
   s_expected_crc = 0U;
   s_prog_log_next = 0U;
   ota_restore_system();
-  if (s_control_owned != 0U)
-  {
-    s_control_owned = 0U;
-    app_ota_control_unlock();
-  }
 }
 
 /**
@@ -604,21 +570,6 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
   s_expected_crc = expected_crc32;         // 记录预期 CRC32 值
   s_core = core;                           // 记录核心
   s_state = APP_OTA_PREPARING;             // 记录状态为准备中
-  /* 尝试获取控制权 */
-  if (!app_ota_control_try_lock())
-  {
-    s_state = APP_OTA_IDLE;
-    return -1;
-  }
-  s_control_owned = 1U; // 记录控制权已被获取
-  /* 获取控制权后重新核对 EEPROM 启动记录。 */
-  if (boot_eeprom_load(&ee) != 0 ||
-      (ee.flags & BOOT_EE_FLAG_PENDING) != 0U ||
-      (ee.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U)
-  {
-    app_ota_abort(); // 释放控制权
-    return -6;
-  }
   /* 尝试静默系统 */
   if (ota_quiesce_system() != 0)
   {

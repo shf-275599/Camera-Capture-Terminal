@@ -37,7 +37,7 @@ static void ota_reply(struct netconn *conn, int code, const char *reason, const 
 /**
  * @brief 中止正在接收的 OTA 会话并清除 HTTP 层接收标志
  * @retval 无
- * @note  abort 负责恢复相机、释放 CM4 hold 和控制锁。
+ * @note  abort 负责恢复相机并释放 CM4 hold。
  */
 void app_http_ota_receive_failed(void)
 {
@@ -59,9 +59,9 @@ void app_http_ota_poll(void)
     uint32_t now = HAL_GetTick();
     /* CM4 任务上报实际运行槽后，由同一管理任务确认本轮启动。 */
     uint8_t running = cm4_ota_running_slot();
-    /* 与 OTA 共用控制锁，避免同时修改启动记录。 */
+    /* 与 OTA 请求在同一 HTTP 任务中串行执行，仅在会话空闲时确认。 */
     if (s_cm4_boot_checked == 0U && running < CM4_APP_SLOT_COUNT &&
-        !app_ota_is_busy() && app_ota_control_try_lock())
+        !app_ota_is_busy())
     {
         boot_eeprom_meta_t meta;
         if (boot_eeprom_load(&meta) == 0)
@@ -75,7 +75,6 @@ void app_http_ota_poll(void)
                 LOG_INFO("HTTP-OTA", "CM4 pending committed -> confirmed=%u", running);
             }
         }
-        app_ota_control_unlock(); // 释放控制锁
     }
     /* 状态查询不续期；无符号时间差允许 HAL tick 正常回绕。 */
     if (s_receiving != 0U &&

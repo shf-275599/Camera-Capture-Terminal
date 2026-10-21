@@ -41,17 +41,6 @@ extern "C"
   int app_ota_is_busy(void);
 
   /**
-   * @brief  尝试获取 OTA 会话控制锁
-   * @return int 1：成功获取；0：已占用
-   */
-  int app_ota_control_try_lock(void);
-
-  /**
-   * @brief  释放 OTA 会话控制锁
-   */
-  void app_ota_control_unlock(void);
-
-  /**
    * @brief  获取当前 OTA 会话的目标核
    * @return app_ota_core_t 目标核
    */
