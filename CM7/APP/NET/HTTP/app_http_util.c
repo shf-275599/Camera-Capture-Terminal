@@ -3,6 +3,7 @@
  * @brief   读取请求、处理 TCP 分包、解析方法和路径、发送响应
  */
 #include "app_http_util.h"
+#include "mylog.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -232,8 +233,13 @@ int app_http_send_all(struct netconn *conn, const void *data, size_t length)
     while (length != 0U)
     {
         size_t written = 0U;
-        if (netconn_write_partly(conn, bytes, length, NETCONN_COPY, &written) != ERR_OK ||
-            written == 0U || written > length) return -1;
+        err_t error = netconn_write_partly(conn, bytes, length, NETCONN_COPY, &written);
+        if (error != ERR_OK || written == 0U || written > length)
+        {
+            LOG_WARN("HTTP", "send failed err=%d remaining=%lu written=%lu",
+                     (int)error, (unsigned long)length, (unsigned long)written);
+            return -1;
+        }
         bytes += written;
         length -= written;
     }
