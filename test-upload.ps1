@@ -1,4 +1,8 @@
 ﻿$ErrorActionPreference = 'Stop'
+$previousTask = $env:QT_OTA_TASK_FILE
+$taskDirectory = Join-Path $HOME ('temp/qt-ota-normal-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $taskDirectory | Out-Null
+$env:QT_OTA_TASK_FILE = Join-Path $taskDirectory 'upload.json'
 $firmware = (Resolve-Path (Join-Path $PSScriptRoot '../BaseProject/Makefile/CM7/build_B/BaseProject_CM7_B.bin')).Path
 $job = Start-Job -ArgumentList $firmware -ScriptBlock {
     param($path)
@@ -22,6 +26,7 @@ $job = Start-Job -ArgumentList $firmware -ScriptBlock {
                     if ($request.Headers['X-Fw-Base'] -ne '0x80a0000' -or
                         [int]$request.Headers['X-Fw-Size'] -ne $image.Length -or
                         $request.Headers['X-Ota-Core'] -ne 'cm7') { throw '元数据错误。' }
+                    $text = 'OTA ready written=0'
                 }
                 '/ota/chunk' {
                     if ([int]$request.Headers['X-Offset'] -ne $offset) { throw 'offset 错误。' }
@@ -66,4 +71,8 @@ try {
     $result = @(Receive-Job $job)
     $result
     if (-not ($result -match 'QT UPLOAD PASS')) { throw 'Qt 上传验证未通过。' }
-} finally { Stop-Job $job; Remove-Job $job }
+} finally {
+    Stop-Job $job; Remove-Job $job
+    $env:QT_OTA_TASK_FILE = $previousTask
+    Remove-Item $taskDirectory -Recurse -Force
+}

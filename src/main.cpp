@@ -30,6 +30,161 @@ class Window : public QWidget
     int offset = 0;
     int targetSlot = -1;
     bool working = false, session = false, ending = false, cancelling = false;
+    bool closing = false, testMode = false, allowRestart = false;
+    quint32 imageCrc = 0, imageBase = 0;
+    QByteArray imageHash;
+    QTimer retryTimer;
+    QElapsedTimer recoveryTime;
+    int retryCount = 0, lastCode = 0;
+    bool transportFailed = false;
+
+    QString taskPath() const
+    {
+        const QString overridePath = qEnvironmentVariable("QT_OTA_TASK_FILE");
+        return overridePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation) + "/upload.json" : overridePath;
+    }
+
+    bool saveTask()
+    {
+        QJsonObject task;
+        task["url"] = baseUrl.toString();
+        task["file"] = QFileInfo(fileName->text()).absoluteFilePath();
+        task["core"] = QString::fromLatin1(selectedCore);
+        task["version"] = double(selectedVersion);
+        task["size"] = image.size();
+        task["crc"] = double(imageCrc);
+        task["base"] = double(imageBase);
+        task["slot"] = targetSlot;
+        task["sha256"] = QString::fromLatin1(imageHash.toHex());
+        task["ending"] = ending;
+        if (!QDir().mkpath(QFileInfo(taskPath()).absolutePath())) return false;
+        QSaveFile file(taskPath());
+        const QByteArray data = QJsonDocument(task).toJson();
+        return file.open(QIODevice::WriteOnly) && file.write(data) == data.size() && file.commit();
+    }
+
+    void pauseUpload(const QString &reason)
+    {
+        retryTimer.stop();
+        append(reason);
+        status->setText(QStringLiteral("上传已暂停，任务已保留"));
+        setWorking(false);
+    }
+
+    void recover()
+    {
+        if (!recoveryTime.isValid()) recoveryTime.start();
+        if (recoveryTime.elapsed() >= 60000) {
+            pauseUpload(QStringLiteral("连续恢复失败已达 60 秒，请恢复网络后重开程序继续。"));
+            return;
+        }
+        const int delay = qMin(5000, 1000 * (1 << qMin(retryCount++, 3)));
+        status->setText(QStringLiteral("连接中断，%1 秒后重连…").arg(delay / 1000));
+        retryTimer.start(delay);
+    }
+
+    void beginUpload()
+    {
+        request("POST", "/ota/begin", {{"X-Fw-Size", QByteArray::number(image.size())},
+                {"X-Fw-Version", QByteArray::number(selectedVersion)},
+                {"X-Fw-Crc32", "0x" + QByteArray::number(imageCrc, 16)},
+                {"X-Fw-Base", "0x" + QByteArray::number(imageBase, 16)}}, {},
+                [this](bool ok, QByteArray data) {
+            if (!ok) { failed(); return; }
+            QRegularExpression expression("^OTA (?:ready|resume) written=([0-9]+)\\s*$");
+            const auto match = expression.match(QString::fromLatin1(data));
+            bool valid = false;
+            const qulonglong written = match.captured(1).toULongLong(&valid);
+            if (!match.hasMatch() || !valid || written > quint64(image.size())) {
+                pauseUpload(QStringLiteral("设备返回了无效续传偏移，已停止。")); return;
+            }
+            // ready=0 表示设备原会话已消失，可能刚被本次 begin 重新创建。
+            if (match.captured(0).startsWith("OTA ready") && !allowRestart) {
+                if (testMode || QMessageBox::question(this, QStringLiteral("会话已失效"),
+                        QStringLiteral("设备在查询后丢失了会话，begin 已重新初始化目标槽，是否从头上传？")) != QMessageBox::Yes) {
+                    pauseUpload(QStringLiteral("设备原会话已失效，等待确认从头上传。")); return;
+                }
+            }
+            allowRestart = false;
+            offset = int(written);
+            progress->setValue(offset);
+            recoveryTime.invalidate(); retryCount = 0;
+            append(QStringLiteral("设备确认续传偏移：%1").arg(offset));
+            sendChunk();
+        });
+    }
+
+    void checkRecovery()
+    {
+        request("GET", "/ota/status", {}, {}, [this](bool ok, QByteArray data) {
+            if (!ok) { failed(); return; }
+            const auto values = parseStatus(data);
+            if (ending) {
+                bool versionOk = false, sizeOk = false;
+                const QByteArray suffix = targetSlot ? "b" : "a";
+                const quint32 ver = values.value("version_" + suffix).toUInt(&versionOk, 0);
+                const int size = values.value("size_" + suffix).toInt(&sizeOk, 0);
+                if (versionOk && sizeOk && ver == selectedVersion && size == image.size() &&
+                    values.value("running") == QByteArray::number(targetSlot) && values.value("flags") == "0x00") {
+                    QFile::remove(taskPath()); session = false;
+                    append(QStringLiteral("设备报告目标槽已运行，版本与长度匹配；请核对实际业务。"));
+                    status->setText(QStringLiteral("设备已报告目标固件运行")); setWorking(false);
+                } else recover();
+                return;
+            }
+            if (values.value("flags") != "0x00" || values.value("other_core_busy") != "0" ||
+                values.value("running") != QByteArray::number(1 - targetSlot)) {
+                pauseUpload(QStringLiteral("设备槽位或 pending 状态已变化，请查询状态。")); return;
+            }
+            if (values.value("busy") == "0" && !allowRestart) {
+                if (testMode || QMessageBox::question(this, QStringLiteral("会话已失效"),
+                        QStringLiteral("设备接收会话已超时或已复位，是否擦除目标槽并从头上传？")) != QMessageBox::Yes) {
+                    pauseUpload(QStringLiteral("设备会话已失效，等待确认从头上传。")); return;
+                }
+                allowRestart = true;
+            } else if (values.value("busy") != "0" && values.value("busy") != "1") {
+                pauseUpload(QStringLiteral("设备状态无效。")); return;
+            }
+            beginUpload();
+        });
+    }
+
+    void restoreTask()
+    {
+        QFile taskFile(taskPath());
+        if (!taskFile.exists()) return;
+        if (!testMode && QMessageBox::question(this, QStringLiteral("恢复上传"),
+                QStringLiteral("发现未完成任务，是否校验固件并恢复上传？")) != QMessageBox::Yes) return;
+        if (!taskFile.open(QIODevice::ReadOnly)) { pauseUpload(QStringLiteral("无法读取保存任务。")); return; }
+        const QJsonObject task = QJsonDocument::fromJson(taskFile.readAll()).object();
+        address->setText(task.value("url").toString());
+        fileName->setText(task.value("file").toString());
+        version->setText(QString::number(quint32(task.value("version").toDouble())));
+        const QString coreName = task.value("core").toString();
+        if (coreName != "cm7" && coreName != "cm4") { pauseUpload(QStringLiteral("保存任务核心无效。")); return; }
+        core->setCurrentIndex(coreName == "cm4" ? 1 : 0);
+        if (!setup()) return;
+        QFile file(fileName->text());
+        if (!file.open(QIODevice::ReadOnly) || file.size() < 8 || file.size() > 393216) {
+            pauseUpload(QStringLiteral("原固件无法读取，请恢复原文件后重试。")); return;
+        }
+        image = file.readAll();
+        imageHash = QCryptographicHash::hash(image, QCryptographicHash::Sha256);
+        imageCrc = crc32(image);
+        targetSlot = task.value("slot").toInt(-1);
+        imageBase = quint32(task.value("base").toDouble());
+        const quint32 expectedBase = (selectedCore == "cm7" ? 0x08020000U : 0x08120000U) + (targetSlot == 1 ? 0x80000U : 0U);
+        if ((targetSlot != 0 && targetSlot != 1) || imageBase != expectedBase ||
+            task.value("sha256").toString().toLatin1() != imageHash.toHex() ||
+            task.value("size").toInt() != image.size() || quint32(task.value("crc").toDouble()) != imageCrc) {
+            pauseUpload(QStringLiteral("固件已改变或任务记录无效，拒绝恢复。")); return;
+        }
+        selectedVersion = quint32(task.value("version").toDouble());
+        ending = task.value("ending").toBool(); session = true; cancelling = false; allowRestart = false;
+        progress->setRange(0, image.size());
+        setWorking(true); recoveryTime.start(); retryCount = 0;
+        checkRecovery();
+    }
 
     void append(const QString &text)
     {
@@ -41,7 +196,7 @@ class Window : public QWidget
         working = value;
         for (QWidget *w : QList<QWidget *>{address, fileName, version, core, browse, query, upload})
             w->setEnabled(!value);
-        cancel->setEnabled(value && !ending);
+        cancel->setEnabled((value || session) && !ending);
     }
 
     bool setup()
@@ -84,9 +239,12 @@ class Window : public QWidget
         timer->start(45000);
         connect(current, &QNetworkReply::finished, this, [=]() {
             timer->stop();
+            if (closing) { current->deleteLater(); return; }
             const int code = current->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            lastCode = code;
             const QByteArray data = current->readAll();
             const bool ok = current->error() == QNetworkReply::NoError && code >= 200 && code < 300;
+            transportFailed = current->error() != QNetworkReply::NoError && (code == 0 || (code >= 200 && code < 300));
             if (!ok && !cancelling) {
                 append(QStringLiteral("请求失败：HTTP %1，%2\n%3").arg(code)
                        .arg(current->property("timedOut").toBool() ? QStringLiteral("请求超时") : current->errorString())
@@ -164,6 +322,7 @@ class Window : public QWidget
         status->setText(QStringLiteral("正在取消升级…"));
         request("POST", "/ota/abort", {}, {}, [this](bool ok, QByteArray) {
             session = false;
+            if (ok) QFile::remove(taskPath());
             append(ok ? QStringLiteral("会话已取消，可重新开始。") : QStringLiteral("取消未确认，请查询状态；设备会话会按超时清理。"));
             status->setText(QStringLiteral("上传已停止"));
             setWorking(false);
@@ -172,23 +331,21 @@ class Window : public QWidget
 
     void failed()
     {
-        if (ending) {
-            session = false;
-            append(QStringLiteral("结束阶段结果未确认，请查询设备状态和启动日志后再操作。"));
-            status->setText(QStringLiteral("升级结果待确认"));
-            setWorking(false);
-        } else abortSession();
+        if (session && (ending || transportFailed || lastCode == 0 || lastCode == 408 || lastCode >= 500)) recover();
+        else pauseUpload(QStringLiteral("请求被拒绝，任务已保留，请查询设备状态。"));
     }
 
     void sendChunk()
     {
         if (offset >= image.size()) {
             ending = true;
+            if (!saveTask()) { ending = false; pauseUpload(QStringLiteral("无法保存结束阶段，已停止上传。")); return; }
             cancel->setEnabled(false);
             status->setText(QStringLiteral("校验镜像、保存 pending…"));
             request("POST", "/ota/end", {}, {}, [this](bool ok, QByteArray data) {
                 if (!ok) { failed(); return; }
                 session = false;
+                QFile::remove(taskPath());
                 append(QString::fromUtf8(data).trimmed());
                 append(QStringLiteral("上传与 pending 保存成功，等待设备复位；请查询状态并核对实际画面。"));
                 status->setText(QStringLiteral("上传成功，设备正在复位"));
@@ -209,6 +366,7 @@ class Window : public QWidget
 
     void startUpload()
     {
+        if (QFile::exists(taskPath())) { restoreTask(); return; }
         if (!setup()) return;
         bool valid;
         const qulonglong number = version->text().trimmed().toULongLong(&valid, 10);
@@ -220,6 +378,9 @@ class Window : public QWidget
         image = file.readAll();
         if (image.size() != file.size()) { append(QStringLiteral("固件读取不完整。")); return; }
         selectedVersion = quint32(number);
+        imageCrc = crc32(image);
+        imageHash = QCryptographicHash::hash(image, QCryptographicHash::Sha256);
+        recoveryTime.invalidate(); retryCount = 0; retryTimer.stop();
         ending = session = cancelling = false;
         offset = 0;
         progress->setRange(0, image.size());
@@ -245,30 +406,40 @@ class Window : public QWidget
                 failed(); return;
             }
             const quint32 crc = crc32(image);
+            imageBase = base;
             append(QStringLiteral("目标 %1 %2，%3 字节，CRC32 0x%4")
                    .arg(QString::fromLatin1(selectedCore)).arg(targetSlot ? "B" : "A").arg(image.size()).arg(crc, 8, 16, QChar('0')));
             status->setText(QStringLiteral("准备升级，正在擦除空闲槽…"));
             session = true;
-            request("POST", "/ota/begin", {{"X-Fw-Size", QByteArray::number(image.size())},
-                    {"X-Fw-Version", QByteArray::number(selectedVersion)},
-                    {"X-Fw-Crc32", "0x" + QByteArray::number(crc, 16)},
-                    {"X-Fw-Base", "0x" + QByteArray::number(base, 16)}}, {},
-                    [this](bool ready, QByteArray) { if (ready) sendChunk(); else failed(); });
+            if (!saveTask()) { session = false; pauseUpload(QStringLiteral("无法保存上传任务，已停止。")); return; }
+            allowRestart = true;
+            beginUpload();
         });
     }
 
 protected:
     void closeEvent(QCloseEvent *event) override
     {
-        if (working) {
-            append(QStringLiteral("请先取消上传，等待当前请求结束后关闭窗口。"));
-            event->ignore();
-        } else event->accept();
+        closing = true;
+        retryTimer.stop();
+        if (reply) reply->abort();
+        event->accept();
     }
 
 public:
     void runTest(const QStringList &args)
     {
+        testMode = args.contains("--test-upload") || args.contains("--test-resume");
+        if (args.contains("--test-resume")) {
+            restoreTask();
+            QTimer *watch = new QTimer(this);
+            connect(watch, &QTimer::timeout, this, [this]() {
+                if (!working) { qInfo().noquote() << log->toPlainText(); qApp->exit(status->text() == QStringLiteral("上传成功，设备正在复位") || status->text() == QStringLiteral("设备已报告目标固件运行") ? 0 : 1); }
+            });
+            watch->start(100);
+            return;
+        }
+        if (!args.contains("--test-query") && !args.contains("--smoke-test") && !testMode) restoreTask();
         if (args.contains("--test-query")) {
             setup();
             request("GET", "/ota/status", {}, {}, [this](bool ok, QByteArray data) {
@@ -286,7 +457,7 @@ public:
             connect(watch, &QTimer::timeout, this, [this]() {
                 if (!working) {
                     qInfo().noquote() << log->toPlainText();
-                    qApp->exit(status->text() == QStringLiteral("上传成功，设备正在复位") ? 0 : 1);
+                    qApp->exit(status->text() == QStringLiteral("上传成功，设备正在复位") || status->text() == QStringLiteral("设备已报告目标固件运行") ? 0 : 1);
                 }
             });
             watch->start(100);
@@ -296,6 +467,8 @@ public:
     Window()
     {
         setWindowTitle(QStringLiteral("qt-ota · STM32 双核固件升级"));
+        retryTimer.setSingleShot(true);
+        connect(&retryTimer, &QTimer::timeout, this, [this]() { checkRecovery(); });
         resize(700, 520);
         network.setProxy(QNetworkProxy::NoProxy);
         address = new QLineEdit("192.168.10.2");
@@ -349,6 +522,7 @@ public:
         connect(upload, &QPushButton::clicked, this, [this]() { startUpload(); });
         connect(clearQuery, &QPushButton::clicked, log, &QPlainTextEdit::clear);
         connect(cancel, &QPushButton::clicked, this, [this]() {
+            retryTimer.stop();
             cancelling = true;
             cancel->setEnabled(false);
             if (reply) reply->abort(); else abortSession();
