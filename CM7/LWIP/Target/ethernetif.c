@@ -322,6 +322,9 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   ETH_BufferTypeDef Txbuffer[ETH_TX_DESC_CNT] = {0};
   ETH_TxPacketConfig tx_config;
 
+  /* 已完成的 DMA 包应及时释放，不能等描述符耗尽后才归还 LwIP heap。 */
+  HAL_ETH_ReleaseTxPacket(&heth);
+
   memset(Txbuffer, 0 , ETH_TX_DESC_CNT*sizeof(ETH_BufferTypeDef));
 
   /* Set Tx packet config common parameters */
@@ -627,6 +630,8 @@ void ethernet_link_thread(void* argument)
       previous_state = state;
     }
     LOCK_TCPIP_CORE();
+    /* 即使断线后没有新发送，也回收已完成包，避免旧连接占满小容量 heap。 */
+    HAL_ETH_ReleaseTxPacket(&heth);
     uint32_t current_ip = netif_ip4_addr(netif)->addr;
     if (current_ip != previous_ip)
     {
