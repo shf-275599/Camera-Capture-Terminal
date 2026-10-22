@@ -194,7 +194,7 @@ static void http_handle_client(struct netconn *conn)
                         405,
                         "Method Not Allowed",
                         "text/plain; charset=utf-8",
-                        "only GET is supported\r\n"); // 提取路径失败，回复 405 错误码
+                        "only GET is supported\r\n"); // 非 OTA 请求的方法不是 GET，回复 405
         return;
     }
 
@@ -279,7 +279,7 @@ static int http_read_request(struct netconn *conn)
 
     /* 设置接收超时 */
     netconn_set_recvtimeout(conn, 1000);                     // 设置接收超时时间为 1000ms
-    netconn_set_sendtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS); // 设置发送超时时间为 30000ms
+    netconn_set_sendtimeout(conn, APP_HTTP_RECV_TIMEOUT_MS); // 设置发送超时时间为 5000ms
 
     while (result == 0)
     {

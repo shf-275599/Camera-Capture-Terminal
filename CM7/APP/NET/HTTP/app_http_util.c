@@ -166,7 +166,9 @@ static int http_parse_header(app_http_request_t *request)
  * @param   request  要添加数据的 HTTP 请求结构体指针
  * @param   data  要添加的数据指针
  * @param   length  要添加的数据长度
- * @retval  0 成功；-1 失败
+ * @retval  0 请求未完整，需要更多数据
+ *          1 请求完整
+ *          负值表示错误，其相反数为对应 HTTP 状态码
  */
 int app_http_request_feed(app_http_request_t *request, const uint8_t *data, size_t length)
 {
