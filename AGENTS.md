@@ -12,11 +12,12 @@
 
 ## HTTP / OTA 验证
 
-- 本机模拟上传测试：先运行 `make -C Makefile/CM7 APP_SLOT=B`，再在 Windows PowerShell 运行 `./tests/http/uploader_test.ps1`；它固定读取 CM7 B BIN，在 `127.0.0.1:18757` 模拟首次上传和续传，并校验 CRC32。
-- `./tests/http/device_test.ps1 -Device <IP>` 要求 CM7 已确认运行 A 且无 pending，会擦写空闲 B 槽。`./tests/http/resume_test.ps1 -Device <IP> -Core cm7 -Firmware <BIN> -Version <整数>` 会完成真实升级并复位，亦支持 `-Core cm4`；这些不是只读检查。
+- 本工程的正式 OTA 上位机为 `../qt-ota/`，使用前读取其 `AGENTS.md`。本机模拟上传测试在 Windows PowerShell 中运行 `../qt-ota/test-upload.ps1`；须先生成 CM7 B BIN，仅验证客户端与模拟服务的正常上传交互，不验证真实设备擦写、启动或断线续传。
+- 原 PowerShell 上传器 `ota_upload.ps1` 已删除；`tests/http/uploader_test.ps1` 和 `tests/http/resume_test.ps1` 仍依赖该脚本，当前不能直接运行，不得作为可用测试入口。
+- `./tests/http/device_test.ps1 -Device <IP>` 要求 CM7 已确认运行 A 且无 pending，会擦写空闲 B 槽，不是只读检查。
 - `tests/http/response_timeout_test.ps1` 的回包失败用例依赖已撤除的临时故障注入，不能直接用于正常固件；`-TotalOnly` 路径不依赖注入，但需设备和串口，实等约 10 分钟并写入 CM4 空闲槽。
 - `tests/http/parser_test.c` 没有构建入口；其头文件依赖 `lwip/api.h`，旧文档提及的 `tests/http` 本地替身当前不存在，不要将它视为可直接独立编译的测试。
-- 正式上传用 `./ota_upload.ps1 -Device <IP> -Core cm7 -Firmware <BIN> -Version <整数>`（亦支持 cm4）；目标为该核实际运行槽的另一槽，BIN 必须链接到目标地址。同一命令可在 RAM 会话有效期内重跑续传；掉电/复位不保留进度，end 结果不明时先查启动日志和状态。协议与验证边界见 `docs/ota_resume_verified_20261021.md`。
+- 正式上传使用 `../qt-ota/` 上位机；目标为该核实际运行槽的另一槽，BIN 必须链接到目标地址。设备端支持 RAM 会话内续传：相同目标核、长度、版本、CRC32、链接地址重复 begin 返回当前偏移，空闲上限 60 秒、总时长上限 10 分钟，掉电/复位不保留进度。Qt 客户端当前未实现断点续传或自动重连，不得将设备端能力等同于上位机能力；end 结果不明时先查启动日志和状态。历史协议与验证记录见 `docs/ota_resume_verified_20261021.md`，其中 PowerShell 上传器命令已不适用。
 
 ## 启动和修改边界
 
