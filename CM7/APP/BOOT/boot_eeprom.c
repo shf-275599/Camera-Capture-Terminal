@@ -499,14 +499,16 @@ uint8_t boot_eeprom_select_boot_slot(const boot_eeprom_meta_t *meta)
         return meta->confirmed_slot;
     }
 
-    /* confirmed 也不可用：按 Slot A → Slot B 兜底 */
-    if ((meta->pending_slot != CM7_APP_SLOT_A_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
+    /* confirmed 也不可用：跳过已检查的 confirmed 槽，按 Slot A → Slot B 兜底 */
+    if ((meta->confirmed_slot != CM7_APP_SLOT_A_INDEX) &&
+        (meta->pending_slot != CM7_APP_SLOT_A_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
         boot_ee_image_valid(0U, 0, meta->app_size[0], meta->app_crc[0], 0))
     {
         return CM7_APP_SLOT_A_INDEX;
     }
 
-    if ((meta->pending_slot != CM7_APP_SLOT_B_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
+    if ((meta->confirmed_slot != CM7_APP_SLOT_B_INDEX) &&
+        (meta->pending_slot != CM7_APP_SLOT_B_INDEX || (meta->flags & BOOT_EE_FLAG_PENDING) == 0U) &&
         boot_ee_image_valid(1U, 0, meta->app_size[1], meta->app_crc[1], 0))
     {
         return CM7_APP_SLOT_B_INDEX;
