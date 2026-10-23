@@ -25,6 +25,17 @@ static StaticTask_t s_task_control;
 static StackType_t s_task_stack[1024];
 static TaskHandle_t s_task;
 static struct netconn *s_connection;
+static uint32_t s_fps_x10;
+static uint32_t s_last_frame_tick;
+
+uint32_t app_http_mjpeg_fps_x10(void)
+{
+    uint32_t fps;
+    taskENTER_CRITICAL();
+    fps = (s_active && HAL_GetTick() - s_last_frame_tick < 3000U) ? s_fps_x10 : 0U;
+    taskEXIT_CRITICAL();
+    return fps;
+}
 
 /* 发送窗口暂满时等待 ACK；已有部分写入必须推进偏移，避免重复字节。 */
 static int mjpeg_send(struct netconn *conn, const void *data, size_t length)
@@ -60,6 +71,8 @@ static void Mjpeg_Thread(void *argument)
     struct netconn *conn = s_connection;
     uint32_t frames = 0U;
     uint32_t waiting = HAL_GetTick();
+    uint32_t fps_tick = waiting;
+    uint32_t fps_frames = 0U;
     netconn_set_sendtimeout(conn, 1000);
     if (mjpeg_send(conn, response, sizeof(response) - 1U) != 0) goto finish;
     LOG_INFO("CM7", "MJPEG_STREAM_START");
@@ -97,6 +110,17 @@ static void Mjpeg_Thread(void *argument)
             offset += count;
         }
         if (s_stopping || mjpeg_send(conn, "\r\n", 2U) != 0) break;
+        uint32_t now = HAL_GetTick();
+        fps_frames++;
+        taskENTER_CRITICAL();
+        s_last_frame_tick = now;
+        if (now - fps_tick >= 1000U)
+        {
+            s_fps_x10 = fps_frames * 10000U / (now - fps_tick);
+            fps_frames = 0U;
+            fps_tick = now;
+        }
+        taskEXIT_CRITICAL();
         if (++frames == 1U)
             LOG_INFO("CM7", "MJPEG_FIRST_FRAME bytes=%lu", (unsigned long)size);
         while (!s_stopping && HAL_GetTick() - started < 100U) osDelay(1U);
@@ -122,6 +146,8 @@ int app_http_mjpeg_start(struct netconn *conn)
         if (s_task == NULL) return -1;
     }
     s_connection = conn;
+    s_fps_x10 = 0U;
+    s_last_frame_tick = HAL_GetTick();
     s_active = 1U;
     xTaskNotifyGive(s_task);
     return 0;
