@@ -224,21 +224,19 @@ uint8_t app_ov5640_run(void)
         osDelay(1U);
     }
     s_paused = 0U;
-    ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
-    if (ret != OV5640_DCMI_EOK)
-    {
-        LOG_ERROR("CM7", "CAMERA_STREAM_START_FAIL=%u", ret);
-        return ret;
-    }
+    uint8_t streaming = 0U;
+    uint32_t retries = 0U;
     for (;;)
     {
         if (s_pause_requested != 0U)
         {
             ov5640_dcmi_stream_stop();
+            streaming = 0U;
             if (((DCMI->CR & DCMI_CR_CAPTURE) != 0U) ||
                 ((((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->CR & DMA_SxCR_EN) != 0U))
             {
-                return OV5640_DCMI_ERROR;
+                osDelay(10U);
+                continue;
             }
             while ((DMA2D->CR & DMA2D_CR_START) != 0U)
             {
@@ -249,22 +247,37 @@ uint8_t app_ov5640_run(void)
             {
                 osDelay(1U);
             }
-            ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
             s_paused = 0U;
+        }
+        if (!streaming)
+        {
+            /* 暂停请求可能在上次等待期间到达，不在 OTA 暂停中重启 DMA。 */
+            if (s_pause_requested) continue;
+            ret = ov5640_dcmi_stream_start(LTDC_FRAME_BUF_ADDR, 0xD0300000U, 800U * 480U * 2U);
             if (ret != OV5640_DCMI_EOK)
             {
-                return ret;
+                ov5640_dcmi_stream_log_error();
+                ov5640_dcmi_stream_stop();
+                LOG_ERROR("CM7", "CAMERA_RESTART_FAIL=%u retry=%lu", ret, (unsigned long)++retries);
+                osDelay(250U);
+                continue;
             }
+            streaming = 1U;
+            if (retries) LOG_INFO("CM7", "CAMERA_RESTART_STARTED retry=%lu", (unsigned long)retries);
         }
         ret = ov5640_dcmi_stream_poll();
         if (ret != OV5640_DCMI_EOK)
         {
-            ov5640_dcmi_stream_stop();
             ov5640_dcmi_stream_log_error();
             LOG_ERROR("CM7", "CAMERA_STREAM_FAIL=%u DCMI=0x%lX DMA=0x%lX",
                       ret, (unsigned long)hdcmi.ErrorCode,
                       (unsigned long)hdcmi.DMA_Handle->ErrorCode);
-            return ret;
+            ov5640_dcmi_stream_stop();
+            streaming = 0U;
+            retries++;
+            LOG_WARN("CM7", "CAMERA_RECOVER retry=%lu", (unsigned long)retries);
+            osDelay(250U);
+            continue;
         }
         osDelay(1);
     }

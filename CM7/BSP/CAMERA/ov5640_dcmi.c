@@ -22,6 +22,7 @@
 #include "dcmi.h"
 #include "ltdc.h"
 #include "mylog.h"
+#include "cmsis_os2.h"
 #include <string.h>
 
 /* OV5640模块DCMI接口数据结构体 */
@@ -163,6 +164,13 @@ static void camera_dma_error(DMA_HandleTypeDef *hdma)
 
 void ov5640_dcmi_stream_log_error(void)
 {
+    DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance;
+    LOG_ERROR("CM7", "CAMERA_FAULT DCMI=0x%lX DMA=0x%lX CR=%08lX SR=%08lX DMA_CR=%08lX NDTR=%lu ISR=%08lX age=%lu copying=%u",
+              (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode,
+              (unsigned long)DCMI->CR, (unsigned long)DCMI->SR,
+              (unsigned long)dma->CR, (unsigned long)dma->NDTR,
+              (unsigned long)DMA1->LISR,
+              (unsigned long)(HAL_GetTick() - g_stream.frame_tick), s_copying);
     LOG_ERROR("CM7", "CAMERA_DMA segment=%u frames=%lu CR=%08lX NDTR=%lu M0=%08lX M1=%08lX ISR=%08lX",
               g_stream.segment, (unsigned long)g_stream.frames,
               (unsigned long)g_stream.dma_cr, (unsigned long)g_stream.dma_ndtr,
@@ -205,6 +213,17 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
     {
         return OV5640_DCMI_EINVAL;
     }
+    /* 出错中止可能留下 HAL BUSY、FIFO 和待处理中断；重建采集状态。 */
+    if (g_stream.active || s_copying) return OV5640_DCMI_ERROR;
+    __HAL_RCC_DCMI_FORCE_RESET();
+    __HAL_RCC_DCMI_RELEASE_RESET();
+    if (HAL_DCMI_Init(&hdcmi) != HAL_OK ||
+        HAL_DMA_DeInit(dma) != HAL_OK || HAL_DMA_Init(dma) != HAL_OK)
+        return OV5640_DCMI_ERROR;
+    /* 连续流按 DMA 分块计帧，不使用逐行/VSYNC 回调，避免无效中断负担。 */
+    __HAL_DCMI_DISABLE_IT(&hdcmi, DCMI_IT_LINE | DCMI_IT_VSYNC | DCMI_IT_FRAME);
+    HAL_NVIC_ClearPendingIRQ(DMA1_Stream0_IRQn);
+    HAL_NVIC_ClearPendingIRQ(DCMI_IRQn);
     g_stream.addr[0] = display_addr;
     g_stream.addr[1] = capture_addr;
     g_stream.addr[2] = capture_addr + frame_size;
@@ -220,6 +239,11 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
     g_stream.fps_capture_frames = 0U;
     g_stream.fps_display_frames = 0U;
     g_stream.reported = 0U;
+    g_stream.dma_cr = 0U;
+    g_stream.dma_ndtr = 0U;
+    g_stream.dma_m0ar = 0U;
+    g_stream.dma_m1ar = 0U;
+    g_stream.dma_lisr = 0U;
     g_stream.frame_tick = HAL_GetTick();
     g_stream.fps_tick = g_stream.frame_tick;
 
@@ -349,7 +373,12 @@ uint8_t ov5640_dcmi_stream_poll(void)
 
 void ov5640_dcmi_stream_stop(void)
 {
+    /* 与 copy_frame 的准入检查使用同一中断屏障，先拒绝新快照。 */
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
     g_stream.active = 0U;
+    __set_PRIMASK(primask);
+    while (s_copying) osDelay(1U);
     HAL_DCMI_Stop(&hdcmi);
 }
 
