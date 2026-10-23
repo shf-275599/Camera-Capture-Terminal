@@ -41,5 +41,8 @@ void ov5640_dcmi_stream_log_error(void);
 void ov5640_dcmi_stream_irq_snapshot(void);
 /* 复制完整显示帧；由任务调用，复制期间暂缓换帧，采集不中断。 */
 int ov5640_dcmi_copy_frame(void *destination);
+/* 锁定完整显示帧供 CPU 只读，调用者必须在停止访问后释放；采集继续。 */
+int ov5640_dcmi_acquire_frame(uint8_t **frame);
+void ov5640_dcmi_release_frame(void);
 
 #endif

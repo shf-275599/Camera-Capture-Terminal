@@ -75,6 +75,40 @@ static struct
 } g_stream;
 
 static volatile uint8_t s_copying;
+/* 直接读取时仅保护持有帧，允许 LCD 切换到其他完整帧。3 表示未持有。 */
+static volatile uint8_t s_read_frame = 3U;
+
+int ov5640_dcmi_acquire_frame(uint8_t **frame)
+{
+    uint32_t address;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    if (!g_stream.active || g_stream.error || !g_stream.display_frames || s_copying)
+    {
+        __set_PRIMASK(primask);
+        return -1;
+    }
+    s_copying = 1U;
+    s_read_frame = g_stream.display;
+    g_stream.copy_offset = 0U;
+    address = g_stream.addr[g_stream.display];
+    __set_PRIMASK(primask);
+    /* DMA 完成帧仅供 CPU 读取，分块失效缓存且允许采集中断抢占。 */
+    for (uint32_t offset = 0U; offset < CAMERA_FRAME_BYTES; offset += 800U * 16U * 2U)
+    {
+        g_stream.copy_offset = offset;
+        SCB_InvalidateDCache_by_Addr((uint32_t *)(address + offset), 800U * 16U * 2U);
+    }
+    *frame = (uint8_t *)address;
+    return 0;
+}
+
+void ov5640_dcmi_release_frame(void)
+{
+    __DMB();
+    s_read_frame = 3U;
+    s_copying = 0U;
+}
 
 int ov5640_dcmi_copy_frame(void *destination)
 {
@@ -149,7 +183,8 @@ static void camera_dma_complete(DMA_HandleTypeDef *hdma)
         /* 整帧搬运完成后才发布，并选定下一帧空闲槽。 */
         for (index = 0U; index < 3U; index++)
         {
-            if (index != g_stream.display && index != g_stream.pending && index != g_stream.capture)
+            if (index != g_stream.display && index != g_stream.pending && index != g_stream.capture &&
+                index != s_read_frame)
             {
                 break;
             }
@@ -341,7 +376,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
     {
         return OV5640_DCMI_ERROR;
     }
-    if (s_copying)
+    if (s_copying && s_read_frame == 3U)
     {
         return OV5640_DCMI_EOK;
     }
@@ -351,7 +386,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
         {
             primask = __get_PRIMASK();
             __disable_irq();
-            if (s_copying)
+            if (s_copying && s_read_frame == 3U)
             {
                 __set_PRIMASK(primask);
                 return OV5640_DCMI_EOK;
@@ -377,7 +412,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
     {
         primask = __get_PRIMASK();
         __disable_irq();
-        if (s_copying)
+        if (s_copying && s_read_frame == 3U)
         {
             __set_PRIMASK(primask);
             return OV5640_DCMI_EOK;

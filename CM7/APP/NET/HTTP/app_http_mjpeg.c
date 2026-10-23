@@ -12,9 +12,8 @@
 #include "mylog.h"
 #include <stdio.h>
 
-/* 快照 D0500000..D05BB7FF，MCU D0600000..D068C9FF；
+/* 直接锁定完整采集帧，MCU D0600000..D068C9FF；
  * 三块 JPEG 缓冲 D0700000..D087FFFF，各 512 KiB，与 LCD/采集区隔离。 */
-#define MJPEG_RGB ((uint8_t *)0xD0500000U)
 #define MJPEG_CAPACITY (512U * 1024U)
 #define MJPEG_CLIENTS 2U
 #define MJPEG_BUFFERS 3U
@@ -210,12 +209,15 @@ static void Mjpeg_Thread(void *argument)
             if (index >= 0)
             {
                 uint32_t size;
+                uint8_t *rgb;
                 uint32_t started = HAL_GetTick();
-                if (ov5640_dcmi_copy_frame(MJPEG_RGB) == 0 && !s_stopping)
+                if (ov5640_dcmi_acquire_frame(&rgb) == 0)
                 {
-                    uint32_t copied = HAL_GetTick();
-                    if (jpeg_hw_encode(MJPEG_RGB, mjpeg_buffer((uint32_t)index),
-                                       MJPEG_CAPACITY, &size) == 0 && !s_stopping)
+                    uint32_t acquired = HAL_GetTick();
+                    int result = s_stopping ? -1 : jpeg_hw_encode(rgb, mjpeg_buffer((uint32_t)index),
+                                                                MJPEG_CAPACITY, &size);
+                    ov5640_dcmi_release_frame();
+                    if (result == 0 && !s_stopping)
                     {
                         taskENTER_CRITICAL();
                         if (++s_sequence == 0U) ++s_sequence;
@@ -224,9 +226,9 @@ static void Mjpeg_Thread(void *argument)
                         s_latest = index;
                         taskEXIT_CRITICAL();
                         if ((s_sequence % 30U) == 0U)
-                            LOG_INFO("CM7", "MJPEG_PERF copy=%lu encode=%lu ms/frame clients=%lu",
-                                     (unsigned long)(copied - started),
-                                     (unsigned long)(HAL_GetTick() - copied),
+                            LOG_INFO("CM7", "MJPEG_PERF acquire=%lu encode=%lu ms/frame clients=%lu",
+                                     (unsigned long)(acquired - started),
+                                     (unsigned long)(HAL_GetTick() - acquired),
                                      (unsigned long)mjpeg_clients());
                     }
                     else if (!s_stopping) LOG_ERROR("CM7", "MJPEG_ENCODE_FAIL");
