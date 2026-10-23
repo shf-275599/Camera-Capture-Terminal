@@ -71,6 +71,13 @@ SECTIONS
   } >RAM_D2
   ASSERT(SIZEOF(.eth_dma) <= 0x5000, "ETH DMA overlaps LwIP heap")
 
+  /* LwIP heap 结束于 0x30025000；CM4 RAM 从 0x30028000 开始。 */
+  .camera_dma 0x30025000 (NOLOAD) :
+  {
+    KEEP(*(.camera_dma))
+  } >RAM_D2
+  ASSERT(SIZEOF(.camera_dma) <= 0x3000, "Camera DMA overlaps CM4 RAM")
+
   .resource_table ORIGIN(OPENAMP_RSC_TAB) (NOLOAD) :
   {
     . = ALIGN(4);

@@ -33,13 +33,15 @@ static struct
     volatile uint16_t frame_lines;
 } g_ov5640_dcmi_sta = {0};
 
-#define CAMERA_BLOCK_LINES (16U)
+#define CAMERA_BLOCK_LINES (3U)
 #define CAMERA_DMA_WORDS (800U * CAMERA_BLOCK_LINES * 2U / 4U)
 #define CAMERA_FRAME_BYTES (800U * 480U * 2U)
 #define CAMERA_BLOCKS (480U / CAMERA_BLOCK_LINES)
 
-/* CM7 的 .bss 位于 DMA 可访问的 AXI SRAM；CPU 不访问接收后的像素。 */
-static uint32_t camera_line_buf[2][CAMERA_DMA_WORDS] __attribute__((aligned(32)));
+/* DMA1 在 D2 SRAM 接收，避免经 D2→D1 桥访问与 CPU 竞争的 AXI SRAM。
+ * 链接脚本在 LwIP heap 与 CM4 RAM 之间保留 12 KiB，像素无需启动清零。 */
+static uint32_t camera_line_buf[2][CAMERA_DMA_WORDS]
+    __attribute__((section(".camera_dma"), aligned(32)));
 
 static struct
 {
@@ -65,6 +67,11 @@ static struct
     volatile uint32_t dma_m0ar;
     volatile uint32_t dma_m1ar;
     volatile uint32_t dma_lisr;
+    volatile uint32_t fault_dcmi;
+    volatile uint32_t fault_dma2d;
+    volatile uint32_t copy_offset;
+    volatile uint32_t fault_copy_offset;
+    volatile uint8_t fault_saved;
 } g_stream;
 
 static volatile uint8_t s_copying;
@@ -80,11 +87,18 @@ int ov5640_dcmi_copy_frame(void *destination)
         return -1;
     }
     s_copying = 1U;
+    g_stream.copy_offset = 0U;
     address = g_stream.addr[g_stream.display];
     __set_PRIMASK(primask);
-    SCB_InvalidateDCache_by_Addr((uint32_t *)address, CAMERA_FRAME_BYTES);
-    __DSB();
-    memcpy(destination, (const void *)address, CAMERA_FRAME_BYTES);
+    /* 分块读取 SDRAM，避免整帧连续复制挤占 DCMI/DMA2D 和 LTDC 的访问。
+     * s_copying 在让出 CPU 期间仍保持置位，显示帧不会被回收为采集缓冲。 */
+    for (uint32_t offset = 0U; offset < CAMERA_FRAME_BYTES; offset += 800U * 16U * 2U)
+    {
+        g_stream.copy_offset = offset;
+        SCB_InvalidateDCache_by_Addr((uint32_t *)(address + offset), 800U * 16U * 2U);
+        memcpy((uint8_t *)destination + offset, (const void *)(address + offset), 800U * 16U * 2U);
+        if (offset + 800U * 16U * 2U < CAMERA_FRAME_BYTES) osDelay(1U);
+    }
     __DMB();
     s_copying = 0U;
     return 0;
@@ -147,6 +161,23 @@ static void camera_dma_complete(DMA_HandleTypeDef *hdma)
     g_stream.segment = (uint8_t)((segment + 1U) % CAMERA_BLOCKS);
 }
 
+void ov5640_dcmi_stream_irq_snapshot(void)
+{
+    DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance;
+    uint32_t status = DCMI->MISR;
+    if (!g_stream.active || g_stream.fault_saved ||
+        (status & (DCMI_MIS_OVR_MIS | DCMI_MIS_ERR_MIS)) == 0U) return;
+    g_stream.dma_cr = dma->CR;
+    g_stream.dma_ndtr = dma->NDTR;
+    g_stream.dma_m0ar = dma->M0AR;
+    g_stream.dma_m1ar = dma->M1AR;
+    g_stream.dma_lisr = DMA1->LISR;
+    g_stream.fault_dcmi = status;
+    g_stream.fault_dma2d = DMA2D->CR;
+    g_stream.fault_copy_offset = s_copying ? g_stream.copy_offset : CAMERA_FRAME_BYTES;
+    g_stream.fault_saved = 1U;
+}
+
 static void camera_dma_error(DMA_HandleTypeDef *hdma)
 {
     if ((hdma->ErrorCode & ~HAL_DMA_ERROR_FE) == HAL_DMA_ERROR_NONE)
@@ -154,11 +185,14 @@ static void camera_dma_error(DMA_HandleTypeDef *hdma)
         return;
     }
     DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdma->Instance;
-    g_stream.dma_cr = dma->CR;
-    g_stream.dma_ndtr = dma->NDTR;
-    g_stream.dma_m0ar = dma->M0AR;
-    g_stream.dma_m1ar = dma->M1AR;
-    g_stream.dma_lisr = DMA1->LISR;
+    if (!g_stream.fault_saved)
+    {
+        g_stream.dma_cr = dma->CR;
+        g_stream.dma_ndtr = dma->NDTR;
+        g_stream.dma_m0ar = dma->M0AR;
+        g_stream.dma_m1ar = dma->M1AR;
+        g_stream.dma_lisr = DMA1->LISR;
+    }
     g_stream.error = 1U;
 }
 
@@ -176,6 +210,9 @@ void ov5640_dcmi_stream_log_error(void)
               (unsigned long)g_stream.dma_cr, (unsigned long)g_stream.dma_ndtr,
               (unsigned long)g_stream.dma_m0ar, (unsigned long)g_stream.dma_m1ar,
               (unsigned long)g_stream.dma_lisr);
+    LOG_ERROR("CM7", "CAMERA_IRQ saved=%u MISR=%08lX DMA2D_CR=%08lX copy_offset=%lu",
+              g_stream.fault_saved, (unsigned long)g_stream.fault_dcmi,
+              (unsigned long)g_stream.fault_dma2d, (unsigned long)g_stream.fault_copy_offset);
 }
 
 void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
@@ -244,6 +281,10 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
     g_stream.dma_m0ar = 0U;
     g_stream.dma_m1ar = 0U;
     g_stream.dma_lisr = 0U;
+    g_stream.fault_saved = 0U;
+    g_stream.fault_dcmi = 0U;
+    g_stream.fault_dma2d = 0U;
+    g_stream.fault_copy_offset = 0U;
     g_stream.frame_tick = HAL_GetTick();
     g_stream.fps_tick = g_stream.frame_tick;
 
