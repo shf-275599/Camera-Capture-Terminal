@@ -23,6 +23,9 @@
 #include "ltdc.h"
 #include "lcd.h"
 #include "mylog.h"
+#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 /*
  * SDRAM 缓冲布局。地址避开从 0xD0000000 开始的 800 x 480 RGB565
@@ -74,6 +77,19 @@ typedef struct
 /* HAL JPEG 回调没有用户上下文参数，因此当前实现使用单个全局会话。 */
 static jpeg_session_t g_jpeg;
 static const uint8_t *g_jpeg_input = NULL;
+static volatile uint8_t s_encoding;
+static uint8_t *s_encode_output;
+static uint32_t s_encode_capacity;
+
+static int jpeg_acquire(void)
+{
+  int acquired;
+  taskENTER_CRITICAL();
+  acquired = !g_jpeg.active;
+  if (acquired) g_jpeg.active = 1U;
+  taskEXIT_CRITICAL();
+  return acquired;
+}
 
 /* 文件内部辅助函数，不作为硬件 JPEG 模块的公共接口。 */
 static void jpeg_cache_clean(const void *address, uint32_t length);
@@ -116,11 +132,6 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
   }
 
   /* 当前 HAL 回调共享全局状态，不允许两个调用者同时解码。 */
-  if (g_jpeg.active)
-  {
-    return -1;
-  }
-
   /*
    * HAL 会把输入长度向下截断到 MDMA BufferTransferLength 的整数倍。
    * 先向上补齐可避免非对齐 JPEG 的末尾 EOI 标记被截掉。
@@ -132,7 +143,11 @@ int jpeg_hw_decode(const uint8_t *data, uint32_t size, uint16_t x, uint16_t y)
     return -1;
   }
 
+  if (!jpeg_acquire()) return -1;
+  taskENTER_CRITICAL();
   memset(&g_jpeg, 0, sizeof(g_jpeg));
+  g_jpeg.active = 1U;
+  taskEXIT_CRITICAL();
 
   /*
    * 输入源可能位于 Flash 或任意 RAM。统一复制到 MDMA 可访问的 SDRAM，
@@ -310,6 +325,30 @@ void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg,
     return;
   }
 
+  if (s_encoding)
+  {
+    if (length > s_encode_capacity - g_jpeg.out_size)
+    {
+      g_jpeg.error = 1U;
+      HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_OUTPUT);
+      return;
+    }
+    g_jpeg.out_size += length;
+    uint32_t remaining = s_encode_capacity - g_jpeg.out_size;
+    if (remaining < JPEG_OUTPUT_BUFFER_SIZE)
+    {
+      /* 缓冲已满时暂停，任务负责终止，绝不覆盖已编码的数据。 */
+      HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_OUTPUT);
+      if (length == JPEG_OUTPUT_BUFFER_SIZE) g_jpeg.error = 1U;
+    }
+    else
+    {
+      HAL_JPEG_ConfigOutputBuffer(hjpeg, s_encode_output + g_jpeg.out_size,
+                                 JPEG_OUTPUT_BUFFER_SIZE);
+    }
+    return;
+  }
+
   /* 检查累计长度，避免后续颜色转换读取固定 MCU 缓冲之外的数据。 */
   if (length > JPEG_OUTPUT_BUFFER_SIZE - g_jpeg.out_size)
   {
@@ -334,6 +373,78 @@ void HAL_JPEG_DecodeCpltCallback(JPEG_HandleTypeDef *hjpeg)
   {
     g_jpeg.done = 1U;
   }
+}
+
+void HAL_JPEG_EncodeCpltCallback(JPEG_HandleTypeDef *hjpeg)
+{
+  (void)hjpeg;
+  if (g_jpeg.active && s_encoding) g_jpeg.done = 1U;
+}
+
+/** RGB565 整帧转 MCU 后使用 JPEG/MDMA 编码，缓冲与 LCD/采集区隔离。 */
+int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t *size)
+{
+  uint8_t *mcu = (uint8_t *)0xD0600000U;
+  JPEG_ConfTypeDef info = {0};
+  JPEG_RGBToYCbCr_Convert_Function convert;
+  uint32_t mcus, converted, start;
+  int result = -1;
+  if (!rgb565 || !output || !size || capacity < JPEG_OUTPUT_BUFFER_SIZE ||
+      (capacity % JPEG_OUTPUT_BUFFER_SIZE) != 0U || !jpeg_acquire()) return -1;
+  g_jpeg.done = 0U;
+  g_jpeg.error = 0U;
+  g_jpeg.in_off = 0U;
+  g_jpeg.out_size = 0U;
+  s_encoding = 1U;
+  s_encode_output = output;
+  s_encode_capacity = capacity;
+  info.ImageWidth = 800U;
+  info.ImageHeight = 480U;
+  info.ColorSpace = JPEG_YCBCR_COLORSPACE;
+  info.ChromaSubsampling = JPEG_420_SUBSAMPLING;
+  info.ImageQuality = 60U;
+  JPEG_InitColorTables();
+  if (JPEG_GetEncodeColorConvertFunc(&info, &convert, &mcus) != HAL_OK) goto finish;
+  /* 每次转换一行 MCU，并让出 CPU；输入始终是独立的完整快照。 */
+  for (uint32_t block = 0U; block < mcus; block += 50U)
+  {
+    if (convert(rgb565, mcu + block * 384U, block, 800U * 16U * 2U, &converted) != 50U ||
+        converted != 50U * 384U) goto finish;
+    osDelay(1U);
+  }
+  g_jpeg.in_size = mcus * 384U;
+  g_jpeg_input = mcu;
+  jpeg_cache_clean(mcu, g_jpeg.in_size);
+  jpeg_cache_clean(output, capacity);
+  jpeg_cache_invalidate(output, capacity);
+  if (HAL_JPEG_ConfigEncoding(&hjpeg, &info) != HAL_OK) goto finish;
+  if (HAL_JPEG_Encode_DMA(&hjpeg, mcu, JPEG_INPUT_CHUNK_SIZE,
+                          output, JPEG_OUTPUT_BUFFER_SIZE) != HAL_OK) goto finish;
+  start = HAL_GetTick();
+  while (!g_jpeg.done && !g_jpeg.error && HAL_GetTick() - start < 2000U) osDelay(1U);
+  if (!g_jpeg.done || g_jpeg.error) goto finish;
+  /* HAL 在 DMA 结束后用 CPU 读取 FIFO 尾部；先写回这些脏行再失效，
+   * 避免丢掉 CPU 写入的 EOI。DMA 长度按 32 字节对齐，尾部另起缓存行。 */
+  jpeg_cache_clean(output, g_jpeg.out_size);
+  jpeg_cache_invalidate(output, g_jpeg.out_size);
+  if (g_jpeg.out_size < 4U || output[0] != 0xFFU || output[1] != 0xD8U) goto finish;
+  /* FIFO 按 32 位读取，EOI 后至多包含三个填充字节，不发送填充。 */
+  uint32_t encoded_size = g_jpeg.out_size;
+  while (encoded_size >= 4U && g_jpeg.out_size - encoded_size <= 3U)
+  {
+    if (output[encoded_size - 2U] == 0xFFU && output[encoded_size - 1U] == 0xD9U) break;
+    encoded_size--;
+  }
+  if (encoded_size < 4U || g_jpeg.out_size - encoded_size > 3U) goto finish;
+  g_jpeg.out_size = encoded_size;
+  *size = g_jpeg.out_size;
+  result = 0;
+finish:
+  if (result != 0) HAL_JPEG_Abort(&hjpeg);
+  s_encoding = 0U;
+  __DMB();
+  g_jpeg.active = 0U;
+  return result;
 }
 
 /**
