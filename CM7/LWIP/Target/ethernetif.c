@@ -607,14 +607,23 @@ void ethernet_link_thread(void* argument)
       }
       if (link_up != 0U)
       {
-        if ((HAL_ETH_SetMACConfig(&heth, &config) != HAL_OK) ||
-            (HAL_ETH_Start_IT(&heth) != HAL_OK))
+        /* PHY 可直接从一种速率/双工状态切换到另一种；HAL 只允许 READY
+         * 状态配置和启动。与发送路径互斥，先停止已运行的 MAC。 */
+        LOCK_TCPIP_CORE();
+        HAL_StatusTypeDef result = HAL_OK;
+        if (heth.gState == HAL_ETH_STATE_STARTED) result = HAL_ETH_Stop_IT(&heth);
+        if (result == HAL_OK) result = HAL_ETH_SetMACConfig(&heth, &config);
+        if (result == HAL_OK) result = HAL_ETH_Start_IT(&heth);
+        if (result != HAL_OK)
         {
-          LOG_ERROR("CM7", "NET_FAIL: ETH 启动 error=0x%lX", (unsigned long)heth.ErrorCode);
+          UNLOCK_TCPIP_CORE();
+          LOG_ERROR("CM7", "NET_FAIL: ETH 启动 error=0x%lX state=0x%lX DMA=0x%lX DMACSR=%08lX phy=%ld previous=%ld",
+                    (unsigned long)heth.ErrorCode, (unsigned long)heth.gState,
+                    (unsigned long)heth.DMAErrorCode, (unsigned long)heth.Instance->DMACSR,
+                    (long)state, (long)previous_state);
           osDelay(100);
           continue;
         }
-        LOCK_TCPIP_CORE();
         netif_set_link_up(netif);
         UNLOCK_TCPIP_CORE();
         LOG_INFO("CM7", "NET_LINK_UP: %s", eth_phy_link_state_str(state));
