@@ -2,18 +2,19 @@
 
 ## 构建与验证
 
-- 这是 STM32H757XIH6 双核固件。在 Windows PowerShell 中使用 GNU Make 和 `arm-none-eabi-*` 工具链（可通过 `make ... GCC_PATH=工具链bin目录` 指定）；从 WSL 操作时通过 `powershell.exe` 执行构建。`make -C Makefile` 先构建 CM4、再构建 CM7，默认仅构建 A 槽。
+- 这是 STM32H757XIH6 双核固件。在 Windows PowerShell 中使用 GNU Make 和 `arm-none-eabi-*` 工具链（可通过 `make ... GCC_PATH=工具链bin目录` 指定）；从 WSL 操作时通过 `powershell.exe` 执行构建和测试。以下路径和命令均相对本目录；`make -C Makefile` 先构建 CM4、再构建 CM7，默认仅构建 A 槽。
 - 聚焦单核/单槽：`make -C Makefile/CM7 APP_SLOT=B` 或 `make -C Makefile/CM4 APP_SLOT=A`；双槽分别运行 `make -C Makefile/CM7 all-slots`、`make -C Makefile/CM4 all-slots`。各核 A 槽产物在 `Makefile/CMx/build/`，B 槽在 `Makefile/CMx/build_B/`（`CMx` 为 `CM4` 或 `CM7`）。
 - 源码变更构建受影响的核；修改 `Common/`、启动或 OpenAMP 时构建两个核，修改槽位或链接布局时验证 A/B。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
 - `./clean.ps1` 清理两个核的双槽产物；顶层 `make -C Makefile clean` 不递归清理两核产物。
 - 源文件和头文件目录需显式加入各核 Makefile 的 `C_SOURCES` / `C_INCLUDES`。目标文件按源文件 basename 扁平化；CM7 为 LwIP 与 libmetal 的 `init.c` / `sys.c` 保留了专用规则，添加同名源文件时检查目标冲突。
-- `./make_all.ps1 [-Jobs N]` 仅构建两个核的双槽；从 WSL 可运行 `powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`。四个单核升级入口为 `make_flash_cm7_slotA.ps1`、`make_flash_cm7_slotB.ps1`、`make_flash_cm4_slotA.ps1`、`make_flash_cm4_slotB.ps1`，均支持 `[-Jobs N] [-Version V]`，共用 `make_flash_core.ps1`。要求板上 Bootloader 本地协议 v2；预检查双核无 pending、confirmed 镜像有效且不覆盖目标核 confirmed，随后仅构建/烧录目标核指定槽、登记该核 pending（3 次试启动）并复位，保留另一核启动字段和镜像信息。版本默认 0。不支持空板初始化；不要当作仅构建命令。烧录需要 ST-Link 和 STM32CubeProgrammer，CLI 可通过 `STM32_PROGRAMMER_CLI` 指定。说明与模拟测试见 `docs/local_flash_update.md`、`tests/local_flash_update_test.ps1`。
-- 烧录脚本仅写应用槽，不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；启动/OTA 验证需另行确认板上的固定引导程序。
+- 全量仅构建：`powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`，覆盖两核双槽。`make_flash_cm7_slotA.ps1`、`make_flash_cm7_slotB.ps1`、`make_flash_cm4_slotA.ps1`、`make_flash_cm4_slotB.ps1` 均支持 `[-Jobs N] [-Version V]`（版本默认 0），会构建、烧录目标核指定槽、登记 pending 并复位；不能当作仅构建命令。
+- 本地升级需要 ST-Link、STM32CubeProgrammer（可用 `STM32_PROGRAMMER_CLI` 指定 CLI）及支持本地协议 v2 的 Bootloader；要求双核无 pending、confirmed 镜像有效且目标槽不是目标核 confirmed。不支持空板初始化。脚本不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；固定引导程序更新与协议说明见 `docs/local_flash_update.md`。
+- 本地升级脚本的无硬件模拟测试：`powershell.exe -NoProfile -File ./tests/local_flash_update_test.ps1`。模拟通过或烧录输出 `PENDING` 均不代表实机启动、应用确认或回退已验证；两核独立确认和回退，不提供双核版本整体原子回滚。
 
 ## HTTP / 摄像头验证
 
-- 当前仓库测试入口为 `powershell.exe -NoProfile -File ./tests/http/mjpeg_test.ps1 -Device <IP> [-Frames 5]`。需要运行固件的实机，检查主页、multipart、多帧 800×480 JPEG 解码、推流期间 `/status` 响应及断线重连；不擦写、不复位。LCD 实际画面仍需现场确认。
-- OTA 上位机位于 `../qt-ota/`，使用前读取其 `AGENTS.md`。其 `test-upload.ps1` / `test-recovery.ps1` 依赖已构建的 Qt EXE 和本工程 CM7 B BIN；模拟通过不代表实机擦写或启动验证通过。本仓库已无旧 OTA 上传器和旧 HTTP/OTA 测试入口。
+- 实机只读测试：`powershell.exe -NoProfile -File ./tests/http/mjpeg_test.ps1 -Device <IP> -Frames 5`。检查主页、双观看连接、第三连接 503、multipart、多帧 800×480 JPEG 解码、推流期间 `/status` 响应、单端断开后另一端继续及重连；不擦写、不复位。LCD 实际画面仍需现场确认。
+- OTA 上位机位于 `../qt-ota/`，使用前读取其 `AGENTS.md`。其 `test-upload.ps1` / `test-recovery.ps1` 依赖已构建的 Qt EXE 和 `Makefile/CM7/build_B/BaseProject_CM7_B.bin`；模拟通过不代表实机擦写或启动验证通过。
 - `/stream` 支持两个观看连接，共用一个编码任务与三块 JPEG 缓冲，每个连接由独立任务发送；慢连接跳过旧帧，满员或 OTA 期间返回 503。HTTP 主任务继续处理状态和 OTA；`/status` 的 `mjpeg_fps_x10` 为最近仍在发送的最快观看连接帧率的十倍，不累加两个连接，也不是浏览器渲染帧率。JPEG 缓冲占用 `0xD0700000..0xD087FFFF`。
 - 相机快照通过 `ov5640_dcmi_copy_frame()` 暂缓三缓冲换帧并失效 D-Cache；不要直接读取正在采集的帧。SDRAM 固定地址分散在 `app_ov5640.c`、`ov5640_dcmi.c`、`app_hw_jpeg.c` 和 `app_http_mjpeg.c`，改缓冲布局时一起核对，保留 CPU/DMA 交接时的缓存维护。
 - OTA 擦写前先停止 MJPEG 并等待任务退出，再暂停摄像头；失败/abort 路径须恢复。协议和会话实现见 `CM7/APP/OTA/`，不能跳过停流流程直接擦写。
@@ -21,7 +22,7 @@
 ## 启动和修改边界
 
 - `CM7/Core/Src/main.c` 配置 MPU/缓存并清空 SRAM4，然后通过 HSEM 唤醒 CM4；`CM4/Core/Src/main.c` 在 D2 STOP 中等待。双核通过 `CM7/OPENAMP`、`CM4/OPENAMP` 与 `Common/` 中的共享代码协作；修改同步、IPC、启动或内存布局时同时检查两核。
-- CM7 初始化外设后通过 `CM7/APP/BOOT/boot_eeprom.c` 读取 EEPROM 启动记录、选择 CM4 应用槽，再调用 `Common/Src/cm4_boot_handoff.c` 将 CM4 应用地址写入 SRAM4，并使能 CM4 启动核；EEPROM 不可用时默认 CM4 A 槽。修改槽位选择、EEPROM 启动记录或 handoff 时，同时核对 `Common/Inc/boot_slot.h`、CM4 Stub 的约定和双核链接脚本。
+- CM7 在 `main()` 中读取 EEPROM，通过 `CM7/APP/BOOT/boot_eeprom.c` 选择 CM4 应用槽，再经 `Common/Src/cm4_boot_handoff.c` 写 SRAM4 并使能 CM4 启动核；EEPROM 不可用时默认 CM4 A 槽。修改该流程时同时核对 `Common/Inc/boot_slot.h`、固定 CM4 Stub 的约定和双核链接脚本。
 - 四份 Flash 链接脚本将 `.resource_table`（`NOLOAD`）放在 SRAM4 前 1 KiB 的 `0x38000000`，59 KiB OpenAMP 共享段从 `0x38000400` 开始，末尾 `0x3800F000..0x3800FFFF` 留给 handoff、OTA hold 和运行槽报告。CM7 MPU 将整个 64 KiB 配置为共享、不可缓存；改布局时同时核对两核 OpenAMP、四份链接脚本、MPU 与 `Common/Inc/cm4_boot_handoff.h`、`cm4_ota_hold.h`。
 - CM4 从 Bank2 执行，擦写其空闲槽前必须经 `cm4_ota_hold_*` 握手，让 CM4 在 RAM 中关中断等待；保留 `.RamFunc` 复制和 abort 释放流程，不能只保护目标 Flash 地址。
 - CM7 A/B 槽链接地址为 `0x08020000` / `0x080A0000`，CM4 为 `0x08120000` / `0x081A0000`，每槽 384 KiB。`Common/Inc/boot_slot.h` 的两核槽索引各自为 `0/1`，可直接用作各核元数据数组下标；CM7 使用 `boot_slot_*` 接口，CM4 使用 `cm4_boot_slot_*` 接口。A 槽镜像不能直接当作 B 槽镜像运行。
