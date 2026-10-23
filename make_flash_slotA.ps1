@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [ValidateRange(0, 256)]
-    [int]$Jobs = 0
+    [int]$Jobs = 0,
+    [uint32]$Version = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,18 +49,5 @@ foreach ($core in @('CM4', 'CM7')) {
 }
 
 $cli = Resolve-ProgrammerCli
-foreach ($core in @('CM7', 'CM4')) {
-    $firmware = $firmwares[$core]
-    if (-not (Test-Path -LiteralPath $firmware -PathType Leaf)) {
-        throw "Firmware was not found: $firmware"
-    }
-
-    $programmerArgs = @('-c', 'port=SWD', 'mode=UR', '-w', $firmware, '-v')
-    if ($core -eq 'CM4') {
-        $programmerArgs += '-rst'
-    }
-    & $cli @programmerArgs
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
-    }
-}
+. (Join-Path $PSScriptRoot 'local_flash_update.ps1')
+Invoke-LocalFlashUpdate -Cli $cli -Firmwares $firmwares -Slot 0 -Version $Version
