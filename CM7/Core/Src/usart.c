@@ -25,6 +25,8 @@
 #include "freertos.h"
 #include "task.h"
 #include "cmsis_os2.h"
+#include "boot_slot.h"
+#include "cm4_ota_hold.h"
 /****************************************************************************/
 // 重定向printf到串口
 #ifdef __GNUC__
@@ -93,7 +95,15 @@ static void USART_Rx_Thread(void *pvParameters)
     uint32_t rx_events = usart_take_rx_events();
     while (rx_events-- != 0U)
     {
-      HAL_UART_Transmit(&huart1, (uint8_t *)"recv success!!!\n", 16, 1000);
+      uint8_t cm7_slot = boot_get_running_slot();
+      uint8_t cm4_slot = cm4_ota_running_slot();
+      char message[64];
+      int length = snprintf(message, sizeof(message), "CM7 running_slot: %s, CM4 running_slot: %s\r\n",
+                            (cm7_slot == CM7_APP_SLOT_A_INDEX) ? "A" :
+                            (cm7_slot == CM7_APP_SLOT_B_INDEX) ? "B" : "unknown",
+                            (cm4_slot == CM4_APP_SLOT_A_INDEX) ? "A" :
+                            (cm4_slot == CM4_APP_SLOT_B_INDEX) ? "B" : "unknown");
+      HAL_UART_Transmit(&huart1, (uint8_t *)message, (uint16_t)length, 1000);
     }
     osDelay(1);
   }
