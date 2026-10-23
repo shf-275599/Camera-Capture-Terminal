@@ -37,5 +37,7 @@ uint8_t ov5640_dcmi_stream_start(uint32_t display_addr, uint32_t capture_addr, u
 uint8_t ov5640_dcmi_stream_poll(void);
 void ov5640_dcmi_stream_stop(void);
 void ov5640_dcmi_stream_log_error(void);
+/* 复制完整显示帧；由任务调用，复制期间暂缓换帧，采集不中断。 */
+int ov5640_dcmi_copy_frame(void *destination);
 
 #endif

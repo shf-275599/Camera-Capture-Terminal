@@ -22,6 +22,7 @@
 #include "dcmi.h"
 #include "ltdc.h"
 #include "mylog.h"
+#include <string.h>
 
 /* OV5640模块DCMI接口数据结构体 */
 static struct
@@ -64,6 +65,29 @@ static struct
     volatile uint32_t dma_m1ar;
     volatile uint32_t dma_lisr;
 } g_stream;
+
+static volatile uint8_t s_copying;
+
+int ov5640_dcmi_copy_frame(void *destination)
+{
+    uint32_t address;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    if (!g_stream.active || g_stream.error || !g_stream.display_frames || s_copying)
+    {
+        __set_PRIMASK(primask);
+        return -1;
+    }
+    s_copying = 1U;
+    address = g_stream.addr[g_stream.display];
+    __set_PRIMASK(primask);
+    SCB_InvalidateDCache_by_Addr((uint32_t *)address, CAMERA_FRAME_BYTES);
+    __DSB();
+    memcpy(destination, (const void *)address, CAMERA_FRAME_BYTES);
+    __DMB();
+    s_copying = 0U;
+    return 0;
+}
 
 static void camera_dma_complete(DMA_HandleTypeDef *hdma)
 {
@@ -246,12 +270,21 @@ uint8_t ov5640_dcmi_stream_poll(void)
     {
         return OV5640_DCMI_ERROR;
     }
+    if (s_copying)
+    {
+        return OV5640_DCMI_EOK;
+    }
     if (g_stream.reload)
     {
         if ((hltdc.Instance->SRCR & LTDC_SRCR_VBR) == 0U)
         {
             primask = __get_PRIMASK();
             __disable_irq();
+            if (s_copying)
+            {
+                __set_PRIMASK(primask);
+                return OV5640_DCMI_EOK;
+            }
             g_stream.display = g_stream.pending;
             g_stream.pending = 3U;
             g_stream.reload = 0U;
@@ -273,6 +306,11 @@ uint8_t ov5640_dcmi_stream_poll(void)
     {
         primask = __get_PRIMASK();
         __disable_irq();
+        if (s_copying)
+        {
+            __set_PRIMASK(primask);
+            return OV5640_DCMI_EOK;
+        }
         pending = g_stream.pending;
         /* 流帧由 DMA 写入、LTDC 读取，CPU 不访问像素，避免整帧维护阻塞 DMA 中断。 */
         if (pending != 3U &&
