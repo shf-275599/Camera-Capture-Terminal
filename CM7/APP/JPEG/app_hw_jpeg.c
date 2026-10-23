@@ -402,7 +402,7 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   info.ImageHeight = 480U;
   info.ColorSpace = JPEG_YCBCR_COLORSPACE;
   info.ChromaSubsampling = JPEG_420_SUBSAMPLING;
-  info.ImageQuality = 60U;
+  info.ImageQuality = 80U;
   JPEG_InitColorTables();
   if (JPEG_GetEncodeColorConvertFunc(&info, &convert, &mcus) != HAL_OK) goto finish;
   /* 每次转换一行 MCU，累计运行 4 ms 后让出 CPU，避免每行固定等待。

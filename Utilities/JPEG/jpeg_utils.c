@@ -426,6 +426,7 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
   uint32_t refline;
   int32_t ycomp, crcomp, cbcomp, offset;
+  uint32_t red_sum, green_sum, blue_sum;
 
   uint32_t red, green, blue;
 
@@ -482,14 +483,11 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         blue  = (*(pInAddr + refline + JPEG_BLUE_OFFSET/8)) ;
 #endif
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
-        cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
-        cbcomp = CLAMP_8BITS(cbcomp);
-        crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
-        crcomp = CLAMP_8BITS(crcomp);
+        red_sum = red;
+        green_sum = green;
+        blue_sum = blue;
 
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset]))  = (ycomp);
-        (*(pOutAddr + JPEG_ConvertorParams.Cb_MCU_LUT[offset])) = (cbcomp);
-        (*(pOutAddr + JPEG_ConvertorParams.Cr_MCU_LUT[offset])) = (crcomp);
 
         /* Second Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
@@ -506,6 +504,9 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 #endif
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + 1]))  = (ycomp);
+        red_sum += red;
+        green_sum += green;
+        blue_sum += blue;
 
         /* Third Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
@@ -523,6 +524,9 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
 
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor]))  = (ycomp);
+        red_sum += red;
+        green_sum += green;
+        blue_sum += blue;
 
         /* Fourth Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
@@ -540,7 +544,15 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor + 1]))  = (ycomp);
 
-        /****************/
+        /* 对整个 2x2 像素组做盒式滤波，避免只取左上角造成彩色边缘混叠。
+         * RGB 到色度为线性变换，先平均 RGB 可保持每组仅计算一次 Cb/Cr。 */
+        red = (red_sum + red + 2U) >> 2;
+        green = (green_sum + green + 2U) >> 2;
+        blue = (blue_sum + blue + 2U) >> 2;
+        cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
+        crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
+        (*(pOutAddr + JPEG_ConvertorParams.Cb_MCU_LUT[offset])) = CLAMP_8BITS(cbcomp);
+        (*(pOutAddr + JPEG_ConvertorParams.Cr_MCU_LUT[offset])) = CLAMP_8BITS(crcomp);
 
         pInAddr += JPEG_BYTES_PER_PIXEL * 2;
         offset+=2;
