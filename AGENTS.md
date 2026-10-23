@@ -16,6 +16,7 @@
 - CM7 跳转实现在 `CM7/APP/BOOT/boot_jump.c`：清除 CM4 的 `BOOT_C2`，清理中断、切 VTOR/MSP，并在 `0x2001FFF0` 写入 `BOOT_JUMP_MAGIC`（见同目录 `boot_config.h`）。改启动逻辑需核对应用侧 SystemInit 对此标记及 CM4 启动的配套处理。
 - CM4 入口 `CM4/Core/Src/main.c` 是固定 Stub，不执行 STOP/HSEM 等待；`CM4/APP/BOOT/cm4_boot_handoff.c` 从 D3 SRAM 的 `0x3800F010` / `0x3800F014` 读取 magic/base，无有效 magic 时尝试 A 槽，跳转失败则关闭中断停留。改共享内存或启动协议需核对应用侧写入者与共享区占用。
 - CM7 当前入口只检查并打印 CM4 向量表，不调用 CM4 EEPROM 选槽或写 handoff；不要把 `boot_eeprom_prepare_cm4_boot()` 的存在当作已接入本仓库启动流程。
+- 本地应用升级在正常选槽前处理 SRAM4 `0x3800F100` 维护请求：预检查有效 EEPROM、无 pending、保护双核 confirmed 镜像；提交阶段校验新镜像，一次保存双核 pending 和各 3 次试启动额度。结果发布后停留，待脚本复位；不支持空板初始化。描述符位于 Boot Flash 末尾 `0x0801FFF0`。配套脚本和协议见 `../BaseProject/local_flash_update.ps1`、`../BaseProject/docs/local_flash_update.md`。固定引导程序烧录脚本不发起应用升级。
 - 本地重刷 CM7 镜像后旧 EEPROM CRC 可能导致拒绝启动。人工确认镜像来源后，可在启动时将 KEY0（PA8，高有效）按住 2 秒重新登记：要求 EEPROM 有效且 CM7 两槽向量表均有效，按整槽计算 CRC，清版本及 pending、设 confirmed=A，保留 CM4 元数据；释放按键后继续启动。
 
 ## Flash 布局
