@@ -59,29 +59,27 @@ function Invoke-UpdateRequest {
 }
 
 function Invoke-LocalFlashUpdate {
-    param([string]$Cli, [hashtable]$Firmwares, [ValidateRange(0, 1)][uint32]$Slot, [uint32]$Version = 0)
-    [uint32]$cm7Base = if ($Slot -eq 0) { 0x08020000 } else { 0x080A0000 }
-    [uint32]$cm4Base = if ($Slot -eq 0) { 0x08120000 } else { 0x081A0000 }
-    $cm7 = Get-UpdateImageInfo $Firmwares['CM7'] $cm7Base
-    $cm4 = Get-UpdateImageInfo $Firmwares['CM4'] $cm4Base
+    param([string]$Cli, [ValidateSet('CM7', 'CM4')][string]$Core, [string]$Firmware, [ValidateRange(0, 1)][uint32]$Slot, [uint32]$Version = 0)
+    [uint32]$base = if ($Core -eq 'CM7') { 0x08020000 } else { 0x08120000 }
+    if ($Slot -eq 1) { $base += 0x80000 }
+    $image = Get-UpdateImageInfo $Firmware $base
     $directory = Join-Path $HOME ('temp\local-update-' + [Guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($directory)
     try {
         $readPath = Join-Path $directory 'read.bin'
         Invoke-UpdateProgrammer $Cli @('-c', 'port=SWD', 'mode=UR', '-halt')
         $descriptor = @(Read-UpdateWords $Cli '0x0801FFF0' 16 $readPath)
-        if ($descriptor[0] -ne 0x4C555044 -or $descriptor[1] -ne 1 -or
+        if ($descriptor[0] -ne 0x4C555044 -or $descriptor[1] -ne 2 -or
             $descriptor[2] -ne 0x3800F100 -or $descriptor[3] -ne 32) {
             throw 'Flash the updated Bootloader first. Application Flash was not written.'
         }
-        [uint32[]]$words = @($Slot, $cm7[0], $cm7[1], $cm4[0], $cm4[1], $Version)
+        [uint32]$coreId = if ($Core -eq 'CM7') { 7 } else { 4 }
+        [uint32[]]$words = @($coreId, $Slot, $image[0], $image[1], $Version, 0)
         # 检查阶段不写 EEPROM，且在任何应用擦写前保护双核 confirmed 镜像。
         Invoke-UpdateRequest $Cli 0x4C555031 $words $readPath
-        foreach ($core in @('CM7', 'CM4')) {
-            Invoke-UpdateProgrammer $Cli @('-c', 'port=SWD', 'mode=UR', '-w', $Firmwares[$core], '-v')
-        }
+        Invoke-UpdateProgrammer $Cli @('-c', 'port=SWD', 'mode=UR', '-w', $Firmware, '-v')
         Invoke-UpdateRequest $Cli 0x4C555032 $words $readPath
-        Write-Host "PENDING: slot=$Slot version=$Version; both cores have 3 trials. Runtime confirmation is still required."
+        Write-Host "PENDING: core=$Core slot=$Slot version=$Version; target core has 3 trials. Runtime confirmation is still required."
         Invoke-UpdateProgrammer $Cli @('-c', 'port=SWD', 'mode=HOTPLUG', '-rst')
     }
     finally {

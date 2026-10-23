@@ -17,7 +17,8 @@ function Invoke-UpdateProgrammer {
     if ($upload -lt 0) { return }
     if ($Arguments[$upload + 1] -eq '0x0801FFF0') {
         $magic = if ($script:scenario -eq 'old-bootloader') { 0 } else { 0x4C555044 }
-        $words = @($magic, 1, 0x3800F100, 32)
+        $protocol = if ($script:scenario -eq 'v1-bootloader') { 1 } else { 2 }
+        $words = @($magic, $protocol, 0x3800F100, 32)
     } else {
         $failed = ($script:phase -eq 'check' -and $script:scenario -eq 'check-failed') -or
                   ($script:phase -eq 'commit' -and $script:scenario -eq 'commit-failed')
@@ -44,23 +45,29 @@ try {
             [IO.File]::WriteAllBytes([IO.Path]::ChangeExtension($elf, '.bin'), $bytes)
             $firmwares[$core] = $elf
         }
-        foreach ($scenario in @('success', 'old-bootloader', 'check-failed', 'commit-failed', 'flash-failed')) {
+        foreach ($core in @('CM7', 'CM4')) {
+        foreach ($scenario in @('success', 'old-bootloader', 'v1-bootloader', 'check-failed', 'commit-failed', 'flash-failed')) {
             $script:scenario = $scenario
             $script:phase = ''
             $script:calls = New-Object 'System.Collections.Generic.List[object]'
             $failed = $false
-            try { Invoke-LocalFlashUpdate -Cli 'mock' -Firmwares $firmwares -Slot $slot -Version 42 }
+            try { Invoke-LocalFlashUpdate -Cli 'mock' -Core $core -Firmware $firmwares[$core] -Slot $slot -Version 42 }
             catch { $failed = $true }
             Assert-UpdateTest ($failed -eq ($scenario -ne 'success')) "Unexpected result: $scenario"
             $writes = @($script:calls | Where-Object { $_ -contains '-w' })
             $requests = @($script:calls | Where-Object { $_ -contains '0x3800F104' })
-            if ($scenario -eq 'old-bootloader' -or $scenario -eq 'check-failed') {
+            if ($scenario -in @('old-bootloader', 'v1-bootloader', 'check-failed')) {
                 Assert-UpdateTest ($writes.Count -eq 0) 'Must reject before Flash erase'
             }
             if ($scenario -eq 'success') {
-                Assert-UpdateTest ($writes.Count -eq 2 -and $requests.Count -eq 2) 'Missing check/write/commit stages'
-                Assert-UpdateTest ($requests[0][5] -eq ('0x{0:X8}' -f $slot)) 'Wrong target slot'
-                Assert-UpdateTest ($requests[1][10] -eq '0x0000002A') 'Wrong version'
+                Assert-UpdateTest ($writes.Count -eq 1 -and $requests.Count -eq 2) 'Missing single-core check/write/commit stages'
+                Assert-UpdateTest ($writes[0][4] -eq $firmwares[$core]) 'Wrong core image written'
+                $coreId = if ($core -eq 'CM7') { 7 } else { 4 }
+                foreach ($request in $requests) {
+                    Assert-UpdateTest ($request[5] -eq ('0x{0:X8}' -f $coreId)) 'Wrong target core'
+                    Assert-UpdateTest ($request[6] -eq ('0x{0:X8}' -f $slot)) 'Wrong target slot'
+                    Assert-UpdateTest ($request[9] -eq '0x0000002A' -and $request[10] -eq '0x00000000') 'Wrong version/reserved word'
+                }
                 Assert-UpdateTest ($script:calls[$script:calls.Count - 1] -contains '-rst') 'Missing trial boot reset'
                 $checkIndex = -1; $writeIndex = -1; $commitIndex = -1
                 for ($i = 0; $i -lt $script:calls.Count; $i++) {
@@ -73,8 +80,9 @@ try {
                 Assert-UpdateTest (-not ($script:calls[$script:calls.Count - 1] -contains '-rst')) 'Failure must not perform final reset'
             }
         }
+        }
     }
-    foreach ($file in @('make_flash_slotA.ps1', 'make_flash_slotB.ps1', 'local_flash_update.ps1')) {
+    foreach ($file in @('make_flash_cm7_slotA.ps1', 'make_flash_cm7_slotB.ps1', 'make_flash_cm4_slotA.ps1', 'make_flash_cm4_slotB.ps1', 'make_flash_core.ps1', 'local_flash_update.ps1')) {
         $tokens = $null; $parseErrors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot "..\$file"), [ref]$tokens, [ref]$parseErrors)
         Assert-UpdateTest ($parseErrors.Count -eq 0) "Syntax error: $file"
@@ -82,8 +90,16 @@ try {
             $parameter = @($ast.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Version' })
             Assert-UpdateTest ($parameter.Count -eq 1 -and $parameter[0].DefaultValue.Value -eq 0) 'Version must default to zero'
         }
+        if ($file -match '^make_flash_(cm[47])_slot([AB])\.ps1$') {
+            $expectedCore = $Matches[1].ToUpperInvariant()
+            $expectedSlot = $Matches[2]
+            $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true) |
+                Where-Object { $_.Extent.Text -match '-Core\s+CM[47]' })
+            Assert-UpdateTest ($commands.Count -eq 1) "Missing core dispatch: $file"
+            Assert-UpdateTest ($commands[0].Extent.Text -match "-Core $expectedCore -Slot $expectedSlot -Jobs \`$Jobs -Version \`$Version") "Wrong dispatch: $file"
+        }
     }
-    Write-Host 'PASS: A/B update ordering, version transfer/default, preflight rejection, Flash failure, pending failure'
+    Write-Host 'PASS: CM7/CM4 A/B single-image writes, request core/slot/version, protocol v1 rejection, update ordering and failure paths'
 }
 finally {
     Remove-Item -LiteralPath $directory -Recurse -Force

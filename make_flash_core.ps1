@@ -1,5 +1,11 @@
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('CM7', 'CM4')]
+    [string]$Core,
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('A', 'B')]
+    [string]$Slot,
     [ValidateRange(0, 256)]
     [int]$Jobs = 0,
     [uint32]$Version = 0
@@ -29,25 +35,25 @@ if (-not $make) {
     throw 'make was not found. Install GNU Make or add it to PATH.'
 }
 
-$firmwares = @{}
-foreach ($core in @('CM4', 'CM7')) {
-    $makeDirectory = Join-Path $PSScriptRoot "Makefile\$core"
-    $makefile = Join-Path $makeDirectory 'Makefile'
-    if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "$core Makefile was not found: $makefile" }
-    $targetBase = Get-MakefileVariable -Path $makefile -Name 'TARGET_BASE'
+$makeDirectory = Join-Path $PSScriptRoot "Makefile\$Core"
+$makefile = Join-Path $makeDirectory 'Makefile'
+if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "$Core Makefile was not found: $makefile" }
+$targetBase = Get-MakefileVariable -Path $makefile -Name 'TARGET_BASE'
 
-    $makeArgs = @('-C', $makeDirectory, 'slot-b')
-    if ($Jobs -gt 0) {
-        $makeArgs += "-j$Jobs"
-    }
-    & $make.Source @makeArgs
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
-    }
-
-    $firmwares[$core] = Join-Path (Join-Path $makeDirectory 'build_B') "${targetBase}_B.elf"
+$makeArgs = @('-C', $makeDirectory, "APP_SLOT=$Slot")
+if ($Jobs -gt 0) {
+    $makeArgs += "-j$Jobs"
 }
+& $make.Source @makeArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "Build failed: $Core slot $Slot (exit $LASTEXITCODE)"
+}
+
+$buildDirectory = if ($Slot -eq 'A') { 'build' } else { 'build_B' }
+$target = if ($Slot -eq 'A') { $targetBase } else { "${targetBase}_B" }
+$firmware = Join-Path (Join-Path $makeDirectory $buildDirectory) "$target.elf"
 
 $cli = Resolve-ProgrammerCli
 . (Join-Path $PSScriptRoot 'local_flash_update.ps1')
-Invoke-LocalFlashUpdate -Cli $cli -Firmwares $firmwares -Slot 1 -Version $Version
+[uint32]$slotIndex = if ($Slot -eq 'A') { 0 } else { 1 }
+Invoke-LocalFlashUpdate -Cli $cli -Core $Core -Firmware $firmware -Slot $slotIndex -Version $Version

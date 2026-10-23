@@ -7,7 +7,7 @@
 - 源码变更构建受影响的核；修改 `Common/`、启动或 OpenAMP 时构建两个核，修改槽位或链接布局时验证 A/B。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
 - `./clean.ps1` 清理两个核的双槽产物；顶层 `make -C Makefile clean` 不递归清理两核产物。
 - 源文件和头文件目录需显式加入各核 Makefile 的 `C_SOURCES` / `C_INCLUDES`。目标文件按源文件 basename 扁平化；CM7 为 LwIP 与 libmetal 的 `init.c` / `sys.c` 保留了专用规则，添加同名源文件时检查目标冲突。
-- `./make_all.ps1 [-Jobs N]` 仅构建两个核的双槽；从 WSL 可运行 `powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`。`./make_flash_slotA.ps1 [-Jobs N] [-Version V]` / `./make_flash_slotB.ps1 [-Jobs N] [-Version V]` 通过新版 Bootloader 预检查，仅允许无 pending 且不覆盖双核 confirmed 的正常升级；烧录校验后一次登记双核 pending（各 3 次试启动），最后复位。版本默认 0，双核共用。不支持空板初始化；不要当作仅构建命令。烧录需要 ST-Link 和 STM32CubeProgrammer，CLI 可通过 `STM32_PROGRAMMER_CLI` 指定。说明与模拟测试见 `docs/local_flash_update.md`、`tests/local_flash_update_test.ps1`。
+- `./make_all.ps1 [-Jobs N]` 仅构建两个核的双槽；从 WSL 可运行 `powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`。四个单核升级入口为 `make_flash_cm7_slotA.ps1`、`make_flash_cm7_slotB.ps1`、`make_flash_cm4_slotA.ps1`、`make_flash_cm4_slotB.ps1`，均支持 `[-Jobs N] [-Version V]`，共用 `make_flash_core.ps1`。要求板上 Bootloader 本地协议 v2；预检查双核无 pending、confirmed 镜像有效且不覆盖目标核 confirmed，随后仅构建/烧录目标核指定槽、登记该核 pending（3 次试启动）并复位，保留另一核启动字段和镜像信息。版本默认 0。不支持空板初始化；不要当作仅构建命令。烧录需要 ST-Link 和 STM32CubeProgrammer，CLI 可通过 `STM32_PROGRAMMER_CLI` 指定。说明与模拟测试见 `docs/local_flash_update.md`、`tests/local_flash_update_test.ps1`。
 - 烧录脚本仅写应用槽，不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；启动/OTA 验证需另行确认板上的固定引导程序。
 
 ## HTTP / 摄像头验证
