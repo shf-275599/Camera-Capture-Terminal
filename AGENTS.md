@@ -12,12 +12,13 @@
 
 ## HTTP / OTA 验证
 
-- 本工程的正式 OTA 上位机为 `../qt-ota/`，使用前读取其 `AGENTS.md`。本机模拟上传测试在 Windows PowerShell 中运行 `../qt-ota/test-upload.ps1`；须先生成 CM7 B BIN，仅验证客户端与模拟服务的正常上传交互，不验证真实设备擦写、启动或断线续传。
+- 本工程的正式 OTA 上位机为 `../qt-ota/`，使用前读取其 `AGENTS.md`。本机模拟测试在 Windows PowerShell 中运行：`../qt-ota/test-upload.ps1` 验证正常上传，`../qt-ota/test-recovery.ps1` 验证 begin/chunk 回包失败、网络中断、未提交块、客户端重启恢复、固件身份不符、会话失效和 end 结果不明等 8 个场景；须先生成 CM7 B BIN 并构建 Qt EXE。模拟测试仅验证客户端与模拟服务交互，不验证真实设备擦写、复位、启动或硬件断线续传。
 - 原 PowerShell 上传器 `ota_upload.ps1` 已删除；`tests/http/uploader_test.ps1` 和 `tests/http/resume_test.ps1` 仍依赖该脚本，当前不能直接运行，不得作为可用测试入口。
 - `./tests/http/device_test.ps1 -Device <IP>` 要求 CM7 已确认运行 A 且无 pending，会擦写空闲 B 槽，不是只读检查。
 - `tests/http/response_timeout_test.ps1` 的回包失败用例依赖已撤除的临时故障注入，不能直接用于正常固件；`-TotalOnly` 路径不依赖注入，但需设备和串口，实等约 10 分钟并写入 CM4 空闲槽。
 - `tests/http/parser_test.c` 没有构建入口；其头文件依赖 `lwip/api.h`，旧文档提及的 `tests/http` 本地替身当前不存在，不要将它视为可直接独立编译的测试。
-- 正式上传使用 `../qt-ota/` 上位机；目标为该核实际运行槽的另一槽，BIN 必须链接到目标地址。设备端支持 RAM 会话内续传：相同目标核、长度、版本、CRC32、链接地址重复 begin 返回当前偏移，空闲上限 60 秒、总时长上限 10 分钟，掉电/复位不保留进度。Qt 客户端当前未实现断点续传或自动重连，不得将设备端能力等同于上位机能力；end 结果不明时先查启动日志和状态。历史协议与验证记录见 `docs/ota_resume_verified_20261021.md`，其中 PowerShell 上传器命令已不适用。
+- 正式上传使用 `../qt-ota/` 上位机；目标为该核实际运行槽的另一槽，BIN 必须链接到目标地址。设备端支持 RAM 会话内续传：相同目标核、长度、版本、CRC32、链接地址重复 begin 返回 `OTA resume written=N`，不重擦、不重置 CRC，也不延长会话时限；written 包含 RAM 缓冲，chunk 偏移必须精确匹配。空闲上限 60 秒、总时长上限 10 分钟，掉电/复位不保留进度。
+- Qt 客户端已实现上传会话内自动重连续传和本地任务恢复：网络错误、HTTP 408/5xx 后按 1/2/4/5 秒退避，查询状态并重发匹配的 begin，以设备偏移继续；连续恢复失败 60 秒后暂停，时限在请求结束时检查，单请求超时 45 秒。重开程序提示恢复并校验原 BIN 身份；设备会话失效须确认擦除目标槽并从头上传，本地任务不代表设备进度已持久化。初始状态查询失败不自动恢复；end 结果不明时只查询目标运行槽、版本和长度，不自动重发 end 或 abort，仍需核对启动日志和业务。历史协议与验证记录见 `docs/ota_resume_verified_20261021.md`，其中 PowerShell 上传器命令已不适用。
 
 ## 启动和修改边界
 
