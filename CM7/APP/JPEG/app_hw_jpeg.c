@@ -388,6 +388,8 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   JPEG_ConfTypeDef info = {0};
   JPEG_RGBToYCbCr_Convert_Function convert;
   uint32_t mcus, converted, start, yield_tick;
+  uint32_t convert_start, convert_ms, dma_start;
+  static uint32_t perf_frames;
   int result = -1;
   if (!rgb565 || !output || !size || capacity < JPEG_OUTPUT_BUFFER_SIZE ||
       (capacity % JPEG_OUTPUT_BUFFER_SIZE) != 0U || !jpeg_acquire()) return -1;
@@ -407,7 +409,8 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   if (JPEG_GetEncodeColorConvertFunc(&info, &convert, &mcus) != HAL_OK) goto finish;
   /* 每次转换一行 MCU，累计运行 4 ms 后让出 CPU，避免每行固定等待。
    * 高优先级相机和网络任务仍可抢占，输入始终是独立的完整快照。 */
-  yield_tick = HAL_GetTick();
+  convert_start = HAL_GetTick();
+  yield_tick = convert_start;
   for (uint32_t block = 0U; block < mcus; block += 50U)
   {
     if (convert(rgb565, mcu + block * 384U, block, 800U * 16U * 2U, &converted) != 50U ||
@@ -418,12 +421,14 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
       yield_tick = HAL_GetTick();
     }
   }
+  convert_ms = HAL_GetTick() - convert_start;
   g_jpeg.in_size = mcus * 384U;
   g_jpeg_input = mcu;
   jpeg_cache_clean(mcu, g_jpeg.in_size);
   jpeg_cache_clean(output, capacity);
   jpeg_cache_invalidate(output, capacity);
   if (HAL_JPEG_ConfigEncoding(&hjpeg, &info) != HAL_OK) goto finish;
+  dma_start = HAL_GetTick();
   if (HAL_JPEG_Encode_DMA(&hjpeg, mcu, JPEG_INPUT_CHUNK_SIZE,
                           output, JPEG_OUTPUT_BUFFER_SIZE) != HAL_OK) goto finish;
   start = HAL_GetTick();
@@ -444,6 +449,10 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   if (encoded_size < 4U || g_jpeg.out_size - encoded_size > 3U) goto finish;
   g_jpeg.out_size = encoded_size;
   *size = g_jpeg.out_size;
+  if (++perf_frames % 30U == 0U)
+    LOG_INFO("JPEG", "ENCODE_PERF convert=%lu dma=%lu ms bytes=%lu",
+             (unsigned long)convert_ms, (unsigned long)(HAL_GetTick() - dma_start),
+             (unsigned long)*size);
   result = 0;
 finish:
   if (result != 0) HAL_JPEG_Abort(&hjpeg);

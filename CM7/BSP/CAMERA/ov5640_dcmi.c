@@ -79,6 +79,7 @@ static volatile uint8_t s_copying;
 int ov5640_dcmi_copy_frame(void *destination)
 {
     uint32_t address;
+    uint32_t yield_tick;
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
     if (!g_stream.active || g_stream.error || !g_stream.display_frames || s_copying)
@@ -92,12 +93,17 @@ int ov5640_dcmi_copy_frame(void *destination)
     __set_PRIMASK(primask);
     /* 分块读取 SDRAM，避免整帧连续复制挤占 DCMI/DMA2D 和 LTDC 的访问。
      * s_copying 在让出 CPU 期间仍保持置位，显示帧不会被回收为采集缓冲。 */
+    yield_tick = HAL_GetTick();
     for (uint32_t offset = 0U; offset < CAMERA_FRAME_BYTES; offset += 800U * 16U * 2U)
     {
         g_stream.copy_offset = offset;
         SCB_InvalidateDCache_by_Addr((uint32_t *)(address + offset), 800U * 16U * 2U);
         memcpy((uint8_t *)destination + offset, (const void *)(address + offset), 800U * 16U * 2U);
-        if (offset + 800U * 16U * 2U < CAMERA_FRAME_BYTES) osDelay(1U);
+        if (offset + 800U * 16U * 2U < CAMERA_FRAME_BYTES && HAL_GetTick() - yield_tick >= 4U)
+        {
+            osDelay(1U);
+            yield_tick = HAL_GetTick();
+        }
     }
     __DMB();
     s_copying = 0U;
