@@ -430,6 +430,10 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
   uint32_t red, green, blue;
 
+#if (JPEG_RGB_FORMAT == JPEG_RGB565)
+  uint16_t pixel;
+#endif
+
   uint8_t *pOutAddr;
   uint8_t *pInAddr;
 
@@ -471,9 +475,10 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
       {
         /* First Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        red   = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
-        green = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
-        blue  = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
+        pixel = *(const uint16_t *)(pInAddr + refline);
+        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
+        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
+        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -491,9 +496,10 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
         /* Second Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        red   = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
-        green = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
-        blue  = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
+        pixel = *(const uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline);
+        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
+        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
+        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -510,9 +516,10 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
         /* Third Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        red   = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
-        green = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
-        blue  = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
+        pixel = *(const uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline);
+        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
+        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
+        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -530,9 +537,10 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
         /* Fourth Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        red   = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
-        green = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
-        blue  = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
+        pixel = *(const uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL);
+        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
+        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
+        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
