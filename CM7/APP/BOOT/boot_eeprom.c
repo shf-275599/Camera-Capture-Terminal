@@ -3,6 +3,7 @@
  * @brief   EEPROM 双备份启动元数据实现（CM7 + CM4）
  */
 #include "boot_eeprom.h"
+#include "boot_local_update.h"
 #include <string.h>
 #include "bl24c16f.h"
 #include "bsp_eeprom.h"
@@ -596,14 +597,57 @@ int boot_eeprom_commit_pending(boot_eeprom_meta_t *meta)
 }
 
 /**
- * @brief  标记 CM7 pending 槽（OTA 写完镜像后由 APP 调用）：记录镜像信息，
- *         置试启动次数与 pending 标志后保存
- * @param  meta       元数据
- * @param  slot_index 待启动槽索引
- * @param  image_size 镜像大小
- * @param  image_crc32 镜像 CRC32
- * @param  version    镜像版本号
+ * @brief  本地升级的擦写前检查与双核 pending 提交
+ * @param  values 槽号、CM7 长度/CRC、CM4 长度/CRC、版本
+ * @param  commit 0 只检查；非 0 校验目标并保存双核 pending
  * @retval 0 成功，-1 失败
+ */
+int boot_eeprom_local_update(const uint32_t values[6], int commit)
+{
+    boot_eeprom_meta_t meta;
+    uint32_t slot = values[0];
+
+    /* 正常升级必须保留双核 confirmed 镜像；空板与未结束的升级均拒绝。 */
+    if ((slot >= CM7_APP_SLOT_COUNT) || (boot_eeprom_load(&meta) != 0) ||
+        ((meta.flags & BOOT_EE_FLAG_PENDING) != 0U) ||
+        ((meta.cm4_flags & BOOT_EE_FLAG_CM4_PENDING) != 0U) ||
+        (meta.confirmed_slot >= CM7_APP_SLOT_COUNT) ||
+        (meta.cm4_confirmed_slot >= CM4_APP_SLOT_COUNT) ||
+        (slot == meta.confirmed_slot) || (slot == meta.cm4_confirmed_slot) ||
+        !boot_ee_image_valid(meta.confirmed_slot, 0, meta.app_size[meta.confirmed_slot],
+                             meta.app_crc[meta.confirmed_slot], 0) ||
+        !boot_ee_image_valid(meta.cm4_confirmed_slot, 1, meta.cm4_app_size[meta.cm4_confirmed_slot],
+                             meta.cm4_app_crc[meta.cm4_confirmed_slot], 0))
+    {
+        return -1;
+    }
+    if (!commit)
+    {
+        return 0;
+    }
+    if (!boot_ee_image_valid((uint8_t)slot, 0, values[1], values[2], 1) ||
+        !boot_ee_image_valid((uint8_t)slot, 1, values[3], values[4], 1))
+    {
+        return -1;
+    }
+    meta.app_size[slot] = values[1];
+    meta.app_crc[slot] = values[2];
+    meta.app_version[slot] = values[5];
+    meta.cm4_app_size[slot] = values[3];
+    meta.cm4_app_crc[slot] = values[4];
+    meta.cm4_app_version[slot] = values[5];
+    meta.pending_slot = (uint8_t)slot;
+    meta.cm4_pending_slot = (uint8_t)slot;
+    meta.boot_trial = BOOT_EE_TRIAL_MAX;
+    meta.cm4_boot_trial = BOOT_EE_TRIAL_MAX;
+    meta.flags |= BOOT_EE_FLAG_PENDING;
+    meta.cm4_flags |= BOOT_EE_FLAG_CM4_PENDING;
+    /* 一次保存双核 pending，避免只登记一个核后中途复位。 */
+    return boot_eeprom_save(&meta);
+}
+
+/**
+ * @brief  OTA 写完后登记 CM7 镜像并设置 pending 和试启动次数
  */
 int boot_eeprom_set_pending(boot_eeprom_meta_t *meta, uint8_t slot_index,
                             uint32_t image_size, uint32_t image_crc32,
