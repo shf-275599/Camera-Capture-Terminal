@@ -387,7 +387,7 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   uint8_t *mcu = (uint8_t *)0xD0600000U;
   JPEG_ConfTypeDef info = {0};
   JPEG_RGBToYCbCr_Convert_Function convert;
-  uint32_t mcus, converted, start;
+  uint32_t mcus, converted, start, yield_tick;
   int result = -1;
   if (!rgb565 || !output || !size || capacity < JPEG_OUTPUT_BUFFER_SIZE ||
       (capacity % JPEG_OUTPUT_BUFFER_SIZE) != 0U || !jpeg_acquire()) return -1;
@@ -405,12 +405,18 @@ int jpeg_hw_encode(uint8_t *rgb565, uint8_t *output, uint32_t capacity, uint32_t
   info.ImageQuality = 60U;
   JPEG_InitColorTables();
   if (JPEG_GetEncodeColorConvertFunc(&info, &convert, &mcus) != HAL_OK) goto finish;
-  /* 每次转换一行 MCU，并让出 CPU；输入始终是独立的完整快照。 */
+  /* 每次转换一行 MCU，累计运行 4 ms 后让出 CPU，避免每行固定等待。
+   * 高优先级相机和网络任务仍可抢占，输入始终是独立的完整快照。 */
+  yield_tick = HAL_GetTick();
   for (uint32_t block = 0U; block < mcus; block += 50U)
   {
     if (convert(rgb565, mcu + block * 384U, block, 800U * 16U * 2U, &converted) != 50U ||
         converted != 50U * 384U) goto finish;
-    osDelay(1U);
+    if (HAL_GetTick() - yield_tick >= 4U)
+    {
+      osDelay(1U);
+      yield_tick = HAL_GetTick();
+    }
   }
   g_jpeg.in_size = mcus * 384U;
   g_jpeg_input = mcu;

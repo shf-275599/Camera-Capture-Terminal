@@ -73,6 +73,9 @@ static void Mjpeg_Thread(void *argument)
     uint32_t waiting = HAL_GetTick();
     uint32_t fps_tick = waiting;
     uint32_t fps_frames = 0U;
+    uint32_t copy_ms = 0U;
+    uint32_t encode_ms = 0U;
+    uint32_t send_ms = 0U;
     netconn_set_sendtimeout(conn, 1000);
     if (mjpeg_send(conn, response, sizeof(response) - 1U) != 0) goto finish;
     LOG_INFO("CM7", "MJPEG_STREAM_START");
@@ -88,6 +91,7 @@ static void Mjpeg_Thread(void *argument)
             continue;
         }
         waiting = HAL_GetTick();
+        uint32_t copied = waiting;
         if (s_stopping) break;
         if (jpeg_hw_encode(MJPEG_RGB, MJPEG_OUTPUT, MJPEG_CAPACITY, &size) != 0)
         {
@@ -95,6 +99,7 @@ static void Mjpeg_Thread(void *argument)
             break;
         }
         if (s_stopping) break;
+        uint32_t encoded = HAL_GetTick();
         int length = snprintf(header, sizeof(header),
                               "--frame\r\nContent-Type: image/jpeg\r\n"
                               "Content-Length: %lu\r\n\r\n", (unsigned long)size);
@@ -111,19 +116,33 @@ static void Mjpeg_Thread(void *argument)
         }
         if (s_stopping || mjpeg_send(conn, "\r\n", 2U) != 0) break;
         uint32_t now = HAL_GetTick();
+        copy_ms += copied - started;
+        encode_ms += encoded - copied;
+        send_ms += now - encoded;
         fps_frames++;
         taskENTER_CRITICAL();
         s_last_frame_tick = now;
         if (now - fps_tick >= 1000U)
         {
             s_fps_x10 = fps_frames * 10000U / (now - fps_tick);
+        }
+        uint32_t fps_x10 = s_fps_x10;
+        taskEXIT_CRITICAL();
+        if (now - fps_tick >= 1000U)
+        {
+            LOG_INFO("CM7", "MJPEG_PERF fps=%lu.%lu copy=%lu encode=%lu send=%lu ms/frame",
+                     (unsigned long)(fps_x10 / 10U), (unsigned long)(fps_x10 % 10U),
+                     (unsigned long)(copy_ms / fps_frames),
+                     (unsigned long)(encode_ms / fps_frames),
+                     (unsigned long)(send_ms / fps_frames));
             fps_frames = 0U;
             fps_tick = now;
+            copy_ms = 0U;
+            encode_ms = 0U;
+            send_ms = 0U;
         }
-        taskEXIT_CRITICAL();
         if (++frames == 1U)
             LOG_INFO("CM7", "MJPEG_FIRST_FRAME bytes=%lu", (unsigned long)size);
-        while (!s_stopping && HAL_GetTick() - started < 100U) osDelay(1U);
     }
 finish:
     netconn_close(conn);
