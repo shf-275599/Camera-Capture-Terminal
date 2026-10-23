@@ -5,6 +5,7 @@
 #include "app_http_server.h"
 #include "app_http_util.h"
 #include "app_http_ota.h"
+#include "app_http_mjpeg.h"
 #include "lwip/api.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
@@ -24,6 +25,7 @@
 extern struct netif gnetif; // 网络接口结构体
 
 static app_http_request_t s_request;
+static uint8_t s_client_transferred;
 
 /**
  * @brief   HTTP 服务器任务
@@ -154,7 +156,9 @@ static void Http_Thread(void *argument)
             osDelay(100U);
             continue;
         }
+        s_client_transferred = 0U;
         http_handle_client(client_connection); // 处理客户端请求
+        if (s_client_transferred) continue;
         netconn_close(client_connection);      // 关闭客户端连接
         netconn_delete(client_connection);     // 释放连接资源
     }
@@ -198,6 +202,26 @@ static void http_handle_client(struct netconn *conn)
         return;
     }
 
+    if (s_request.content_length == 0U && strcmp(s_request.path, "/") == 0)
+    {
+        http_reply_text(conn, 200, "OK", "text/html; charset=utf-8",
+                        "<!doctype html><html lang=\"zh-CN\"><meta charset=\"utf-8\">"
+                        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                        "<title>相机实时预览</title><body>"
+                        "<h1>相机实时预览</h1><img src=\"/stream\" alt=\"相机画面\" "
+                        "style=\"max-width:100%;height:auto\">"
+                        "<p>连接中断或升级结束后，请刷新页面。</p></body></html>");
+        return;
+    }
+    if (s_request.content_length == 0U && strcmp(s_request.path, "/stream") == 0)
+    {
+        if (app_http_mjpeg_start(conn) == 0)
+            s_client_transferred = 1U;
+        else
+            http_reply_text(conn, 503, "Service Unavailable", "text/plain; charset=utf-8",
+                            "stream busy or OTA active\r\n");
+        return;
+    }
     /* 处理 /status 请求 */
     if (strcmp(s_request.path, "/status") == 0 && s_request.content_length == 0U) // 如果是 /status 请求
     {

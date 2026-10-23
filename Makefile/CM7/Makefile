@@ -74,6 +74,7 @@ C_SOURCES =  \
 ../../CM7/APP/JPEG/app_hw_jpeg.c \
 ../../CM7/APP/IPC/app_ipc_cm7.c \
 ../../CM7/APP/NET/HTTP/app_http_server.c \
+../../CM7/APP/NET/HTTP/app_http_mjpeg.c \
 ../../CM7/APP/NET/HTTP/app_http_util.c \
 ../../CM7/APP/BOOT/boot_eeprom.c \
 ../../CM7/APP/OTA/app_ota.c \

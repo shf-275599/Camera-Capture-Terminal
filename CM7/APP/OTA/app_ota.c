@@ -15,6 +15,7 @@
 #include "boot_eeprom.h"
 #include "boot_slot.h"
 #include "app_ov5640.h"
+#include "app_http_mjpeg.h"
 #include "mylog.h"
 
 #define APP_OTA_PROG_CHUNK (8192U)           // 编程缓冲粒度
@@ -246,7 +247,17 @@ static int flush_prog_buf(void)
  */
 static int ota_quiesce_system(void)
 {
-  return app_ov5640_pause(3000U);
+  if (app_http_mjpeg_stop(5000U) != 0)
+  {
+    app_http_mjpeg_resume();
+    return -1;
+  }
+  if (app_ov5640_pause(3000U) != 0)
+  {
+    app_http_mjpeg_resume();
+    return -1;
+  }
+  return 0;
 }
 
 /**
@@ -255,6 +266,7 @@ static int ota_quiesce_system(void)
 static void ota_restore_system(void)
 {
   app_ov5640_resume();
+  app_http_mjpeg_resume();
 }
 
 /**
