@@ -28,11 +28,6 @@ if (-not $make) {
     throw 'make was not found. Install GNU Make or add it to PATH.'
 }
 
-& (Join-Path $PSScriptRoot 'make_all.ps1') -Jobs $Jobs
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-}
-
 $firmwares = @{}
 foreach ($core in @('CM4', 'CM7')) {
     $makeDirectory = Join-Path $PSScriptRoot "Makefile\$core"
@@ -40,25 +35,27 @@ foreach ($core in @('CM4', 'CM7')) {
     if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "$core Makefile was not found: $makefile" }
     $targetBase = Get-MakefileVariable -Path $makefile -Name 'TARGET_BASE'
 
-    foreach ($slot in @('A', 'B')) {
-        $buildDirectory = if ($slot -eq 'A') { 'build' } else { 'build_B' }
-        $targetName = if ($slot -eq 'A') { $targetBase } else { "${targetBase}_$slot" }
-        $firmwares["$core-$slot"] = Join-Path (Join-Path $makeDirectory $buildDirectory) "$targetName.elf"
+    $makeArgs = @('-C', $makeDirectory, 'slot-b')
+    if ($Jobs -gt 0) {
+        $makeArgs += "-j$Jobs"
     }
-}
+    & $make.Source @makeArgs
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 
-$flashOrder = @('CM7-A', 'CM4-A', 'CM7-B', 'CM4-B')
-foreach ($name in $flashOrder) {
-    $firmware = $firmwares[$name]
-    if (-not (Test-Path -LiteralPath $firmware -PathType Leaf)) {
-        throw "Firmware was not found: $firmware"
-    }
+    $firmwares[$core] = Join-Path (Join-Path $makeDirectory 'build_B') "${targetBase}_B.elf"
 }
 
 $cli = Resolve-ProgrammerCli
-foreach ($name in $flashOrder) {
-    $programmerArgs = @('-c', 'port=SWD', 'mode=UR', '-w', $firmwares[$name], '-v')
-    if ($name -eq 'CM4-B') {
+foreach ($core in @('CM7', 'CM4')) {
+    $firmware = $firmwares[$core]
+    if (-not (Test-Path -LiteralPath $firmware -PathType Leaf)) {
+        throw "Firmware was not found: $firmware"
+    }
+
+    $programmerArgs = @('-c', 'port=SWD', 'mode=UR', '-w', $firmware, '-v')
+    if ($core -eq 'CM4') {
         $programmerArgs += '-rst'
     }
     & $cli @programmerArgs
