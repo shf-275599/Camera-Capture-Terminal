@@ -37,7 +37,8 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 128K
+FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 128K - 16
+LOCAL_UPDATE (r) : ORIGIN = 0x0801FFF0, LENGTH = 16
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 }
@@ -50,6 +51,10 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
+  .local_update :
+  {
+    KEEP(*(.local_update))
+  } >LOCAL_UPDATE
   /* The startup code goes first into FLASH */
   .isr_vector :
   {

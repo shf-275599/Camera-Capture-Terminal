@@ -35,6 +35,7 @@
 #include "mylog.h"
 #include "bsp_eeprom.h"
 #include "boot_eeprom.h"
+#include "boot_local_update.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,6 +78,51 @@ static void boot_key0_recover(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+__attribute__((used, section(".local_update")))
+const uint32_t boot_local_update_descriptor[4] = {
+    BOOT_LOCAL_DESCRIPTOR_MAGIC, BOOT_LOCAL_PROTOCOL_VERSION,
+    BOOT_LOCAL_MAILBOX_ADDR, BOOT_LOCAL_MAILBOX_SIZE};
+
+/** 本地更新维护入口：检查和提交均在正常选槽前执行，结果由 SWD 读取。 */
+static void boot_local_update(void)
+{
+  volatile uint32_t *mailbox = (volatile uint32_t *)BOOT_LOCAL_MAILBOX_ADDR;
+  uint32_t command = mailbox[0];
+  uint32_t values[6];
+
+  if ((command != BOOT_LOCAL_CHECK) && (command != BOOT_LOCAL_COMMIT))
+  {
+    return;
+  }
+  for (uint32_t i = 0U; i < 6U; i++)
+  {
+    values[i] = mailbox[i + 1U];
+  }
+  mailbox[0] = 0U;
+  mailbox[7] = BOOT_LOCAL_BUSY;
+  __DSB();
+  CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2);
+  LOG_INFO("LOCAL-UPDATE", "START phase=%s slot=%lu",
+           command == BOOT_LOCAL_CHECK ? "check" : "commit", (unsigned long)values[0]);
+  if ((bsp_eeprom_init() == 0) && (boot_eeprom_init() == 0) &&
+      (boot_eeprom_local_update(values, command == BOOT_LOCAL_COMMIT) == 0))
+  {
+    mailbox[7] = BOOT_LOCAL_OK;
+    LOG_INFO("LOCAL-UPDATE", "PASS phase=%s",
+             command == BOOT_LOCAL_CHECK ? "check" : "commit");
+  }
+  else
+  {
+    mailbox[7] = BOOT_LOCAL_FAILED;
+    LOG_ERROR("LOCAL-UPDATE", "FAIL phase=%s rc=-1 (EEPROM, slot or image)",
+              command == BOOT_LOCAL_CHECK ? "check" : "commit");
+  }
+  __DSB();
+  /* 不进入选槽和试启动；由脚本决定后续写入或复位。 */
+  while (1)
+  {
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -124,6 +170,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_I2C4_Init();
   /* USER CODE BEGIN 2 */
+  boot_local_update();
   boot_print_info(); // 打印系统信息
   LOG_INFO("BOOT", "====================================================================================");
   boot_init_eeprom();         // 初始化 EEPROM
