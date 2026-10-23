@@ -184,13 +184,13 @@ uint8_t app_ov5640_run(void)
         LOG_ERROR("CM7", "ov5640_set_color_saturation failed (err=%d)", ret);
         return ret;
     }
-    ret = ov5640_set_brightness(OV5640_BRIGHTNESS_3);
+    ret = ov5640_set_brightness(OV5640_BRIGHTNESS_4);
     if (ret != OV5640_EOK)
     {
         LOG_ERROR("CM7", "ov5640_set_brightness failed (err=%d)", ret);
         return ret;
     }
-    ret = ov5640_set_contrast(OV5640_CONTRAST_2);
+    ret = ov5640_set_contrast(OV5640_CONTRAST_4);
     if (ret != OV5640_EOK)
     {
         LOG_ERROR("CM7", "ov5640_set_contrast failed (err=%d)", ret);
@@ -202,7 +202,7 @@ uint8_t app_ov5640_run(void)
         LOG_ERROR("CM7", "ov5640_set_hue failed (err=%d)", ret);
         return ret;
     }
-    ret = ov5640_set_exposure_level(OV5640_EXPOSURE_LEVEL_2);
+    ret = ov5640_set_exposure_level(OV5640_EXPOSURE_LEVEL_5);
     if (ret != OV5640_EOK)
     {
         LOG_ERROR("CM7", "ov5640_set_exposure_level failed (err=%d)", ret);

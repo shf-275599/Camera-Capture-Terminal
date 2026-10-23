@@ -560,6 +560,8 @@ uint8_t ov5640_set_light_mode(ov5640_light_mode_t mode)
  */
 uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
 {
+    uint8_t control = ov5640_read_reg(0x5580);
+    uint8_t signs = ov5640_read_reg(0x5588);
     switch (saturation)
     {
     case OV5640_COLOR_SATURATION_0:
@@ -649,6 +651,9 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
     }
     }
 
+    /* 保留其他颜色功能及色相、亮度符号，仅更新饱和度控制。 */
+    ov5640_write_reg(0x5580, control | 0x02);
+    ov5640_write_reg(0x5588, signs | 0x41);
     return OV5640_EOK;
 }
 
@@ -668,6 +673,8 @@ uint8_t ov5640_set_color_saturation(ov5640_color_saturation_t saturation)
  */
 uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
 {
+    uint8_t control = ov5640_read_reg(0x5580);
+    uint8_t signs = ov5640_read_reg(0x5588);
     switch (brightness)
     {
     case OV5640_BRIGHTNESS_0:
@@ -748,6 +755,10 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
     }
     }
 
+    /* 亮度仅更新自身符号位，不清除饱和度和色相控制。 */
+    ov5640_write_reg(0x5580, control | 0x04);
+    ov5640_write_reg(0x5588, (signs & (uint8_t)~0x08U) |
+                     (ov5640_read_reg(0x5588) & 0x08U) | 0x01U);
     return OV5640_EOK;
 }
 
@@ -767,6 +778,8 @@ uint8_t ov5640_set_brightness(ov5640_brightness_t brightness)
  */
 uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
 {
+    uint8_t control = ov5640_read_reg(0x5580);
+    uint8_t signs = ov5640_read_reg(0x5588);
     switch (contrast)
     {
     case OV5640_CONTRAST_0:
@@ -856,6 +869,8 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
     }
     }
 
+    ov5640_write_reg(0x5580, control | 0x04);
+    ov5640_write_reg(0x5588, signs | 0x41);
     return OV5640_EOK;
 }
 
@@ -878,6 +893,8 @@ uint8_t ov5640_set_contrast(ov5640_contrast_t contrast)
  */
 uint8_t ov5640_set_hue(ov5640_hue_t hue)
 {
+    uint8_t control = ov5640_read_reg(0x5580);
+    uint8_t signs = ov5640_read_reg(0x5588);
     switch (hue)
     {
     case OV5640_HUE_0:
@@ -994,6 +1011,10 @@ uint8_t ov5640_set_hue(ov5640_hue_t hue)
     }
     }
 
+    /* 色相仅修改正弦、余弦符号，保留亮度符号和手动饱和度位。 */
+    ov5640_write_reg(0x5580, control | 0x01);
+    ov5640_write_reg(0x5588, (signs & (uint8_t)~0x33U) |
+                     (ov5640_read_reg(0x5588) & 0x33U));
     return OV5640_EOK;
 }
 
