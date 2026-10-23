@@ -208,9 +208,21 @@ static void http_handle_client(struct netconn *conn)
                         "<!doctype html><html lang=\"zh-CN\"><meta charset=\"utf-8\">"
                         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
                         "<title>相机实时预览</title><body>"
-                        "<h1>相机实时预览</h1><img src=\"/stream\" alt=\"相机画面\" "
+                        "<h1>相机实时预览</h1>"
+                        "<p>推流帧率：<span id=\"fps\">--</span> FPS（板端发送）</p>"
+                        "<img src=\"/stream\" alt=\"相机画面\" "
                         "style=\"max-width:100%;height:auto\">"
-                        "<p>连接中断或升级结束后，请刷新页面。</p></body></html>");
+                        "<p>连接中断或升级结束后，请刷新页面。</p>"
+                        "<script>async function updateFps(){"
+                        "const el=document.getElementById('fps');"
+                        "const ctrl=new AbortController();"
+                        "const timer=setTimeout(()=>ctrl.abort(),3000);"
+                        "try{const r=await fetch('/status',{cache:'no-store',signal:ctrl.signal});"
+                        "if(!r.ok)throw new Error();const s=await r.json();"
+                        "el.textContent=(s.mjpeg_fps_x10/10).toFixed(1);}"
+                        "catch(e){el.textContent='--';}"
+                        "finally{clearTimeout(timer);setTimeout(updateFps,1000);}}"
+                        "updateFps();</script></body></html>");
         return;
     }
     if (s_request.content_length == 0U && strcmp(s_request.path, "/stream") == 0)
@@ -247,6 +259,7 @@ static void http_handle_status(struct netconn *conn)
     char body[256];
     char ip_address[IP4ADDR_STRLEN_MAX];
     uint8_t running_slot;
+    uint32_t fps_x10 = app_http_mjpeg_fps_x10();
     int body_length;
 
     /* 获取 IP 地址 */
@@ -260,14 +273,16 @@ static void http_handle_status(struct netconn *conn)
                            "\"device\":\"STM32H757\","
                            "\"network\":\"%s\","
                            "\"ip\":\"%s\","
-                           "\"cm7_running_slot\":%u"
+                           "\"cm7_running_slot\":%u,"
+                           "\"mjpeg_fps_x10\":%lu"
                            "}\r\n",
                            (netif_is_link_up(&gnetif) &&
                             netif_is_up(&gnetif))
                                ? "up"
                                : "down",
                            ip_address,
-                           (unsigned int)running_slot);
+                           (unsigned int)running_slot,
+                           (unsigned long)fps_x10);
 
     /* 检查响应体长度是否有效 */
     if ((body_length <= 0) || ((size_t)body_length >= sizeof(body)))
