@@ -7,18 +7,16 @@
 - 源码变更构建受影响的核；修改 `Common/`、启动或 OpenAMP 时构建两个核，修改槽位或链接布局时验证 A/B。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
 - `./clean.ps1` 清理两个核的双槽产物；顶层 `make -C Makefile clean` 不递归清理两核产物。
 - 源文件和头文件目录需显式加入各核 Makefile 的 `C_SOURCES` / `C_INCLUDES`。目标文件按源文件 basename 扁平化；CM7 为 LwIP 与 libmetal 的 `init.c` / `sys.c` 保留了专用规则，添加同名源文件时检查目标冲突。
-- `./make_all.ps1 [-Jobs N]` 构建两个核的双槽；`./make_flash_slotA.ps1 [-Jobs N]` 构建并按 CM7-A、CM4-A 顺序烧录 A 槽；`./make_flash_all.ps1 [-Jobs N]` 构建两个核的双槽，再按 CM7-A、CM4-A、CM7-B、CM4-B 顺序烧录，最后复位。需要 ST-Link 和 STM32CubeProgrammer；CLI 未在 PATH 时可设置 `STM32_PROGRAMMER_CLI`。不要把烧录脚本当作仅构建命令。
+- `./make_all.ps1 [-Jobs N]` 仅构建两个核的双槽；从 WSL 可运行 `powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`。`./make_flash_slotA.ps1 [-Jobs N]` / `./make_flash_slotB.ps1 [-Jobs N]` 构建对应槽，按 CM7、CM4 顺序烧录并在最后复位；不要当作仅构建命令。烧录需要 ST-Link 和 STM32CubeProgrammer，CLI 可通过 `STM32_PROGRAMMER_CLI` 指定。
 - 烧录脚本仅写应用槽，不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；启动/OTA 验证需另行确认板上的固定引导程序。
 
-## HTTP / OTA 验证
+## HTTP / 摄像头验证
 
-- 本工程的正式 OTA 上位机为 `../qt-ota/`，使用前读取其 `AGENTS.md`。本机模拟测试在 Windows PowerShell 中运行：`../qt-ota/test-upload.ps1` 验证正常上传，`../qt-ota/test-recovery.ps1` 验证 begin/chunk 回包失败、网络中断、未提交块、客户端重启恢复、固件身份不符、会话失效和 end 结果不明等 8 个场景；须先生成 CM7 B BIN 并构建 Qt EXE。模拟测试仅验证客户端与模拟服务交互，不验证真实设备擦写、复位、启动或硬件断线续传。
-- 原 PowerShell 上传器 `ota_upload.ps1` 已删除；`tests/http/uploader_test.ps1` 和 `tests/http/resume_test.ps1` 仍依赖该脚本，当前不能直接运行，不得作为可用测试入口。
-- `./tests/http/device_test.ps1 -Device <IP>` 要求 CM7 已确认运行 A 且无 pending，会擦写空闲 B 槽，不是只读检查。
-- `tests/http/response_timeout_test.ps1` 的回包失败用例依赖已撤除的临时故障注入，不能直接用于正常固件；`-TotalOnly` 路径不依赖注入，但需设备和串口，实等约 10 分钟并写入 CM4 空闲槽。
-- `tests/http/parser_test.c` 没有构建入口；其头文件依赖 `lwip/api.h`，旧文档提及的 `tests/http` 本地替身当前不存在，不要将它视为可直接独立编译的测试。
-- 正式上传使用 `../qt-ota/` 上位机；目标为该核实际运行槽的另一槽，BIN 必须链接到目标地址。设备端支持 RAM 会话内续传：相同目标核、长度、版本、CRC32、链接地址重复 begin 返回 `OTA resume written=N`，不重擦、不重置 CRC，也不延长会话时限；written 包含 RAM 缓冲，chunk 偏移必须精确匹配。空闲上限 60 秒、总时长上限 10 分钟，掉电/复位不保留进度。
-- Qt 客户端已实现上传会话内自动重连续传和本地任务恢复：网络错误、HTTP 408/5xx 后按 1/2/4/5 秒退避，查询状态并重发匹配的 begin，以设备偏移继续；连续恢复失败 60 秒后暂停，时限在请求结束时检查，单请求超时 45 秒。重开程序提示恢复并校验原 BIN 身份；设备会话失效须确认擦除目标槽并从头上传，本地任务不代表设备进度已持久化。初始状态查询失败不自动恢复；end 结果不明时只查询目标运行槽、版本和长度，不自动重发 end 或 abort，仍需核对启动日志和业务。历史协议与验证记录见 `docs/ota_resume_verified_20261021.md`，其中 PowerShell 上传器命令已不适用。
+- 当前仓库测试入口为 `powershell.exe -NoProfile -File ./tests/http/mjpeg_test.ps1 -Device <IP> [-Frames 5]`。需要运行固件的实机，检查主页、multipart、多帧 800×480 JPEG 解码、推流期间 `/status` 响应及断线重连；不擦写、不复位。LCD 实际画面仍需现场确认。
+- OTA 上位机位于 `../qt-ota/`，使用前读取其 `AGENTS.md`。其 `test-upload.ps1` / `test-recovery.ps1` 依赖已构建的 Qt EXE 和本工程 CM7 B BIN；模拟通过不代表实机擦写或启动验证通过。本仓库已无旧 OTA 上传器和旧 HTTP/OTA 测试入口。
+- `/stream` 由独立任务持有连接，HTTP 主任务继续处理状态和 OTA；只允许一个观看连接，繁忙时返回 503。`/status` 的 `mjpeg_fps_x10` 是板端完整帧发送速率的十倍，不是浏览器渲染帧率。
+- 相机快照通过 `ov5640_dcmi_copy_frame()` 暂缓三缓冲换帧并失效 D-Cache；不要直接读取正在采集的帧。SDRAM 固定地址分散在 `app_ov5640.c`、`ov5640_dcmi.c`、`app_hw_jpeg.c` 和 `app_http_mjpeg.c`，改缓冲布局时一起核对，保留 CPU/DMA 交接时的缓存维护。
+- OTA 擦写前先停止 MJPEG 并等待任务退出，再暂停摄像头；失败/abort 路径须恢复。协议和会话实现见 `CM7/APP/OTA/`，不能跳过停流流程直接擦写。
 
 ## 启动和修改边界
 
@@ -30,4 +28,4 @@
 - CM7 的 `Core/Src/freertos.c` 创建 IPC、摄像头任务；默认任务先执行 `MX_LWIP_Init()` 再启动 HTTP，并周期喂 IWDG。`main()` 负责 ETH/PHY 外设初始化；ETH/LwIP、HTTP 与 OTA 服务仅在 CM7，CM4 通过 IPC/共享 mailbox 配合。
 - `BaseProject.ioc` 是 CubeMX 配置源；`Core/` 中的外设代码为生成代码，修改时保留 `USER CODE` 区域。应用逻辑主要在 `CM7/APP/`、`CM4/APP/` 和 `CM7/BSP/`，不要无故改动 `Drivers/` 或 `Middlewares/`。
 - `.vscode/launch.json` 使用本机 ST-Link/STM32CubeProgrammer 路径，仅指向 A 槽 ELF；CM7 为 launch，CM4 为 attach。
-- `docs/` 中 HTTP、OTA 与本地升级文档包含实施方案和旧基线（例如 HTTP“尚未接入”）；判断已实现功能以当前源码和 Makefile 为准。
+- `docs/superpowers/specs/` 保存设计与验证范围；判断已实现行为以当前源码和 Makefile 为准，设计中的目标帧率不代表实测结果。
