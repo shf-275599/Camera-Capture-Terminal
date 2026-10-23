@@ -102,8 +102,9 @@ static void boot_local_update(void)
   mailbox[7] = BOOT_LOCAL_BUSY;
   __DSB();
   CLEAR_BIT(RCC->GCR, RCC_GCR_BOOT_C2);
-  LOG_INFO("LOCAL-UPDATE", "START phase=%s slot=%lu",
-           command == BOOT_LOCAL_CHECK ? "check" : "commit", (unsigned long)values[0]);
+  LOG_INFO("LOCAL-UPDATE", "START phase=%s core=CM%lu slot=%lu",
+           command == BOOT_LOCAL_CHECK ? "check" : "commit",
+           (unsigned long)values[0], (unsigned long)values[1]);
   if ((bsp_eeprom_init() == 0) && (boot_eeprom_init() == 0) &&
       (boot_eeprom_local_update(values, command == BOOT_LOCAL_COMMIT) == 0))
   {
