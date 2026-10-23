@@ -14,7 +14,7 @@
 
 - 当前仓库测试入口为 `powershell.exe -NoProfile -File ./tests/http/mjpeg_test.ps1 -Device <IP> [-Frames 5]`。需要运行固件的实机，检查主页、multipart、多帧 800×480 JPEG 解码、推流期间 `/status` 响应及断线重连；不擦写、不复位。LCD 实际画面仍需现场确认。
 - OTA 上位机位于 `../qt-ota/`，使用前读取其 `AGENTS.md`。其 `test-upload.ps1` / `test-recovery.ps1` 依赖已构建的 Qt EXE 和本工程 CM7 B BIN；模拟通过不代表实机擦写或启动验证通过。本仓库已无旧 OTA 上传器和旧 HTTP/OTA 测试入口。
-- `/stream` 由独立任务持有连接，HTTP 主任务继续处理状态和 OTA；只允许一个观看连接，繁忙时返回 503。`/status` 的 `mjpeg_fps_x10` 是板端完整帧发送速率的十倍，不是浏览器渲染帧率。
+- `/stream` 支持两个观看连接，共用一个编码任务与三块 JPEG 缓冲，每个连接由独立任务发送；慢连接跳过旧帧，满员或 OTA 期间返回 503。HTTP 主任务继续处理状态和 OTA；`/status` 的 `mjpeg_fps_x10` 为最近仍在发送的最快观看连接帧率的十倍，不累加两个连接，也不是浏览器渲染帧率。JPEG 缓冲占用 `0xD0700000..0xD087FFFF`。
 - 相机快照通过 `ov5640_dcmi_copy_frame()` 暂缓三缓冲换帧并失效 D-Cache；不要直接读取正在采集的帧。SDRAM 固定地址分散在 `app_ov5640.c`、`ov5640_dcmi.c`、`app_hw_jpeg.c` 和 `app_http_mjpeg.c`，改缓冲布局时一起核对，保留 CPU/DMA 交接时的缓存维护。
 - OTA 擦写前先停止 MJPEG 并等待任务退出，再暂停摄像头；失败/abort 路径须恢复。协议和会话实现见 `CM7/APP/OTA/`，不能跳过停流流程直接擦写。
 
