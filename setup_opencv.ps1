@@ -46,3 +46,4 @@ if (!(Test-Path $model) -or (Get-FileHash $model -Algorithm SHA256).Hash -ne $mo
 if ((Get-FileHash $model -Algorithm SHA256).Hash -ne $modelHash) { throw 'YuNet model checksum mismatch' }
 Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/opencv/opencv_zoo/main/models/face_detection_yunet/LICENSE' -OutFile (Join-Path $modelDir 'LICENSE-YuNet.txt')
 Write-Output "OpenCV and YuNet installed in $install"
+& (Join-Path $PSScriptRoot 'setup_expression.ps1')

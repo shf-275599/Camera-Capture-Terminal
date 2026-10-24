@@ -4,6 +4,9 @@ $mingwBin = 'D:\QT\Tools\mingw530_32\bin'
 $env:PATH = "$qtBin;$mingwBin;$env:PATH"
 Push-Location $PSScriptRoot
 try {
+    if (!(Test-Path 'D:/OpenCV/mingw32-4.10.0/models/facial_expression_recognition_mobilefacenet_2022july.onnx')) {
+        throw 'Expression model missing. Run ./setup_expression.ps1 first.'
+    }
     if (-not (Test-Path build/yunet)) { New-Item build/yunet -ItemType Directory | Out-Null }
     Push-Location build/yunet
     try {
