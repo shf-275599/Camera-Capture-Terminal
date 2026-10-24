@@ -61,6 +61,8 @@ public:
     quint64 dropped = 0;
     int processMs = 0;
     int detectionMs = 0;
+    int expressionMs = 0;
+    QString expressionError;
     std::atomic<int> testProcessingDelayMs{0};
     quint32 sequence = 0;
     int faceCount = 0;
@@ -191,6 +193,7 @@ void CameraThread::Processor::run()
 {
     FaceDetector detector;
     detector.load();
+    detector.loadExpression();
     QElapsedTimer clock; clock.start();
     quint64 detectorEpoch = 0;
     while (!isInterruptionRequested()) {
@@ -222,6 +225,8 @@ void CameraThread::Processor::run()
         if (epoch != owner->connectionEpoch) continue;
         owner->processMs = int(processing.elapsed());
         owner->detectionMs = image.isNull() ? 0 : detector.detectionMs;
+        owner->expressionMs = image.isNull() ? 0 : detector.expressionMs;
+        owner->expressionError = detector.expressionError;
         owner->faceCount = faces;
         owner->faceError = detector.error;
         if (!image.isNull()) {
@@ -247,7 +252,7 @@ public:
     void connectDevice(const QString &host) { address->setText(host); button->click(); }
     Window()
     {
-        setWindowTitle(QString::fromUtf8("OV5640 YuNet 人脸检测"));
+        setWindowTitle(QString::fromUtf8("OV5640 人脸检测与表情分类"));
         resize(960, 650);
         address = new QLineEdit("192.168.10.2");
         port = new QSpinBox; port->setRange(1, 65535); port->setValue(80);
@@ -273,7 +278,8 @@ public:
                 worker.port = quint16(port->value());
                 { QMutexLocker lock(&worker.mutex);
                    worker.latest = QImage(); worker.received = 0; worker.decoded = 0; worker.sequence = 0;
-                   worker.faceCount = 0; worker.faceError.clear(); worker.dropped = 0; worker.processMs = 0; worker.detectionMs = 0; }
+                   worker.faceCount = 0; worker.faceError.clear(); worker.dropped = 0; worker.processMs = 0; worker.detectionMs = 0;
+                   worker.expressionMs = 0; worker.expressionError.clear(); }
                 shown = 0; lastReceived = 0; rate = "0.0"; elapsed.restart();
                 picture->clear(); picture->setText(QString::fromUtf8("等待 JPEG 画面"));
                 worker.start(); button->setText(QString::fromUtf8("断开"));
@@ -295,11 +301,12 @@ public:
                     picture->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 picture->setProperty("imageSize", picture->size()); shown = worker.decoded;
             }
-            status->setText(QString::fromUtf8("%1 | 接收 %2 fps | 完整帧 %3 | 解码成功 %4 | 人脸 %5%6 | 跳过 %7 | 处理 %8 ms | 检测 %9 ms")
+            status->setText(QString::fromUtf8("%1 | 接收 %2 fps | 完整帧 %3 | 解码成功 %4 | 人脸 %5%6 | 跳过 %7 | 处理 %8 ms | 检测 %9 ms | 表情 %10 ms%11")
                             .arg(worker.state).arg(rate).arg(worker.received).arg(worker.decoded)
                             .arg(qMax(0, worker.faceCount))
                              .arg(worker.faceError.isEmpty() ? QString() : " | " + worker.faceError)
-                              .arg(worker.dropped).arg(worker.processMs).arg(worker.detectionMs));
+                               .arg(worker.dropped).arg(worker.processMs).arg(worker.detectionMs).arg(worker.expressionMs)
+                               .arg(worker.expressionError.isEmpty() ? QString() : " | " + worker.expressionError));
         });
         timer->start(33);
     }
@@ -309,6 +316,55 @@ public:
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (app.arguments().contains("--expression-state-test")) return runExpressionStateTest();
+    if (app.arguments().contains("--expression-degraded-test")) {
+        const int index=app.arguments().indexOf("--expression-degraded-test");
+        if (index+1>=app.arguments().size()) return 2;
+        FaceDetector detector;
+        if (!detector.load()) return 3;
+        detector.loadExpression();
+        QImage source(app.arguments()[index+1]);
+        if (source.isNull()) return 4;
+        QImage first=source,second=source;
+        detector.annotateVideo(first,0);
+        const int faces=detector.annotateVideo(second,33);
+        const bool ok=faces>=1 && !detector.expressionError.isEmpty() && detector.error.isEmpty();
+        fprintf(stdout,"Expression degraded: faces=%d error=%d %s\n",faces,
+                int(!detector.expressionError.isEmpty()),ok?"PASS":"FAIL"); fflush(stdout);
+        return ok?0:1;
+    }
+    if (app.arguments().contains("--expression-test")) {
+        const int index=app.arguments().indexOf("--expression-test");
+        if (index+1>=app.arguments().size()) return 2;
+        FaceDetector detector;
+        if (!detector.load()) return 3;
+        detector.loadExpression();
+        if (!detector.expressionError.isEmpty()) { qCritical() << detector.expressionError; return 3; }
+        QImage source(app.arguments()[index+1]);
+        if (source.isNull()) return 4;
+        qint64 total=0;
+        for (int i=0;i<6;++i) {
+            QImage sample=source;
+            if (detector.annotateExpression(sample)<1) { qCritical() << detector.expressionError; return 1; }
+            if (i==0 && app.arguments().contains("--output")) {
+                const int output=app.arguments().indexOf("--output");
+                if (output+1>=app.arguments().size() || !sample.save(app.arguments()[output+1])) return 5;
+            }
+            if (i) total+=detector.expressionMs;
+        }
+        QImage pair(source.width()*2,source.height(),QImage::Format_RGB32);
+        { QPainter painter(&pair); painter.drawImage(0,0,source); painter.drawImage(source.width(),0,source); }
+        const int multiple=detector.annotateExpression(pair);
+        detector.reset();
+        QImage first=source, second=source, cached=source;
+        detector.annotateVideo(first,0); detector.annotateVideo(second,33);
+        const int inferred=detector.expressionCount;
+        detector.annotateVideo(cached,100);
+        const bool throttled=detector.expressionCount==0;
+        fprintf(stdout,"Expression test: multiple=%d confirmed_inference=%d throttled=%d mean=%.1f ms per image\n",
+                multiple,inferred,int(throttled),total/5.0); fflush(stdout);
+        return multiple>=2 && inferred>=1 && throttled && detector.expressionError.isEmpty()?0:1;
+    }
     if (app.arguments().contains("--stabilizer-test")) return runFaceStabilizerTest();
     if (app.arguments().contains("--face-test")) {
         const int index = app.arguments().indexOf("--face-test");
@@ -378,9 +434,10 @@ int main(int argc, char **argv)
             QThread::msleep(20);
         }
         { QMutexLocker lock(&worker.mutex);
-          fprintf(stdout, "Qt device test: decoded=%llu faces=%d state=%s detection=%s\n",
+            fprintf(stdout, "Qt device test: decoded=%llu faces=%d state=%s detection=%s expression=%s\n",
                   static_cast<unsigned long long>(worker.decoded), worker.faceCount,
-                  worker.state.toUtf8().constData(), worker.faceError.toUtf8().constData());
+                  worker.state.toUtf8().constData(), worker.faceError.toUtf8().constData(),
+                  worker.expressionError.toUtf8().constData());
           fflush(stdout); }
         worker.requestInterruption(); worker.wait();
         qInfo() << (ok ? "QT CAMERA DEVICE PASS" : "QT CAMERA DEVICE FAIL") << worker.decoded;

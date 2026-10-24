@@ -6,6 +6,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
 #include <cmath>
+#include <QFontMetrics>
+#include <cstdio>
 
 bool FaceDetector::load()
 {
@@ -37,6 +39,7 @@ bool FaceDetector::load()
 bool FaceDetector::detect(const QImage &image, std::vector<QRectF> &boxes)
 {
     detectionMs = 0;
+    landmarks.clear();
     if (detector.empty()) return false;
     QElapsedTimer timer; timer.start();
     try {
@@ -58,7 +61,11 @@ bool FaceDetector::detect(const QImage &image, std::vector<QRectF> &boxes)
                 !std::isfinite(face[2]) || !std::isfinite(face[3]) || face[2] <= 0 || face[3] <= 0) continue;
             const QRectF box = QRectF(face[0] * sx, face[1] * sy, face[2] * sx, face[3] * sy)
                     .intersected(QRectF(image.rect()));
-            if (box.width() > 0 && box.height() > 0) boxes.push_back(box);
+            if (box.width() > 0 && box.height() > 0) {
+                std::array<cv::Point2f, 5> points;
+                for (int j=0;j<5;++j) points[size_t(j)]=cv::Point2f(float(face[4+j*2]*sx),float(face[5+j*2]*sy));
+                boxes.push_back(box); landmarks.push_back(points);
+            }
         }
         detectionMs = int(timer.elapsed());
         error.clear();
@@ -87,9 +94,81 @@ int FaceDetector::annotate(QImage &image)
 
 int FaceDetector::annotateVideo(QImage &image, qint64 now)
 {
+    expressionMs = 0; expressionCount = 0;
     std::vector<QRectF> boxes;
     if (!detect(image, boxes)) { reset(); return -1; }
-    boxes = stabilizer.update(boxes, image.size(), now);
-    draw(image, boxes);
+    const auto faces = stabilizer.updateFaces(boxes, image.size(), now);
+    const QImage source = image;
+    std::vector<QString> labels;
+    for (const auto &face : faces) {
+        QString label=QString::fromUtf8("无法判断");
+        bool eligible=face.detection>=0;
+        if (eligible) {
+            const QRectF &box=boxes[size_t(face.detection)];
+            eligible=box.width()>=48 && box.height()>=48;
+            for (const auto &point : landmarks[size_t(face.detection)])
+                if (!std::isfinite(point.x) || !std::isfinite(point.y) || point.x<0 || point.y<0 ||
+                    point.x>=image.width() || point.y>=image.height()) eligible=false;
+        }
+        if (eligible) {
+            ExpressionState &state=expressions[face.id];
+            if (state.due(now)) {
+                ExpressionScores scores;
+                if (expression.infer(source,landmarks[size_t(face.detection)],scores)) {
+                    state.accept(scores,now); expressionCount++; expressionError.clear();
+                } else {
+                    state=ExpressionState(); expressionError=expression.error;
+                }
+                state.attempted=now;
+                expressionMs+=expression.inferenceMs;
+            }
+            label=state.label(now);
+        }
+        labels.push_back(label);
+    }
+    for (auto it=expressions.begin();it!=expressions.end();) {
+        bool active=false;
+        for (const auto &face : faces) if (face.id==it->first) active=true;
+        if (!active || now-it->second.attempted > 600) it=expressions.erase(it);
+        else ++it;
+    }
+    QPainter painter(&image);
+    QFont font=painter.font(); font.setPixelSize(16); painter.setFont(font);
+    painter.setPen(QPen(QColor(0,255,0),3));
+    for (size_t i=0;i<faces.size();++i) {
+        painter.drawRect(faces[i].box);
+        const QFontMetrics metrics(painter.font());
+        const int width=qMin(image.width(),metrics.horizontalAdvance(labels[i])+8);
+        const int height=metrics.height()+4;
+        const int x=qBound(0,qRound(faces[i].box.x()),qMax(0,image.width()-width));
+        const int y=qBound(0,qRound(faces[i].box.y())-height,qMax(0,image.height()-height));
+        painter.fillRect(QRect(x,y,width,height),QColor(0,0,0,190));
+        painter.drawText(QRect(x+4,y,width-4,height),Qt::AlignVCenter,labels[i]);
+    }
+    return int(faces.size());
+}
+
+int FaceDetector::annotateExpression(QImage &image)
+{
+    expressionCount=0; expressionMs=0;
+    std::vector<QRectF> boxes;
+    if (!detect(image,boxes)) return -1;
+    const QImage source=image;
+    std::vector<QString> labels;
+    for (size_t i=0;i<boxes.size();++i) {
+        ExpressionScores scores;
+        if (!expression.infer(source,landmarks[i],scores)) { expressionError=expression.error; return -1; }
+        ExpressionState state; state.accept(scores,0);
+        labels.push_back(state.label(0));
+        expressionMs+=expression.inferenceMs; expressionCount++;
+        fprintf(stdout,"Expression face %d: %s\n",int(i),state.label(0).toUtf8().constData());
+    }
+    draw(image,boxes); expressionError.clear();
+    QPainter painter(&image);
+    QFont font=painter.font(); font.setPixelSize(16); painter.setFont(font);
+    painter.setPen(QColor(0,255,0));
+    for (size_t i=0;i<boxes.size();++i)
+        painter.drawText(qBound(0,qRound(boxes[i].x()),qMax(0,image.width()-120)),
+                         qBound(16,qRound(boxes[i].y())-4,qMax(16,image.height()-4)),labels[i]);
     return int(boxes.size());
 }
