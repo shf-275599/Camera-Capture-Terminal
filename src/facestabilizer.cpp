@@ -10,12 +10,20 @@ void FaceStabilizer::reset()
 
 std::vector<QRectF> FaceStabilizer::update(const std::vector<QRectF> &detections, const QSize &size, qint64 now)
 {
+    std::vector<QRectF> boxes;
+    for (const Face &face : updateFaces(detections, size, now)) boxes.push_back(face.box);
+    return boxes;
+}
+
+std::vector<FaceStabilizer::Face> FaceStabilizer::updateFaces(const std::vector<QRectF> &detections, const QSize &size, qint64 now)
+{
     if (size != imageSize || now < lastUpdate) reset();
     imageSize = size;
     lastUpdate = now;
     tracks.erase(std::remove_if(tracks.begin(), tracks.end(), [now](const Track &track) {
         return now - track.seen > 300;
     }), tracks.end());
+    for (Track &track : tracks) track.detection = -1;
 
     struct Match { size_t track, detection; double overlap; };
     std::vector<Match> candidates;
@@ -45,17 +53,18 @@ std::vector<QRectF> FaceStabilizer::update(const std::vector<QRectF> &detections
                           track.box.width() + alpha * (box.width() - track.box.width()),
                           track.box.height() + alpha * (box.height() - track.box.height()));
         track.seen = now; track.confirmed = true;
+        track.detection = int(match.detection);
         usedTrack[match.track] = true; usedDetection[match.detection] = true;
     }
     // 未确认目标必须连续检出；已确认目标按真实经过时间保留。
     for (size_t t = tracks.size(); t > 0; --t)
         if (!usedTrack[t - 1] && !tracks[t - 1].confirmed) tracks.erase(tracks.begin() + t - 1);
     for (size_t d = 0; d < detections.size(); ++d)
-        if (!usedDetection[d]) tracks.push_back({detections[d], now, false});
+        if (!usedDetection[d]) tracks.push_back({detections[d], now, false, nextId++, int(d)});
 
-    std::vector<QRectF> visible;
+    std::vector<Face> visible;
     for (const Track &track : tracks)
-        if (track.confirmed && now - track.seen <= 150) visible.push_back(track.box);
+        if (track.confirmed && now - track.seen <= 150) visible.push_back({track.box, track.id, track.detection});
     return visible;
 }
 
@@ -113,6 +122,18 @@ int runFaceStabilizerTest()
     stabilizer.update({left}, size, 33);
     ok = ok && stabilizer.update({left}, size, 333).size() == 1;
     ok = ok && stabilizer.update({left}, size, 634).empty();
+    stabilizer.reset();
+    stabilizer.updateFaces({left,right},size,0);
+    auto tracked=stabilizer.updateFaces({left,right},size,33);
+    const quint64 firstId=tracked.empty()?0:tracked[0].id;
+    tracked=stabilizer.updateFaces({right,left},size,66);
+    ok=ok && tracked.size()==2 && tracked[0].id==firstId && tracked[0].detection==1 && tracked[1].detection==0;
+    tracked=stabilizer.updateFaces({},size,99);
+    ok=ok && tracked.size()==2 && tracked[0].detection==-1;
+    stabilizer.reset();
+    stabilizer.updateFaces({left},size,132);
+    tracked=stabilizer.updateFaces({left},size,165);
+    ok=ok && tracked.size()==1 && tracked[0].id!=firstId;
     fprintf(stdout, "Face stabilizer: %s\n", ok ? "PASS" : "FAIL"); fflush(stdout);
     return ok ? 0 : 1;
 }
