@@ -5,6 +5,7 @@
  * CM4 路径额外依赖 cm4_ota_hold：擦写前停核，abort 时唤醒。
  */
 #include "app_ota.h"
+#include "app_storage.h"
 #include "boot_eeprom.h"
 #include "bsp_flash_ram.h"
 #include "cmsis_os2.h"
@@ -339,6 +340,7 @@ void app_ota_abort(void)
     LOG_INFO("OTA", " CM4 hold released");
   }
   s_state = APP_OTA_IDLE;
+  app_storage_ota_unlock();
   s_core = APP_OTA_CORE_CM7;
   s_prog_fill = 0U;
   s_offset = 0U;
@@ -580,6 +582,11 @@ int app_ota_begin(uint32_t image_size, uint32_t version, app_ota_core_t core,
     return -2;
   }
 
+  if (app_storage_ota_lock() != 0)
+  {
+    LOG_ERROR("OTA", " begin rejected: storage saving/export/switching; return to local first");
+    return -9;
+  }
   s_image_size = image_size;               // 记录镜像尺寸
   s_version = version;                     // 记录版本号
   s_offset = 0U;                           // 记录偏移量
