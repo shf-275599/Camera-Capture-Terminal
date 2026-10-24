@@ -60,6 +60,7 @@ public:
     quint64 decoded = 0;
     quint64 dropped = 0;
     int processMs = 0;
+    int detectionMs = 0;
     std::atomic<int> testProcessingDelayMs{0};
     quint32 sequence = 0;
     int faceCount = 0;
@@ -190,6 +191,8 @@ void CameraThread::Processor::run()
 {
     FaceDetector detector;
     detector.load();
+    QElapsedTimer clock; clock.start();
+    quint64 detectorEpoch = 0;
     while (!isInterruptionRequested()) {
         QByteArray jpeg;
         quint64 epoch;
@@ -212,10 +215,13 @@ void CameraThread::Processor::run()
             QImageReader reader(&buffer, "JPEG");
             if (reader.size() == QSize(800, 480)) image = reader.read();
         }
-        const int faces = image.isNull() ? -1 : detector.annotate(image);
+        if (epoch != detectorEpoch) { detector.reset(); detectorEpoch = epoch; }
+        const int faces = image.isNull() ? -1 : detector.annotateVideo(image, clock.elapsed());
+        if (image.isNull()) detector.reset();
         QMutexLocker lock(&owner->mutex);
         if (epoch != owner->connectionEpoch) continue;
         owner->processMs = int(processing.elapsed());
+        owner->detectionMs = image.isNull() ? 0 : detector.detectionMs;
         owner->faceCount = faces;
         owner->faceError = detector.error;
         if (!image.isNull()) {
@@ -241,7 +247,7 @@ public:
     void connectDevice(const QString &host) { address->setText(host); button->click(); }
     Window()
     {
-        setWindowTitle(QString::fromUtf8("OV5640 OpenCV 人脸检测"));
+        setWindowTitle(QString::fromUtf8("OV5640 YuNet 人脸检测"));
         resize(960, 650);
         address = new QLineEdit("192.168.10.2");
         port = new QSpinBox; port->setRange(1, 65535); port->setValue(80);
@@ -267,7 +273,7 @@ public:
                 worker.port = quint16(port->value());
                 { QMutexLocker lock(&worker.mutex);
                    worker.latest = QImage(); worker.received = 0; worker.decoded = 0; worker.sequence = 0;
-                   worker.faceCount = 0; worker.faceError.clear(); worker.dropped = 0; worker.processMs = 0; }
+                   worker.faceCount = 0; worker.faceError.clear(); worker.dropped = 0; worker.processMs = 0; worker.detectionMs = 0; }
                 shown = 0; lastReceived = 0; rate = "0.0"; elapsed.restart();
                 picture->clear(); picture->setText(QString::fromUtf8("等待 JPEG 画面"));
                 worker.start(); button->setText(QString::fromUtf8("断开"));
@@ -289,11 +295,11 @@ public:
                     picture->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 picture->setProperty("imageSize", picture->size()); shown = worker.decoded;
             }
-            status->setText(QString::fromUtf8("%1 | 接收 %2 fps | 完整帧 %3 | 解码成功 %4 | 人脸 %5%6 | 跳过 %7 | 处理 %8 ms")
+            status->setText(QString::fromUtf8("%1 | 接收 %2 fps | 完整帧 %3 | 解码成功 %4 | 人脸 %5%6 | 跳过 %7 | 处理 %8 ms | 检测 %9 ms")
                             .arg(worker.state).arg(rate).arg(worker.received).arg(worker.decoded)
                             .arg(qMax(0, worker.faceCount))
                              .arg(worker.faceError.isEmpty() ? QString() : " | " + worker.faceError)
-                             .arg(worker.dropped).arg(worker.processMs));
+                              .arg(worker.dropped).arg(worker.processMs).arg(worker.detectionMs));
         });
         timer->start(33);
     }
@@ -303,11 +309,12 @@ public:
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (app.arguments().contains("--stabilizer-test")) return runFaceStabilizerTest();
     if (app.arguments().contains("--face-test")) {
         const int index = app.arguments().indexOf("--face-test");
         if (index + 1 >= app.arguments().size()) return 2;
         FaceDetector detector;
-        if (!detector.load()) return 3;
+        if (!detector.load()) { qCritical() << detector.error; return 3; }
         QImage face(app.arguments()[index + 1]);
         if (face.isNull()) return 4;
         const QImage source = face;
@@ -321,9 +328,41 @@ int main(int argc, char **argv)
         QImage pair(source.width() * 2, source.height(), QImage::Format_RGB32);
         { QPainter painter(&pair); painter.drawImage(0, 0, source); painter.drawImage(source.width(), 0, source); }
         const int multiple = detector.annotate(pair);
-        fprintf(stdout, "Face test: faces=%d green_box=%d blank=%d multiple=%d\n",
-                found, int(greenBox), empty, multiple); fflush(stdout);
-        return found >= 1 && greenBox && empty == 0 && multiple >= 2 ? 0 : 1;
+        QImage wide(800, 480, QImage::Format_RGB32); wide.fill(Qt::white);
+        { QPainter painter(&wide);
+          painter.drawImage(QRect(160, 0, 480, 480), source); }
+        const int resizedFaces = detector.annotate(wide);
+        detector.reset();
+        QImage firstVideo = source, secondVideo = source;
+        const int pendingFaces = detector.annotateVideo(firstVideo, 0);
+        const int stableFaces = detector.annotateVideo(secondVideo, 33);
+        detector.reset();
+        QImage resetVideo = source;
+        const int resetFaces = detector.annotateVideo(resetVideo, 66);
+        QImage confirmedVideo = source;
+        detector.annotateVideo(confirmedVideo, 99);
+        QImage invalidVideo;
+        const int invalidFaces = detector.annotateVideo(invalidVideo, 132);
+        QImage recoveredVideo = source;
+        const int recoveredFaces = detector.annotateVideo(recoveredVideo, 165);
+        qint64 totalMs = 0;
+        int minimumMs = 1000000, maximumMs = 0;
+        bool repeatedDetection = true;
+        for (int i = 0; i < 10; ++i) {
+            QImage sample = wide;
+            if (detector.annotate(sample) < 1) repeatedDetection = false;
+            totalMs += detector.detectionMs;
+            minimumMs = qMin(minimumMs, detector.detectionMs);
+            maximumMs = qMax(maximumMs, detector.detectionMs);
+        }
+        fprintf(stdout, "YuNet detection (800x480, 10 runs): mean=%.1f ms min=%d ms max=%d ms\n",
+                totalMs / 10.0, minimumMs, maximumMs);
+        fprintf(stdout, "Face test: faces=%d green_box=%d blank=%d multiple=%d pending=%d stable=%d reset=%d invalid=%d recovered=%d resized=%d\n",
+                found, int(greenBox), empty, multiple, pendingFaces, stableFaces, resetFaces,
+                invalidFaces, recoveredFaces, resizedFaces); fflush(stdout);
+        return found >= 1 && greenBox && empty == 0 && multiple >= 2 &&
+                pendingFaces == 0 && stableFaces >= 1 && resetFaces == 0 &&
+                invalidFaces == -1 && recoveredFaces == 0 && resizedFaces >= 1 && repeatedDetection ? 0 : 1;
     }
     if (app.arguments().contains("--device-test")) {
         const int index = app.arguments().indexOf("--device-test");
