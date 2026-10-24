@@ -1081,4 +1081,4 @@ VP_SYS_M4_VS_tim1.Signal=SYS_M4_VS_tim1
 VP_SYS_VS_tim2.Mode=TIM2
 VP_SYS_VS_tim2.Signal=SYS_VS_tim2
 board=custom
-rtos.0.ip=FREERTOS_M7
+rtos.0.ip=FREERTOS_M4

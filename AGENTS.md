@@ -7,7 +7,7 @@
 - 源码变更构建受影响的核；修改 `Common/`、启动或 OpenAMP 时构建两个核，修改槽位或链接布局时验证 A/B。`all-slots` 的配方含 Windows `@echo.`，请在 Windows 环境运行构建。
 - `./clean.ps1` 清理两个核的双槽产物；顶层 `make -C Makefile clean` 不递归清理两核产物。
 - 源文件和头文件目录需显式加入各核 Makefile 的 `C_SOURCES` / `C_INCLUDES`。目标文件按源文件 basename 扁平化；CM7 为 LwIP 与 libmetal 的 `init.c` / `sys.c` 保留了专用规则，添加同名源文件时检查目标冲突。
-- 全量仅构建：`powershell.exe -NoProfile -File ./make_all.ps1 -Jobs 8`，覆盖两核双槽。`make_flash_cm7_slotA.ps1`、`make_flash_cm7_slotB.ps1`、`make_flash_cm4_slotA.ps1`、`make_flash_cm4_slotB.ps1` 均支持 `[-Jobs N] [-Version V]`（版本默认 0），会构建、烧录目标核指定槽、登记 pending 并复位；不能当作仅构建命令。
+- 全量仅构建：在 Windows PowerShell 中依次执行 `make -C Makefile/CM4 all-slots -j8` 和 `make -C Makefile/CM7 all-slots -j8`，覆盖两核双槽。`make_flash_cm7_slotA.ps1`、`make_flash_cm7_slotB.ps1`、`make_flash_cm4_slotA.ps1`、`make_flash_cm4_slotB.ps1` 各自包含完整构建和升级逻辑，均支持 `[-Jobs N] [-Version V]`（版本默认 0），会构建、烧录目标核指定槽、登记 pending 并复位；不能当作仅构建命令。
 - 本地升级需要 ST-Link、STM32CubeProgrammer（可用 `STM32_PROGRAMMER_CLI` 指定 CLI）及支持本地协议 v2 的 Bootloader；要求双核无 pending、confirmed 镜像有效且目标槽不是目标核 confirmed。不支持空板初始化。脚本不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；固定引导程序更新与协议说明见 `docs/local_flash_update.md`。
 - 本地升级脚本的无硬件模拟测试：`powershell.exe -NoProfile -File ./tests/local_flash_update_test.ps1`。模拟通过或烧录输出 `PENDING` 均不代表实机启动、应用确认或回退已验证；两核独立确认和回退，不提供双核版本整体原子回滚。
 

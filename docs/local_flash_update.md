@@ -24,7 +24,7 @@
 .\BaseProject\make_flash_cm4_slotA.ps1 -Jobs 4
 ```
 
-四个入口共用 `make_flash_core.ps1`。原 `make_flash_slotA.ps1` / `make_flash_slotB.ps1` 已替换。`-Version` 是无符号 32 位整数，仅用于本次目标核，默认 `0`。Bootloader/Stub 烧录仍只更新固定引导程序，不触发应用升级。必须先更新支持协议 v2 的 Bootloader；旧版会在应用擦写前被拒绝。
+四个入口各自包含完整的构建和本地升级逻辑，可独立运行，不依赖公共升级脚本。修改升级协议时需同步维护四份实现，并运行模拟测试。`-Version` 是无符号 32 位整数，仅用于本次目标核，默认 `0`。Bootloader/Stub 烧录仍只更新固定引导程序，不触发应用升级。必须先更新支持协议 v2 的 Bootloader；旧版会在应用擦写前被拒绝。
 
 ## 执行流程与结果
 

@@ -1,9 +1,14 @@
 ﻿$ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot '..\local_flash_update.ps1')
+$entries = @('make_flash_cm7_slotA.ps1', 'make_flash_cm7_slotB.ps1', 'make_flash_cm4_slotA.ps1', 'make_flash_cm4_slotB.ps1')
 
 function Assert-UpdateTest {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw $Message }
+}
+
+# 模拟设备立即返回结果，无需等待真实硬件的 CRC / EEPROM 时序。
+function Start-Sleep {
+    param([int]$Seconds, [int]$Milliseconds)
 }
 
 # 模拟全部编程器操作，不连接设备。
@@ -32,6 +37,16 @@ function Invoke-UpdateProgrammer {
 $directory = Join-Path $HOME ('temp\local-update-test-' + [Guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($directory)
 try {
+    foreach ($entry in $entries) {
+        $tokens = $null; $parseErrors = $null
+        $entryAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot "..\$entry"), [ref]$tokens, [ref]$parseErrors)
+        Assert-UpdateTest ($parseErrors.Count -eq 0) "Syntax error: $entry"
+        # 仅加载函数，不执行入口中的真实构建、烧录命令；保留编程器模拟函数。
+        foreach ($function in $entryAst.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] }, $false)) {
+            if ($function.Name -ne 'Invoke-UpdateProgrammer') {
+                . ([scriptblock]::Create($function.Extent.Text))
+            }
+        }
     foreach ($slot in @(0, 1)) {
         $firmwares = @{}
         foreach ($core in @('CM7', 'CM4')) {
@@ -82,21 +97,28 @@ try {
         }
         }
     }
-    foreach ($file in @('make_flash_cm7_slotA.ps1', 'make_flash_cm7_slotB.ps1', 'make_flash_cm4_slotA.ps1', 'make_flash_cm4_slotB.ps1', 'make_flash_core.ps1', 'local_flash_update.ps1')) {
+    }
+    foreach ($file in $entries) {
         $tokens = $null; $parseErrors = $null
         $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot "..\$file"), [ref]$tokens, [ref]$parseErrors)
         Assert-UpdateTest ($parseErrors.Count -eq 0) "Syntax error: $file"
-        if ($file -ne 'local_flash_update.ps1') {
-            $parameter = @($ast.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Version' })
-            Assert-UpdateTest ($parameter.Count -eq 1 -and $parameter[0].DefaultValue.Value -eq 0) 'Version must default to zero'
-        }
+        $parameter = @($ast.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Version' })
+        Assert-UpdateTest ($parameter.Count -eq 1 -and $parameter[0].DefaultValue.Value -eq 0) 'Version must default to zero'
         if ($file -match '^make_flash_(cm[47])_slot([AB])\.ps1$') {
             $expectedCore = $Matches[1].ToUpperInvariant()
-            $expectedSlot = $Matches[2]
+            $slotLetter = $Matches[2]
+            $expectedSlot = if ($Matches[2] -eq 'A') { 0 } else { 1 }
             $commands = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] }, $true) |
                 Where-Object { $_.Extent.Text -match '-Core\s+CM[47]' })
             Assert-UpdateTest ($commands.Count -eq 1) "Missing core dispatch: $file"
-            Assert-UpdateTest ($commands[0].Extent.Text -match "-Core $expectedCore -Slot $expectedSlot -Jobs \`$Jobs -Version \`$Version") "Wrong dispatch: $file"
+            $expectedDispatch = '-Core {0} -Firmware \$firmware -Slot {1} -Version \$Version' -f $expectedCore, $expectedSlot
+            Assert-UpdateTest ($commands[0].Extent.Text -match $expectedDispatch) "Wrong dispatch: $file"
+            $source = $ast.Extent.Text
+            Assert-UpdateTest ($source.Contains("Makefile\$expectedCore")) "Wrong build core: $file"
+            Assert-UpdateTest ($source.Contains("APP_SLOT=$slotLetter")) "Wrong build slot: $file"
+            $expectedFirmware = if ($slotLetter -eq 'A') { '"$targetBase.elf"' } else { '"${targetBase}_B.elf"' }
+            $expectedDirectory = if ($slotLetter -eq 'A') { "'build'" } else { "'build_B'" }
+            Assert-UpdateTest ($source.Contains($expectedFirmware) -and $source.Contains($expectedDirectory)) "Wrong firmware path: $file"
         }
     }
     Write-Host 'PASS: CM7/CM4 A/B single-image writes, request core/slot/version, protocol v1 rejection, update ordering and failure paths'
