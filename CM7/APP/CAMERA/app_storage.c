@@ -1,4 +1,4 @@
-/* FatFs 由抓拍任务使用；USB 栈和读盘由 USB 任务串行执行。 */
+/* FatFs 由抓拍任务使用；USB 栈和读写盘由 USB 任务串行执行。 */
 #include "app_storage.h"
 #include "app_usb_export.h"
 #include "fatfs.h"
@@ -64,7 +64,7 @@ int app_storage_service(void)
         if (result == FR_OK && app_usb_export_set(1) == 0)
         {
             s_mode = STORAGE_USB;
-            LOG_INFO("STORAGE", "USB_EXPORT_READY readonly=1");
+            LOG_INFO("STORAGE", "USB_EXPORT_READY readonly=0");
             return 1;
         }
         LOG_ERROR("STORAGE", "USB_EXPORT_START_FAIL unmount=%d", result);

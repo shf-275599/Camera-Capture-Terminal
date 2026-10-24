@@ -220,7 +220,7 @@ int8_t STORAGE_IsWriteProtected_FS(uint8_t lun)
 {
   /* USER CODE BEGIN 5 */
   UNUSED(lun);
-  return 1;
+  return 0;
   /* USER CODE END 5 */
 }
 
@@ -250,11 +250,7 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
 {
   /* USER CODE BEGIN 7 */
-  UNUSED(lun);
-  UNUSED(buf);
-  UNUSED(blk_addr);
-  UNUSED(blk_len);
-  return (USBD_FAIL);
+  return lun == 0U && app_usb_export_write(buf, blk_addr, blk_len) == 0 ? USBD_OK : USBD_FAIL;
   /* USER CODE END 7 */
 }
 

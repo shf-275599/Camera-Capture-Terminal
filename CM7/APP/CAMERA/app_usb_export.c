@@ -1,4 +1,4 @@
-/* IRQ 仅唤醒；PCD/BOT、同步读盘与断开在同一个任务串行执行。 */
+/* IRQ 仅唤醒；PCD/BOT、同步读写盘与断开在同一个任务串行执行。 */
 #include "app_usb_export.h"
 #include "app_sd.h"
 #include "usb_device.h"
@@ -38,6 +38,18 @@ int app_usb_export_read(uint8_t *buffer, uint32_t sector, uint16_t count)
         count > MSC_MEDIA_PACKET / 512U || sector >= capacity || count > capacity - sector)
         return -1;
     if (app_sd_read(0U, buffer, sector, count) != RES_OK) return -1;
+    if (!s_wanted || (USB_OTG_FS->GINTSTS & USB_OTG_GINTSTS_USBRST) != 0U) return -1;
+    return 0;
+}
+
+int app_usb_export_write(const uint8_t *buffer, uint32_t sector, uint16_t count)
+{
+    uint32_t capacity = hsd2.SdCard.LogBlockNbr;
+    if (__get_IPSR() != 0U || !app_usb_export_ready() || count == 0U ||
+        count > MSC_MEDIA_PACKET / 512U || sector >= capacity || count > capacity - sector)
+        return -1;
+    /* app_sd_write 等待卡完成编程，USB 任务结束在途写入后才处理退出请求。 */
+    if (app_sd_write(0U, buffer, sector, count) != RES_OK) return -1;
     if (!s_wanted || (USB_OTG_FS->GINTSTS & USB_OTG_GINTSTS_USBRST) != 0U) return -1;
     return 0;
 }
