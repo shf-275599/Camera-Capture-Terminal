@@ -115,7 +115,7 @@ function Invoke-LocalFlashUpdate {
 $make = Get-Command make -ErrorAction SilentlyContinue
 if (-not $make) { throw 'make was not found. Install GNU Make or add it to PATH.' }
 $makeDirectory = Join-Path $PSScriptRoot 'Makefile\CM4'
-$makefile = Join-Path $makeDirectory 'GNUmakefile'
+$makefile = Join-Path $makeDirectory 'Makefile'
 if (-not (Test-Path -LiteralPath $makefile -PathType Leaf)) { throw "CM4 Makefile was not found: $makefile" }
 $targetBase = Get-MakefileVariable -Path $makefile -Name 'TARGET_BASE'
 $makeArgs = @('-C', $makeDirectory, 'APP_SLOT=A')

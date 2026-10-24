@@ -13,7 +13,7 @@
 - USB 中断仅屏蔽并唤醒任务；PCD、MSC、同步 SD 读取和停止均在 USB 任务中串行执行。
 - USB 通过官方写保护回调报告只读，并拒绝实际块写回调，未修改 MSC 中间件。
 - `SDMMC_SWDATATIMEOUT=1000U` 通过应用 GNUmakefile 的编译宏覆盖，未修改 HAL。
-- 两核应用构建入口迁至 `GNUmakefile`，四个升级脚本从该入口读取 TARGET_BASE。对象及 ELF 规则均依赖 GNUmakefile，确保编译配置变化触发重编译。CubeMX 默认 Makefile 保留独立入口。
+- 首轮验证曾将两核应用构建入口迁至 `GNUmakefile`。后按用户要求移回 `Makefile`，四个升级脚本从 Makefile 读取 TARGET_BASE，对象及 ELF 规则也依赖 Makefile；不再保留 GNUmakefile。CubeMX 后续生成可能覆盖自定义源列表、编译宏和双槽规则，生成后须核对恢复，再执行两核双槽构建。
 
 ## 实际生成
 
@@ -74,6 +74,6 @@ powershell.exe -NoProfile -File ./tests/http/mjpeg_test.ps1 -Device 192.168.10.2
 
 最终审查：本轮新增或变化的 43 个 HAL/中间件文件与本机官方 `D:/STM32CubeMX/Packs/STM32Cube_FW_H7_V1.13.0` 对应文件逐一比较，统一行尾后全部一致。官方 SDMMC 头文件对 `SDMMC_SWDATATIMEOUT` 使用 `#ifndef`，应用编译宏覆盖有效。两核 GNUmakefile 未残留指向默认 Makefile 的对象/ELF 依赖。
 
-`.gitignore` 未忽略默认 Makefile 或 GNUmakefile；两核默认 Makefile 和新增 GNUmakefile 均纳入版本控制。隔离生成器覆盖依靠 GNU Make 优先读取 GNUmakefile，而不是依靠忽略规则；`.mxproject` 保持既有忽略规则。没有在最终审查阶段改变此策略。
+上述往返生成及构建记录对应当时使用 GNUmakefile 的版本。后续已按用户要求恢复以 Makefile 为唯一构建入口，因此这些历史记录不能证明当前 Makefile 不会被 CubeMX 覆盖。恢复后通过 Windows PowerShell 重新执行两核 `all-slots -j8`，四槽构建成功；CM7 A/B text 均为 201528 字节、bss 为 131916 字节。本地升级脚本模拟测试再次 PASS，未烧录。`.mxproject` 保持既有忽略规则。
 
 原工作区保留引用为 `stash@{0}`，对象 `22812ff44236bc89a2bd99571f144e264f7a5ee3`（切换分支前的行尾改动）；另一个既有 stash `8d17da0886bc17fc16a9158912e22c54eed75937` 同样未动。当前设备保持 USB 只读导出模式，CM7 A 镜像与源码构建产物一致。

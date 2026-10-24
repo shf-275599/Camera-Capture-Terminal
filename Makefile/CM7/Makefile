@@ -1,2 +1,509 @@
-# CubeMX 生成入口；应用构建优先使用 GNUmakefile。
-include GNUmakefile
+##########################################################################################################################
+# 应用双槽构建入口；CubeMX 重新生成后需核对自定义构建规则。
+##########################################################################################################################
+
+# ------------------------------------------------
+# Generic Makefile (based on gcc)
+#
+# ChangeLog :
+#	2017-02-10 - Several enhancements + project update mode
+#   2015-07-22 - first version
+# ------------------------------------------------
+
+######################################
+# target
+######################################
+# Slot A @ 0x08020000，Reserve S4 @ 0x08080000，Slot B @ 0x080A0000
+# 默认 make = Slot A（烧录脚本读取 build/BaseProject_CM7.elf）
+# 一键双槽：make all-slots → build/BaseProject_CM7.bin + build_B/BaseProject_CM7_B.bin
+TARGET_BASE = BaseProject_CM7
+TARGET = BaseProject_CM7
+BUILD_DIR = build
+APP_SLOT ?= A
+APP_SLOT_NAME := $(patsubst a,A,$(patsubst b,B,$(APP_SLOT)))
+
+ifeq ($(APP_SLOT_NAME),A)
+APP_FLASH_ORIGIN = 0x08020000
+LDSCRIPT = stm32h757xx_flash_CM7.ld
+else ifeq ($(APP_SLOT_NAME),B)
+APP_FLASH_ORIGIN = 0x080A0000
+LDSCRIPT = stm32h757xx_flash_CM7_slot_B.ld
+TARGET := BaseProject_CM7_B
+BUILD_DIR := build_B
+else
+$(error APP_SLOT must be A or B)
+endif
+
+
+######################################
+# building variables
+######################################
+# debug build?
+DEBUG = 1
+# optimization
+OPT = -Og
+
+
+#######################################
+# paths
+#######################################
+# Build path（由上方 APP_SLOT 分支决定：A=build / B=build_B）
+
+######################################
+# source
+######################################
+# C sources
+C_SOURCES =  \
+../../Common/Src/mylog.c \
+../../Common/Src/bsp_flash_ram.c \
+../../CM7/BSP/bsp_delay.c \
+../../CM7/BSP/bsp_sys.c \
+../../CM7/BSP/MPU/mpu.c \
+../../CM7/BSP/SDRAM/sdram.c \
+../../CM7/BSP/LCD/lcd.c \
+../../CM7/BSP/LCD/lcd_ltdc.c \
+../../CM7/BSP/CAMERA/ov5640.c \
+../../CM7/BSP/CAMERA/ov5640_sccb.c \
+../../CM7/BSP/CAMERA/ov5640_dcmi.c \
+../../CM7/BSP/EEPROM/bl24c16f.c \
+../../CM7/BSP/EEPROM/bsp_eeprom.c \
+../../CM7/BSP/ETH/eth_phy.c \
+../../CM7/APP/CAMERA/app_ov5640.c \
+../../CM7/APP/CAMERA/app_snapshot.c \
+../../CM7/APP/CAMERA/app_storage.c \
+../../CM7/APP/CAMERA/app_sd.c \
+../../CM7/APP/CAMERA/app_usb_export.c \
+../../CM7/Core/Src/sdmmc.c \
+../../CM7/FATFS/App/fatfs.c \
+../../CM7/FATFS/Target/user_diskio.c \
+../../Middlewares/Third_Party/FatFs/src/diskio.c \
+../../Middlewares/Third_Party/FatFs/src/ff.c \
+../../Middlewares/Third_Party/FatFs/src/ff_gen_drv.c \
+../../CM7/USB_DEVICE/App/usb_device.c \
+../../CM7/USB_DEVICE/App/usbd_desc.c \
+../../CM7/USB_DEVICE/App/usbd_storage_if.c \
+../../CM7/USB_DEVICE/Target/usbd_conf.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_bot.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_data.c \
+../../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sd.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sd_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_sdmmc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_delayblock.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c \
+../../Utilities/TJpgDec/tjpgd_utils.c \
+../../CM7/APP/JPEG/app_sw_jpeg.c \
+../../CM7/APP/JPEG/app_hw_jpeg.c \
+../../CM7/APP/IPC/app_ipc_cm7.c \
+../../CM7/APP/NET/HTTP/app_http_server.c \
+../../CM7/APP/NET/HTTP/app_http_mjpeg.c \
+../../CM7/APP/NET/HTTP/app_http_util.c \
+../../CM7/APP/BOOT/boot_eeprom.c \
+../../CM7/APP/OTA/app_ota.c \
+../../CM7/APP/OTA/app_http_ota.c \
+../../Common/Src/boot_slot.c \
+../../Common/Src/cm4_boot_handoff.c \
+../../Common/Src/cm4_ota_hold.c \
+../../CM7/Core/Src/main.c \
+../../CM7/Core/Src/stm32h7xx_it.c \
+../../CM7/Core/Src/stm32h7xx_hal_msp.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c \
+../../Common/Src/system_stm32h7xx_dualcore_boot_cm4_cm7.c \
+../../CM7/Core/Src/sysmem.c \
+../../CM7/Core/Src/syscalls.c \
+../../CM7/Core/Src/freertos.c \
+../../CM7/Core/Src/stm32h7xx_hal_timebase_tim.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/Common/mpu_wrappers_v2.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/list.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
+../../CM7/OPENAMP/mbox_hsem.c \
+../../CM7/OPENAMP/openamp.c \
+../../CM7/OPENAMP/rsc_table.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/device.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/io.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/log.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/shmem.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/condition.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_device.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_init.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_io.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_shmem.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/time.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/remoteproc/remoteproc_virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg_virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtqueue.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c \
+../../CM7/Core/Src/gpio.c \
+../../CM7/Core/Src/fmc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_fmc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_nor.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sram.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_nand.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_sdram.c \
+../../CM7/Core/Src/ltdc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ltdc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ltdc_ex.c \
+../../CM7/Core/Src/dma2d.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma2d.c \
+../../CM7/Core/Src/jpeg.c \
+../../CM7/Core/Src/mdma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_jpeg.c \
+../../Utilities/JPEG/jpeg_utils.c \
+../../CM7/Core/Src/dcmi.c \
+../../CM7/Core/Src/dma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dcmi.c \
+../../CM7/Core/Src/usart.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
+../../CM7/Core/Src/i2c.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_eth_ex.c \
+../../CM7/Core/Src/eth.c \
+../../CM7/LWIP/Target/ethernetif.c \
+../../CM7/LWIP/Target/lan8720.c \
+../../CM7/LWIP/App/lwip.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/auth.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/ccp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/chap_ms.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/chap-md5.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/chap-new.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/demand.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/eap.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/eui64.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/fsm.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/ipcp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/ipv6cp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/lcp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/magic.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/mppe.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/multilink.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/ppp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/pppapi.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/pppcrypt.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/pppoe.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/pppol2tp.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/pppos.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/upap.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/utils.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/vj.c \
+../../Middlewares/Third_Party/LwIP/src/netif/bridgeif.c \
+../../Middlewares/Third_Party/LwIP/src/netif/bridgeif_fdb.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ethernet.c \
+../../Middlewares/Third_Party/LwIP/src/netif/lowpan6.c \
+../../Middlewares/Third_Party/LwIP/src/netif/lowpan6_ble.c \
+../../Middlewares/Third_Party/LwIP/src/netif/lowpan6_common.c \
+../../Middlewares/Third_Party/LwIP/src/netif/slipif.c \
+../../Middlewares/Third_Party/LwIP/src/netif/zepif.c \
+../../Middlewares/Third_Party/LwIP/src/netif/ppp/ecp.c \
+../../Middlewares/Third_Party/LwIP/src/api/api_lib.c \
+../../Middlewares/Third_Party/LwIP/src/api/api_msg.c \
+../../Middlewares/Third_Party/LwIP/src/api/err.c \
+../../Middlewares/Third_Party/LwIP/src/api/if_api.c \
+../../Middlewares/Third_Party/LwIP/src/api/netbuf.c \
+../../Middlewares/Third_Party/LwIP/src/api/netdb.c \
+../../Middlewares/Third_Party/LwIP/src/api/netifapi.c \
+../../Middlewares/Third_Party/LwIP/src/api/sockets.c \
+../../Middlewares/Third_Party/LwIP/src/api/tcpip.c \
+../../Middlewares/Third_Party/LwIP/src/core/altcp.c \
+../../Middlewares/Third_Party/LwIP/src/core/altcp_alloc.c \
+../../Middlewares/Third_Party/LwIP/src/core/altcp_tcp.c \
+../../Middlewares/Third_Party/LwIP/src/core/def.c \
+../../Middlewares/Third_Party/LwIP/src/core/dns.c \
+../../Middlewares/Third_Party/LwIP/src/core/inet_chksum.c \
+../../Middlewares/Third_Party/LwIP/src/core/init.c \
+../../Middlewares/Third_Party/LwIP/src/core/ip.c \
+../../Middlewares/Third_Party/LwIP/src/core/mem.c \
+../../Middlewares/Third_Party/LwIP/src/core/memp.c \
+../../Middlewares/Third_Party/LwIP/src/core/netif.c \
+../../Middlewares/Third_Party/LwIP/src/core/pbuf.c \
+../../Middlewares/Third_Party/LwIP/src/core/raw.c \
+../../Middlewares/Third_Party/LwIP/src/core/stats.c \
+../../Middlewares/Third_Party/LwIP/src/core/sys.c \
+../../Middlewares/Third_Party/LwIP/src/core/tcp.c \
+../../Middlewares/Third_Party/LwIP/src/core/tcp_in.c \
+../../Middlewares/Third_Party/LwIP/src/core/tcp_out.c \
+../../Middlewares/Third_Party/LwIP/src/core/timeouts.c \
+../../Middlewares/Third_Party/LwIP/src/core/udp.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/acd.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/autoip.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/dhcp.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/etharp.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/icmp.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/igmp.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/ip4.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/ip4_addr.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv4/ip4_frag.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/dhcp6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/ethip6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/icmp6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/inet6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/ip6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/ip6_addr.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/ip6_frag.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/mld6.c \
+../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c \
+../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c \
+../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c \
+../../CM7/Core/Src/iwdg.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_iwdg.c
+
+# ASM sources
+ASM_SOURCES =  \
+startup_stm32h757xx_CM7.s
+
+# ASMM sources
+ASMM_SOURCES = 
+
+
+
+#######################################
+# binaries
+#######################################
+PREFIX = arm-none-eabi-
+# The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
+# either it can be added to the PATH environment variable.
+ifdef GCC_PATH
+CC = $(GCC_PATH)/$(PREFIX)gcc
+AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
+CP = $(GCC_PATH)/$(PREFIX)objcopy
+SZ = $(GCC_PATH)/$(PREFIX)size
+else
+CC = $(PREFIX)gcc
+AS = $(PREFIX)gcc -x assembler-with-cpp
+CP = $(PREFIX)objcopy
+SZ = $(PREFIX)size
+endif
+HEX = $(CP) -O ihex
+BIN = $(CP) -O binary -S
+ 
+#######################################
+# CFLAGS
+#######################################
+# cpu
+CPU = -mcpu=cortex-m7
+
+# fpu
+FPU = -mfpu=fpv5-d16
+
+# float-abi
+FLOAT-ABI = -mfloat-abi=hard
+
+# mcu
+MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+
+# macros for gcc
+# AS defines
+AS_DEFS = 
+
+# C defines
+C_DEFS =  \
+-DCORE_CM7 \
+-DUSE_HAL_DRIVER \
+-DSTM32H757xx \
+-DUSE_PWR_LDO_SUPPLY \
+-DMETAL_INTERNAL \
+-DMETAL_MAX_DEVICE_REGIONS=2 \
+-DRPMSG_BUFFER_SIZE=512 \
+-DVIRTIO_MASTER_ONLY \
+-DNO_ATOMIC_64_SUPPORT
+
+
+# AS includes
+AS_INCLUDES = 
+
+# C includes
+C_INCLUDES =  \
+-I../../CM7/BSP \
+-I../../CM7/BSP/MPU \
+-I../../CM7/BSP/SDRAM \
+-I../../CM7/BSP/LCD \
+-I../../CM7/BSP/CAMERA \
+-I../../CM7/BSP/EEPROM \
+-I../../CM7/BSP/ETH \
+-I../../CM7/APP/JPEG \
+-I../../CM7/APP/IPC \
+-I../../CM7/APP/CAMERA \
+-I../../CM7/APP/NET/HTTP \
+-I../../CM7/APP/BOOT \
+-I../../CM7/APP/OTA \
+-I../../CM7/Core/Inc \
+-I../../Utilities/TJpgDec\ \
+-I../../Common/Inc \
+-I../../Drivers/STM32H7xx_HAL_Driver/Inc \
+-I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
+-I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
+-I../../Drivers/CMSIS/Include \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/include \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+-I../../Drivers/CMSIS/RTOS2/Include \
+-I../../CM7/OPENAMP \
+-I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/include \
+-I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include \
+-I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include/metal/compiler/gcc \
+-I../../Middlewares/Third_Party/OpenAMP/virtual_driver \
+-I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg \
+-I../../Utilities/JPEG \
+-I../../CM7/LWIP/App \
+-I../../CM7/LWIP/Target \
+-I../../Middlewares/Third_Party/LwIP/src/include \
+-I../../Middlewares/Third_Party/LwIP/system \
+-I../../Middlewares/Third_Party/LwIP/src/include/netif/ppp \
+-I../../Middlewares/Third_Party/LwIP/src/include/lwip \
+-I../../Middlewares/Third_Party/LwIP/src/include/lwip/apps \
+-I../../Middlewares/Third_Party/LwIP/src/include/lwip/priv \
+-I../../Middlewares/Third_Party/LwIP/src/include/lwip/prot \
+-I../../Middlewares/Third_Party/LwIP/src/include/netif \
+-I../../Middlewares/Third_Party/LwIP/src/include/compat/posix \
+-I../../Middlewares/Third_Party/LwIP/src/include/compat/posix/arpa \
+-I../../Middlewares/Third_Party/LwIP/src/include/compat/posix/net \
+-I../../Middlewares/Third_Party/LwIP/src/include/compat/posix/sys \
+-I../../Middlewares/Third_Party/LwIP/src/include/compat/stdc \
+-I../../Middlewares/Third_Party/LwIP/system/arch
+
+# compile gcc flags
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+ifeq ($(DEBUG), 1)
+CFLAGS += -g -gdwarf-2
+endif
+
+
+# Generate dependency information
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+# HAL 官方可覆盖宏：限制状态寄存器轮询，无需修改生成驱动。
+CFLAGS += -DSDMMC_SWDATATIMEOUT=1000U
+CFLAGS += -I../../CM7/FATFS/App -I../../CM7/FATFS/Target -I../../Middlewares/Third_Party/FatFs/src
+CFLAGS += -I../../CM7/USB_DEVICE/App -I../../CM7/USB_DEVICE/Target
+CFLAGS += -I../../Middlewares/ST/STM32_USB_Device_Library/Core/Inc
+CFLAGS += -I../../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc
+
+
+#######################################
+# LDFLAGS
+#######################################
+# link script
+# LDSCRIPT selected by APP_SLOT above (A: 0x08020000 / B: 0x080A0000)
+
+# libraries
+LIBS = -lc -lm -lnosys 
+LIBDIR = 
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+
+# default action: build all
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+
+.PHONY: all slot-a slot-b all-slots clean clean-slots
+
+# 双槽产物（链接地址分别对齐 A/B）
+#   build/BaseProject_CM7.bin @ 0x08020000
+#   build_B/BaseProject_CM7_B.bin @ 0x080A0000
+slot-a:
+	$(MAKE) all APP_SLOT=A
+
+slot-b:
+	$(MAKE) all APP_SLOT=B
+
+all-slots: slot-a slot-b
+	@echo.
+	@echo === CM7 dual-slot bins ready ===
+	@echo   Slot A : build/$(TARGET_BASE).bin  @ 0x08020000
+	@echo   Slot B : build_B/$(TARGET_BASE)_B.bin  @ 0x080A0000
+	@echo.
+
+#######################################
+# build the application
+#######################################
+# list of objects
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+OBJECTS := $(filter-out $(BUILD_DIR)/init.o $(BUILD_DIR)/sys.o,$(OBJECTS))
+OBJECTS += $(BUILD_DIR)/init.o $(BUILD_DIR)/sys.o $(BUILD_DIR)/metal_init.o $(BUILD_DIR)/metal_sys.o
+vpath %.c $(sort $(dir $(C_SOURCES)))
+# list of ASM program objects
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(ASM_SOURCES)))
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASMM_SOURCES:.S=.o)))
+vpath %.S $(sort $(dir $(ASMM_SOURCES)))
+
+# 颜色转换为逐像素热点，仅对该工具启用速度优化，保留其他模块的调试配置。
+$(BUILD_DIR)/jpeg_utils.o: CFLAGS += -O2
+
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+
+$(BUILD_DIR)/init.o: ../../Middlewares/Third_Party/LwIP/src/core/init.c
+$(BUILD_DIR)/sys.o: ../../Middlewares/Third_Party/LwIP/src/core/sys.c
+$(BUILD_DIR)/app_http_ota.o: ../../CM7/APP/OTA/app_http_ota.c
+$(BUILD_DIR)/metal_init.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c
+$(BUILD_DIR)/metal_sys.o: ../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c
+$(BUILD_DIR)/metal_init.o $(BUILD_DIR)/metal_sys.o: Makefile | $(BUILD_DIR)
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(@:.o=.lst) $(filter %.c,$^) -o $@
+
+$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile $(LDSCRIPT)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(SZ) $@
+
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(HEX) $< $@
+	
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(BIN) $< $@	
+	
+$(BUILD_DIR):
+	mkdir $@		
+
+#######################################
+# clean up
+#######################################
+clean:
+	-rm -fR $(BUILD_DIR)
+
+clean-slots:
+	-rm -fR build build_B
+#######################################
+# dependencies
+#######################################
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+# *** EOF ***
