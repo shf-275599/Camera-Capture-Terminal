@@ -51,6 +51,8 @@
 #define ETH_RX_BUFFER_SIZE 1536
 /*----- Value in opt.h for MEM_ALIGNMENT: 1 -----*/
 #define MEM_ALIGNMENT 4
+/*----- Default Value for MEM_SIZE: 1600 ---*/
+#define MEM_SIZE 32768
 /*----- Default Value for H7 devices: 0x30004000 -----*/
 #define LWIP_RAM_HEAP_POINTER 0x30004000
 /*----- Value supported for H7 devices: 1 -----*/
@@ -117,8 +119,6 @@
 #define LWIP_RAM_HEAP_POINTER 0x30005000
 #define LWIP_SO_RCVTIMEO 1
 #define LWIP_SO_SNDTIMEO 1
-/* MJPEG 持续 TCP 发送需要容纳多个 pbuf，默认 1600 字节无法维持流水。 */
-#define MEM_SIZE (32U * 1024U)
 
 /* USER CODE END 1 */
 

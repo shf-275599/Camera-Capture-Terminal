@@ -426,13 +426,8 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 
   uint32_t refline;
   int32_t ycomp, crcomp, cbcomp, offset;
-  uint32_t red_sum, green_sum, blue_sum;
 
   uint32_t red, green, blue;
-
-#if (JPEG_RGB_FORMAT == JPEG_RGB565)
-  uint16_t pixel;
-#endif
 
   uint8_t *pOutAddr;
   uint8_t *pInAddr;
@@ -475,10 +470,9 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
       {
         /* First Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        pixel = *(const uint16_t *)(pInAddr + refline);
-        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
-        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
-        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
+        red   = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
+        green = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
+        blue  = (((*(__IO uint16_t *)(pInAddr + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -488,18 +482,20 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         blue  = (*(pInAddr + refline + JPEG_BLUE_OFFSET/8)) ;
 #endif
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
-        red_sum = red;
-        green_sum = green;
-        blue_sum = blue;
+        cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
+        cbcomp = CLAMP_8BITS(cbcomp);
+        crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
+        crcomp = CLAMP_8BITS(crcomp);
 
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset]))  = (ycomp);
+        (*(pOutAddr + JPEG_ConvertorParams.Cb_MCU_LUT[offset])) = (cbcomp);
+        (*(pOutAddr + JPEG_ConvertorParams.Cr_MCU_LUT[offset])) = (crcomp);
 
         /* Second Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        pixel = *(const uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline);
-        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
-        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
-        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
+        red   = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
+        green = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
+        blue  = (((*(__IO uint16_t *)(pInAddr + JPEG_BYTES_PER_PIXEL + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -510,16 +506,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
 #endif
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + 1]))  = (ycomp);
-        red_sum += red;
-        green_sum += green;
-        blue_sum += blue;
 
         /* Third Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        pixel = *(const uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline);
-        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
-        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
-        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
+        red   = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
+        green = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
+        blue  = (((*(__IO uint16_t *)(pInAddr + JPEG_ConvertorParams.ScaledWidth + refline)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -531,16 +523,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
 
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor]))  = (ycomp);
-        red_sum += red;
-        green_sum += green;
-        blue_sum += blue;
 
         /* Fourth Pixel */
 #if (JPEG_RGB_FORMAT == JPEG_RGB565)
-        pixel = *(const uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL);
-        red   = (pixel & JPEG_RGB565_RED_MASK) >> JPEG_RED_OFFSET;
-        green = (pixel & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET;
-        blue  = (pixel & JPEG_RGB565_BLUE_MASK) >> JPEG_BLUE_OFFSET;
+        red   = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_RED_MASK)   >> JPEG_RED_OFFSET) ;
+        green = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_GREEN_MASK) >> JPEG_GREEN_OFFSET) ;
+        blue  = (((*(__IO uint16_t *)(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL)) & JPEG_RGB565_BLUE_MASK)  >> JPEG_BLUE_OFFSET) ;
         red   = (red << 3)   | (red >> 2);
         green = (green << 2) | (green >> 4);
         blue  = (blue << 3)  | (blue >> 2);
@@ -552,15 +540,7 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor + 1]))  = (ycomp);
 
-        /* 对整个 2x2 像素组做盒式滤波，避免只取左上角造成彩色边缘混叠。
-         * RGB 到色度为线性变换，先平均 RGB 可保持每组仅计算一次 Cb/Cr。 */
-        red = (red_sum + red + 2U) >> 2;
-        green = (green_sum + green + 2U) >> 2;
-        blue = (blue_sum + blue + 2U) >> 2;
-        cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
-        crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
-        (*(pOutAddr + JPEG_ConvertorParams.Cb_MCU_LUT[offset])) = CLAMP_8BITS(cbcomp);
-        (*(pOutAddr + JPEG_ConvertorParams.Cr_MCU_LUT[offset])) = CLAMP_8BITS(crcomp);
+        /****************/
 
         pInAddr += JPEG_BYTES_PER_PIXEL * 2;
         offset+=2;
