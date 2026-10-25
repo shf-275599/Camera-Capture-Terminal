@@ -194,14 +194,14 @@ void lcd_init(void)
     lcddev.id = 0X8081;
 #endif
    
-    LOG_INFO("CM7","LCD ID:%x", lcddev.id); /* 打印LCD ID */
+    LOG_INFO("LCD","LCD ID:%x", lcddev.id); /* 打印LCD ID */
     if (lcddev.id != 0)                 /* ID非零,说明有RGB屏接入 */
     {
         ltdc_init();                    /* 初始化LTDC */
-        LOG_INFO("CM7","LCD init OK");
+        LOG_INFO("LCD","LCD init OK");
     }
     else {
-        LOG_ERROR("CM7","LCD init Failed, no RGB screen connected");
+        LOG_ERROR("LCD","LCD init Failed, no RGB screen connected");
     }
 
     if (lcdltdc.pwidth != 0)            /* 如果是RGB屏 */
@@ -623,7 +623,6 @@ void lcd_show_string(uint16_t x, uint16_t y, uint16_t width, uint16_t height, ui
         p++;
     }
 }
-
 
 
 

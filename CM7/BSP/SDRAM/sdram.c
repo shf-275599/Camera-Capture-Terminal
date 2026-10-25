@@ -13,7 +13,7 @@ void sdram_init(void)
 {
     sdram_initialization_sequence();
     HAL_SDRAM_ProgramRefreshRate(&hsdram1, SDRAM_REFRESH_COUNT);
-    LOG_INFO("CM7","SDRAM init OK");
+    LOG_INFO("SDRAM","SDRAM init OK");
 }
 
 /**
@@ -101,6 +101,6 @@ void sdram_test(void)
             break;
         }
 
-        LOG_INFO("CM7","SDRAM Capacity: %lu KB", (unsigned long)((temp - sval + 1U) * 16U));
+        LOG_INFO("SDRAM","SDRAM Capacity: %lu KB", (unsigned long)((temp - sval + 1U) * 16U));
     }
 }

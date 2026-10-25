@@ -113,13 +113,13 @@ static int32_t phy_scan_address(uint32_t *found_addr)
     if ((id1 == LAN8720_PHY_ID1) && ((id2 & 0xFFF0U) == LAN8720_PHY_ID2))
     {
       *found_addr = addr;
-      LOG_INFO("CM7", "PHY found at addr %lu, ID=0x%04lX/0x%04lX",
+      LOG_INFO("PHY", "PHY found at addr %lu, ID=0x%04lX/0x%04lX",
              (unsigned long)addr, (unsigned long)id1, (unsigned long)id2);
       return LAN8720_STATUS_OK;
     }
   }
 
-  LOG_ERROR("CM7", "PHY scan: no LAN8720 found on MDIO bus");
+  LOG_ERROR("PHY", "PHY scan: no LAN8720 found on MDIO bus");
   return LAN8720_STATUS_ERROR;
 }
 
@@ -133,7 +133,7 @@ void eth_phy_print_diag(void)
   uint32_t id2 = 0U;
   uint32_t bsr = 0U;
 
-  LOG_INFO("CM7", "Diag: using PHY addr %lu, last BCR=0x%04lX",
+  LOG_INFO("PHY", "Diag: using PHY addr %lu, last BCR=0x%04lX",
          (unsigned long)phy_addr, (unsigned long)last_bcr);
 
   /* 只扫低地址，覆盖本板常见布线，避免刷屏 */
@@ -143,7 +143,7 @@ void eth_phy_print_diag(void)
     {
       phy_io_read_reg(addr, 0U, &last_bcr);
       phy_io_read_reg(addr, 1U, &bsr);
-      LOG_INFO("CM7", "  addr %lu: ID=0x%04lX/0x%04lX BCR=0x%04lX BSR=0x%04lX",
+      LOG_INFO("PHY", "  addr %lu: ID=0x%04lX/0x%04lX BCR=0x%04lX BSR=0x%04lX",
              (unsigned long)addr, (unsigned long)id1, (unsigned long)id2,
              (unsigned long)last_bcr, (unsigned long)bsr);
     }
