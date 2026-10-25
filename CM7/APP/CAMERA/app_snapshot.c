@@ -182,8 +182,9 @@ static void snapshot_task(void *argument)
 
 void App_Snapshot_Thread_Start(void)
 {
+    /* CMSIS 优先级直接映射到 FreeRTOS；抓拍须低于相机(5)和 MJPEG(4)。 */
     const osThreadAttr_t attributes = {
-        .name = "snapshot", .stack_size = sizeof(s_task_stack), .priority = osPriorityBelowNormal,
+        .name = "snapshot", .stack_size = sizeof(s_task_stack), .priority = (osPriority_t)3,
         .stack_mem = s_task_stack, .cb_mem = &s_task_control, .cb_size = sizeof(s_task_control)
     };
     if (osThreadNew(snapshot_task, NULL, &attributes) == NULL)
