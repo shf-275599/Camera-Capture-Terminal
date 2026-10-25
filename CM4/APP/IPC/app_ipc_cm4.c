@@ -108,7 +108,7 @@ void app_ipc_cm4_init(void)
     Error_Handler();
   }
   OPENAMP_Wait_EndPointready(&s_ept);
-  LOG_INFO("IPC", "OpenAMP init OK");
+  LOG_INFO("CM4-IPC", "OpenAMP init OK");
 }
 
 void app_ipc_cm4_send(void)
