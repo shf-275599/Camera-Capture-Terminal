@@ -240,18 +240,18 @@ static void camera_dma_error(DMA_HandleTypeDef *hdma)
 void ov5640_dcmi_stream_log_error(void)
 {
     DMA_Stream_TypeDef *dma = (DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance;
-    LOG_ERROR("CM7", "CAMERA_FAULT DCMI=0x%lX DMA=0x%lX CR=%08lX SR=%08lX DMA_CR=%08lX NDTR=%lu ISR=%08lX age=%lu copying=%u",
+    LOG_ERROR("CAMERA", "CAMERA_FAULT DCMI=0x%lX DMA=0x%lX CR=%08lX SR=%08lX DMA_CR=%08lX NDTR=%lu ISR=%08lX age=%lu copying=%u",
               (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode,
               (unsigned long)DCMI->CR, (unsigned long)DCMI->SR,
               (unsigned long)dma->CR, (unsigned long)dma->NDTR,
               (unsigned long)DMA1->LISR,
               (unsigned long)(HAL_GetTick() - g_stream.frame_tick), s_copying);
-    LOG_ERROR("CM7", "CAMERA_DMA segment=%u frames=%lu CR=%08lX NDTR=%lu M0=%08lX M1=%08lX ISR=%08lX",
+    LOG_ERROR("CAMERA", "CAMERA_DMA segment=%u frames=%lu CR=%08lX NDTR=%lu M0=%08lX M1=%08lX ISR=%08lX",
               g_stream.segment, (unsigned long)g_stream.frames,
               (unsigned long)g_stream.dma_cr, (unsigned long)g_stream.dma_ndtr,
               (unsigned long)g_stream.dma_m0ar, (unsigned long)g_stream.dma_m1ar,
               (unsigned long)g_stream.dma_lisr);
-    LOG_ERROR("CM7", "CAMERA_IRQ saved=%u MISR=%08lX DMA2D_CR=%08lX copy_offset=%lu",
+    LOG_ERROR("CAMERA", "CAMERA_IRQ saved=%u MISR=%08lX DMA2D_CR=%08lX copy_offset=%lu",
               g_stream.fault_saved, (unsigned long)g_stream.fault_dcmi,
               (unsigned long)g_stream.fault_dma2d, (unsigned long)g_stream.fault_copy_offset);
 }
@@ -398,7 +398,7 @@ uint8_t ov5640_dcmi_stream_poll(void)
             g_stream.display_frames++;
             if (!g_stream.reported)
             {
-                LOG_INFO("CM7", "CAMERA_STREAM_FRAME_PASS frames=%lu display=0x%08lX",
+                LOG_INFO("CAMERA", "CAMERA_STREAM_FRAME_PASS frames=%lu display=0x%08lX",
                          (unsigned long)g_stream.frames, (unsigned long)g_stream.addr[g_stream.display]);
                 g_stream.reported = 1U;
             }
@@ -438,12 +438,12 @@ uint8_t ov5640_dcmi_stream_poll(void)
     if (elapsed >= 1000U && !g_stream.error)
     {
         capture_frames = g_stream.frames;
-        // LOG_INFO("CM7", "CAMERA_FPS capture=%lu display=%lu",
+        // LOG_INFO("CAMERA", "CAMERA_FPS capture=%lu display=%lu",
         //          (unsigned long)((capture_frames - g_stream.fps_capture_frames) * 1000U / elapsed),
         //           (unsigned long)((g_stream.display_frames - g_stream.fps_display_frames) * 1000U / elapsed));
         if ((hltdc.Instance->ISR & (LTDC_ISR_FUIF | LTDC_ISR_TERRIF)) != 0U)
         {
-            LOG_WARN("CM7", "CAMERA_LTDC status=0x%lX", (unsigned long)hltdc.Instance->ISR);
+            LOG_WARN("CAMERA", "CAMERA_LTDC status=0x%lX", (unsigned long)hltdc.Instance->ISR);
             hltdc.Instance->ICR = LTDC_ICR_CFUIF | LTDC_ICR_CTERRIF;
         }
         g_stream.fps_capture_frames = capture_frames;
@@ -488,7 +488,7 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     __HAL_DCMI_CLEAR_FLAG(&hdcmi, DCMI_FLAG_FRAMERI);
     if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, dts_addr, len) != HAL_OK)
     {
-        LOG_ERROR("CM7","OV5640 start DCMI DMA failed");
+        LOG_ERROR("CAMERA","OV5640 start DCMI DMA failed");
         HAL_DCMI_Stop(&hdcmi);
         return OV5640_DCMI_ERROR;
     }
@@ -498,7 +498,7 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
     {
         if ((HAL_GetTick() - start_tick) > 1000U)
         {
-            LOG_ERROR("CM7","OV5640 DCMI DMA transfer timeout");
+            LOG_ERROR("CAMERA","OV5640 DCMI DMA transfer timeout");
             HAL_DCMI_Stop(&hdcmi);
             return OV5640_DCMI_ETIMEOUT;
         }
@@ -508,8 +508,8 @@ uint8_t ov5640_dcmi_start(uint32_t dts_addr, uint32_t meminc, uint32_t memdataal
         (hdcmi.DMA_Handle->ErrorCode & ~HAL_DMA_ERROR_FE) != HAL_DMA_ERROR_NONE ||
         hdcmi.XferCount != hdcmi.XferTransferNumber)
     {
-        LOG_ERROR("CM7", "OV5640 DCMI error=0x%lX DMA error=0x%lX", (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode);
-        LOG_ERROR("CM7", "DMA addr0=0x%08lX addr1=0x%08lX pixels first=%04X last=%04X",
+        LOG_ERROR("CAMERA", "OV5640 DCMI error=0x%lX DMA error=0x%lX", (unsigned long)hdcmi.ErrorCode, (unsigned long)hdcmi.DMA_Handle->ErrorCode);
+        LOG_ERROR("CAMERA", "DMA addr0=0x%08lX addr1=0x%08lX pixels first=%04X last=%04X",
                   (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->M0AR,
                   (unsigned long)((DMA_Stream_TypeDef *)hdcmi.DMA_Handle->Instance)->M1AR,
                   ((volatile uint16_t *)dts_addr)[0], ((volatile uint16_t *)dts_addr)[800U * 480U - 1U]);

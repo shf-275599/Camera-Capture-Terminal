@@ -61,7 +61,7 @@ static void Camera_Thread(void *argument)
   s_camera_running = 1U;
   if (app_ov5640_run() != 0U)
   {
-    LOG_ERROR("CM7", "CAMERA_THREAD_FAIL");
+    LOG_ERROR("CAMERA", "CAMERA_THREAD_FAIL");
   }
 
   s_camera_running = 0U;
@@ -96,19 +96,19 @@ void app_ov5640_init(void)
 {
     uint8_t ret;
 
-    LOG_INFO("CM7","OV5640 init start");
+    LOG_INFO("CAMERA","OV5640 init start");
 
     ret = ov5640_init();
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7","OV5640 init FAILED (err=%d)", ret);
+        LOG_ERROR("CAMERA","OV5640 init FAILED (err=%d)", ret);
         return;
     }
 
     ov5640_led_on();
     ov5640_led_off();
     
-    LOG_INFO("CM7","OV5640 init OK, chip ID verified");
+    LOG_INFO("CAMERA","OV5640 init OK, chip ID verified");
 }
 
 /**
@@ -118,26 +118,26 @@ void app_ov5640_capture_colorbar(void)
 {
     uint8_t ret = 0;
 
-    LOG_INFO("CM7","OV5640 capture colorbar start");
+    LOG_INFO("CAMERA","OV5640 capture colorbar start");
     /* 1. 设置输出格式为 RGB565 */
     ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7","OV5640 set output format failed (err=%d)", ret);
+        LOG_ERROR("CAMERA","OV5640 set output format failed (err=%d)", ret);
         return;
     }
     /* 2. 设置输出尺寸为 800x480 */
     ret = ov5640_set_output_size(800, 480);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7","OV5640 set output size failed (err=%d)", ret);
+        LOG_ERROR("CAMERA","OV5640 set output size failed (err=%d)", ret);
         return;
     }
     /* 3. 设置测试模式为 颜色条测试 */
     ret = ov5640_set_test_pattern(OV5640_TEST_PATTERN_COLOR_BAR);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7","OV5640 set test pattern failed (err=%d)", ret);
+        LOG_ERROR("CAMERA","OV5640 set test pattern failed (err=%d)", ret);
         return;
     }
     /* 4. 开始捕获 */
@@ -146,10 +146,10 @@ void app_ov5640_capture_colorbar(void)
                          NULL);                      // 帧数据传输前无需要完成的工作
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7","OV5640 get frame failed (err=%d)", ret);
+        LOG_ERROR("CAMERA","OV5640 get frame failed (err=%d)", ret);
         return;
     }
-    LOG_INFO("CM7","Colorbar frame captured to 0x%08X", LTDC_FRAME_BUF_ADDR);
+    LOG_INFO("CAMERA","Colorbar frame captured to 0x%08X", LTDC_FRAME_BUF_ADDR);
 }
 
 /**
@@ -163,61 +163,61 @@ uint8_t app_ov5640_run(void)
     ret = ov5640_set_output_format(OV5640_OUTPUT_FORMAT_RGB565);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_output_format failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_output_format failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_output_size(800, 480);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_output_size failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_output_size failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_light_mode(OV5640_LIGHT_MODE_ADVANCED_AWB);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_light_mode failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_light_mode failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_color_saturation(OV5640_COLOR_SATURATION_3);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_color_saturation failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_color_saturation failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_brightness(OV5640_BRIGHTNESS_4);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_brightness failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_brightness failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_contrast(OV5640_CONTRAST_4);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_contrast failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_contrast failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_hue(OV5640_HUE_6);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_hue failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_hue failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_exposure_level(OV5640_EXPOSURE_LEVEL_5);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_exposure_level failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_exposure_level failed (err=%d)", ret);
         return ret;
     }
     ret = ov5640_set_sharpness_level(OV5640_SHARPNESS_5);
     if (ret != OV5640_EOK)
     {
-        LOG_ERROR("CM7", "ov5640_set_sharpness_level failed (err=%d)", ret);
+        LOG_ERROR("CAMERA", "ov5640_set_sharpness_level failed (err=%d)", ret);
         return ret;
     }
 
     /* 三帧 SDRAM：显示帧、采集帧、待显示帧。DMA 持续接收，LTDC 在消隐期换帧。 */
     /* 避开从 0xD0110000 开始的 JPEG 工作缓冲，采集帧放在独立区域。 */
-    LOG_INFO("CM7", "CAMERA_STREAM_START");
+    LOG_INFO("CAMERA", "CAMERA_STREAM_START");
     while (s_pause_requested != 0U)
     {
         s_paused = 1U;
@@ -258,24 +258,24 @@ uint8_t app_ov5640_run(void)
             {
                 ov5640_dcmi_stream_log_error();
                 ov5640_dcmi_stream_stop();
-                LOG_ERROR("CM7", "CAMERA_RESTART_FAIL=%u retry=%lu", ret, (unsigned long)++retries);
+                LOG_ERROR("CAMERA", "CAMERA_RESTART_FAIL=%u retry=%lu", ret, (unsigned long)++retries);
                 osDelay(250U);
                 continue;
             }
             streaming = 1U;
-            if (retries) LOG_INFO("CM7", "CAMERA_RESTART_STARTED retry=%lu", (unsigned long)retries);
+            if (retries) LOG_INFO("CAMERA", "CAMERA_RESTART_STARTED retry=%lu", (unsigned long)retries);
         }
         ret = ov5640_dcmi_stream_poll();
         if (ret != OV5640_DCMI_EOK)
         {
             ov5640_dcmi_stream_log_error();
-            LOG_ERROR("CM7", "CAMERA_STREAM_FAIL=%u DCMI=0x%lX DMA=0x%lX",
+            LOG_ERROR("CAMERA", "CAMERA_STREAM_FAIL=%u DCMI=0x%lX DMA=0x%lX",
                       ret, (unsigned long)hdcmi.ErrorCode,
                       (unsigned long)hdcmi.DMA_Handle->ErrorCode);
             ov5640_dcmi_stream_stop();
             streaming = 0U;
             retries++;
-            LOG_WARN("CM7", "CAMERA_RECOVER retry=%lu", (unsigned long)retries);
+            LOG_WARN("CAMERA", "CAMERA_RECOVER retry=%lu", (unsigned long)retries);
             osDelay(250U);
             continue;
         }
