@@ -567,7 +567,7 @@ void ethernet_link_thread(void* argument)
   struct netif *netif = (struct netif *)argument;
   int32_t previous_state = LAN8720_STATUS_LINK_DOWN;
   uint32_t previous_ip = 0U;
-  LOG_INFO("CM7", "NET_START: wait PHY link and IP address");
+  LOG_INFO("NET", "NET_START: wait PHY link and IP address");
 /* USER CODE END ETH link init */
 
   for(;;)
@@ -614,7 +614,7 @@ void ethernet_link_thread(void* argument)
         if (result != HAL_OK)
         {
           UNLOCK_TCPIP_CORE();
-          LOG_ERROR("CM7", "NET_FAIL: ETH 启动 error=0x%lX state=0x%lX DMA=0x%lX DMACSR=%08lX phy=%ld previous=%ld",
+          LOG_ERROR("NET", "NET_FAIL: ETH 启动 error=0x%lX state=0x%lX DMA=0x%lX DMACSR=%08lX phy=%ld previous=%ld",
                     (unsigned long)heth.ErrorCode, (unsigned long)heth.gState,
                     (unsigned long)heth.DMAErrorCode, (unsigned long)heth.Instance->DMACSR,
                     (long)state, (long)previous_state);
@@ -623,7 +623,7 @@ void ethernet_link_thread(void* argument)
         }
         netif_set_link_up(netif);
         UNLOCK_TCPIP_CORE();
-        LOG_INFO("CM7", "NET_LINK_UP: %s", eth_phy_link_state_str(state));
+        LOG_INFO("NET", "NET_LINK_UP: %s", eth_phy_link_state_str(state));
       }
       else
       {
@@ -631,7 +631,7 @@ void ethernet_link_thread(void* argument)
         LOCK_TCPIP_CORE();
         netif_set_link_down(netif);
         UNLOCK_TCPIP_CORE();
-        LOG_INFO("CM7", "NET_LINK_DOWN: %s", eth_phy_link_state_str(state));
+        LOG_INFO("NET", "NET_LINK_DOWN: %s", eth_phy_link_state_str(state));
       }
       previous_state = state;
     }
@@ -643,7 +643,7 @@ void ethernet_link_thread(void* argument)
     {
       char address[IP4ADDR_STRLEN_MAX];
       ip4addr_ntoa_r(netif_ip4_addr(netif), address, sizeof(address));
-      LOG_INFO("CM7", "NET_IP: %s", address);
+      LOG_INFO("NET", "NET_IP: %s", address);
       previous_ip = current_ip;
     }
     UNLOCK_TCPIP_CORE();

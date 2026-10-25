@@ -114,7 +114,7 @@ static void Mjpeg_SendThread(void *argument)
         uint32_t waiting = fps_tick;
         netconn_set_sendtimeout(conn, 100);
         if (mjpeg_send(conn, response, sizeof(response) - 1U) != 0) goto finish;
-        LOG_INFO("CM7", "MJPEG_STREAM_START");
+        LOG_INFO("MJPEG", "MJPEG_STREAM_START");
         while (!s_stopping)
         {
             int index = -1;
@@ -166,12 +166,12 @@ static void Mjpeg_SendThread(void *argument)
                 fps_tick = waiting;
             }
             if (++frames == 1U)
-                LOG_INFO("CM7", "MJPEG_FIRST_FRAME bytes=%lu", (unsigned long)size);
+                LOG_INFO("MJPEG", "MJPEG_FIRST_FRAME bytes=%lu", (unsigned long)size);
         }
 finish:
         netconn_close(conn);
         netconn_delete(conn);
-        LOG_INFO("CM7", "MJPEG_STREAM_STOP frames=%lu", (unsigned long)frames);
+        LOG_INFO("MJPEG", "MJPEG_STREAM_STOP frames=%lu", (unsigned long)frames);
         taskENTER_CRITICAL();
         client->connection = NULL;
         client->active = 0U;
@@ -226,12 +226,12 @@ static void Mjpeg_Thread(void *argument)
                         s_latest = index;
                         taskEXIT_CRITICAL();
                         if ((s_sequence % 30U) == 0U)
-                            LOG_INFO("CM7", "MJPEG_PERF acquire=%lu encode=%lu ms/frame clients=%lu",
+                            LOG_INFO("MJPEG", "MJPEG_PERF acquire=%lu encode=%lu ms/frame clients=%lu",
                                      (unsigned long)(acquired - started),
                                      (unsigned long)(HAL_GetTick() - acquired),
                                      (unsigned long)mjpeg_clients());
                     }
-                    else if (!s_stopping) LOG_ERROR("CM7", "MJPEG_ENCODE_FAIL");
+                    else if (!s_stopping) LOG_ERROR("MJPEG", "MJPEG_ENCODE_FAIL");
                 }
             }
             s_encoding = 0U;

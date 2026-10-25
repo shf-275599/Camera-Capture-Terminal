@@ -92,7 +92,7 @@ void App_HTTP_Server_Thread_Start(void)
                           (TaskHandle_t *)NULL);
     if (xReturn != pdPASS)
     {
-        LOG_ERROR("CM7", "HTTP: Http_Thread creation failed");
+        LOG_ERROR("HTTP", "HTTP: Http_Thread creation failed");
         return;
     }
 }
@@ -116,7 +116,7 @@ static void Http_Thread(void *argument)
     listen_connection = netconn_new(NETCONN_TCP);
     if (listen_connection == NULL)
     {
-        LOG_ERROR("CM7", "HTTP: netconn_new failed");
+        LOG_ERROR("HTTP", "HTTP: netconn_new failed");
         return;
     }
 
@@ -124,7 +124,7 @@ static void Http_Thread(void *argument)
     error = netconn_bind(listen_connection, IP_ADDR_ANY, APP_HTTP_PORT);
     if (error != ERR_OK)
     {
-        LOG_ERROR("CM7", "HTTP: bind port %u failed, error=%d",
+        LOG_ERROR("HTTP", "HTTP: bind port %u failed, error=%d",
                   (unsigned int)APP_HTTP_PORT, (int)error);
         netconn_delete(listen_connection); // 删除监听连接
         return;
@@ -134,13 +134,13 @@ static void Http_Thread(void *argument)
     error = netconn_listen(listen_connection);
     if (error != ERR_OK)
     {
-        LOG_ERROR("CM7", "HTTP: listen port %u failed, error=%d",
+        LOG_ERROR("HTTP", "HTTP: listen port %u failed, error=%d",
                   (unsigned int)APP_HTTP_PORT, (int)error);
         netconn_delete(listen_connection); // 删除监听连接
         return;
     } // 监听成功
 
-    LOG_INFO("CM7", "HTTP: server listening on port %u",
+    LOG_INFO("HTTP", "HTTP: server listening on port %u",
              (unsigned int)APP_HTTP_PORT);
     netconn_set_recvtimeout(listen_connection, APP_HTTP_RECV_TIMEOUT_MS); // 设置接收超时时间：5000ms
 
