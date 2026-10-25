@@ -234,24 +234,24 @@ int main(void)
   /* 初始化以太网接口 */
   MX_ETH_Init();
   {
-    LOG_INFO("CM7", "ETH I/O init OK");
+    LOG_INFO("ETH", "ETH I/O init OK");
     int32_t phy_status = eth_phy_init(); // 初始化 PHY
     if (phy_status != LAN8720_STATUS_OK)
     {
       eth_phy_print_diag(); // 打印 PHY 状态：当前地址、最近 BCR，以及地址 0~3 的 ID/BCR/BSR
-      LOG_ERROR("CM7", "PHY init failed: %s", eth_phy_link_state_str(phy_status));
+      LOG_ERROR("PHY", "PHY init failed: %s", eth_phy_link_state_str(phy_status));
     }
     else
     {
       eth_phy_print_diag();
-      LOG_INFO("CM7", "PHY init OK, link: %s", eth_phy_link_state_str(eth_phy_get_link_state()));
+      LOG_INFO("PHY", "PHY init OK, link: %s", eth_phy_link_state_str(eth_phy_get_link_state()));
     }
   }
   app_ipc_cm7_init(); // 初始化 IPC 模块
   sdram_init();       // 初始化 SDRAM
   lcd_init();         // 初始化 LCD
   app_ov5640_init();  // 初始化 OV5640 摄像头
-  LOG_INFO("CM7", "main() user init OK");
+  LOG_INFO("SYSTEM", "main() user init OK");
 
   /* OTA 试启动确认：初始化调用流程结束后，当前运行槽匹配 pending 时尝试提交 */
   if (((ee.flags & BOOT_EE_FLAG_PENDING) != 0U) && (ee.pending_slot == running_slot))
@@ -259,11 +259,11 @@ int main(void)
     int commit_ret = boot_eeprom_commit_pending(&ee); // 更新 confirmed 并清除 pending，写回 EEPROM
     if (commit_ret == 0)
     {
-      LOG_INFO("APP", "CM7 OTA pending committed -> confirmed=%u", (unsigned int)ee.confirmed_slot);
+      LOG_INFO("OTA", "CM7 OTA pending committed -> confirmed=%u", (unsigned int)ee.confirmed_slot);
     }
     else
     {
-      LOG_ERROR("APP", "CM7 OTA pending commit failed (ret=%d)", commit_ret);
+      LOG_ERROR("OTA", "CM7 OTA pending commit failed (ret=%d)", commit_ret);
     }
   }
   HAL_IWDG_Refresh(&hiwdg1); // EEPROM 写入后再喂一次

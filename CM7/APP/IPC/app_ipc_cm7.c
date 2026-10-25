@@ -87,7 +87,6 @@ void app_ipc_cm7_init(void)
   {
     Error_Handler();
   }
-  LOG_INFO("CM7","OpenAMP init OK");
+  LOG_INFO("IPC","OpenAMP init OK");
 }
-
 
