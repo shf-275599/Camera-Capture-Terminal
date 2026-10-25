@@ -134,7 +134,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   app_ipc_cm4_init();        // 初始化 IPC 模块
   HAL_IWDG_Refresh(&hiwdg2); // 喂狗
-  LOG_INFO("CM4", "main() user init OK");
+  LOG_INFO("SYSTEM", "main() user init OK");
   /* USER CODE END 2 */
 
   /* Init scheduler */
