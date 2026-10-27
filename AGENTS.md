@@ -1,5 +1,7 @@
 # 仓库操作说明
 
+工程概览与目录说明见 `README.md`。
+
 ## 构建与验证
 
 - 这是 STM32H757XIH6 双核固件。在 Windows PowerShell 中使用 GNU Make 和 `arm-none-eabi-*` 工具链（可通过 `make ... GCC_PATH=工具链bin目录` 指定）；从 WSL 操作时通过 `powershell.exe` 执行构建和测试。以下路径和命令均相对本目录；`make -C Makefile` 先构建 CM4、再构建 CM7，默认仅构建 A 槽。
@@ -10,7 +12,7 @@
 - 四个 `make_flash_cm{7,4}_slot{A,B}.ps1` 入口均支持 `[-Jobs N] [-Version V]`（版本默认 0），会构建、烧录目标核指定槽、登记 pending 并复位；不能当作仅构建命令。升级协议实现各自独立，修改时同步维护四份。
 - 本地升级需要 ST-Link、STM32CubeProgrammer（可用 `STM32_PROGRAMMER_CLI` 指定 CLI）及支持本地协议 v2 的 Bootloader；要求双核无 pending、confirmed 镜像有效且目标槽不是目标核 confirmed。不支持空板初始化。脚本不构建或烧录 `0x08000000` 的 CM7 Bootloader、`0x08100000` 的 CM4 Stub；固定引导程序更新与协议说明见 `docs/local_flash_update.md`。
 - 本地升级脚本的无硬件模拟测试：`powershell.exe -NoProfile -File ./tests/local_flash_update_test.ps1`。模拟通过或烧录输出 `PENDING` 均不代表实机启动、应用确认或回退已验证；两核独立确认和回退，不提供双核版本整体原子回滚。
-- JPEG RGB565→YCbCr420 转换回归：`powershell.exe -NoProfile -File ./tests/jpeg_color_equivalence_test.ps1`，提取实际转换函数与旧实现逐字节比较；依赖脚本内固定的 `D:\QT\Tools\mingw530_32\bin\gcc.exe`，不使用 ARM 交叉编译器。
+- JPEG RGB565→YCbCr420 转换回归：`powershell.exe -NoProfile -File ./tests/jpeg_color_equivalence_test.ps1`，提取实际转换函数与旧实现逐字节比较；依赖脚本内固定的 `D:\QT\Tools\mingw530_32\bin\gcc.exe`，不使用 ARM 交叉编译器。该测试守护 `Utilities/JPEG/jpeg_utils.c` 的转换优化；CubeMX 重新生成会把该文件覆盖回 ST 原始实现（2026-10-24 曾发生），生成后必须重跑本测试。
 
 ## HTTP / 摄像头验证
 
