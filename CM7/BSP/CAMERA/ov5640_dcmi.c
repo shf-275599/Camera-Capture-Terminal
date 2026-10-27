@@ -21,6 +21,7 @@
 #include "ov5640_dcmi.h"
 #include "dcmi.h"
 #include "ltdc.h"
+#include "lcd.h"
 #include "mylog.h"
 #include "cmsis_os2.h"
 #include <string.h>
@@ -420,7 +421,16 @@ uint8_t ov5640_dcmi_stream_poll(void)
         pending = g_stream.pending;
         /* 流帧由 DMA 写入、LTDC 读取，CPU 不访问像素，避免整帧维护阻塞 DMA 中断。 */
         if (pending != 3U &&
-            HAL_LTDC_SetAddress_NoReload(&hltdc, g_stream.addr[pending], 0U) == HAL_OK &&
+            HAL_LTDC_SetAddress_NoReload(&hltdc, g_stream.addr[pending], 0U) == HAL_OK)
+        {
+            /* HAL 设置地址会重新使能图层，无屏时须在重载前关闭 SDRAM 读取。 */
+            if (lcddev.id == 0U) __HAL_LTDC_LAYER_DISABLE(&hltdc, 0U);
+        }
+        else if (pending != 3U)
+        {
+            g_stream.error = 1U;
+        }
+        if (pending != 3U && !g_stream.error &&
             HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING) == HAL_OK)
         {
             g_stream.reload = 1U;

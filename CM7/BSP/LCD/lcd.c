@@ -201,6 +201,9 @@ void lcd_init(void)
         LOG_INFO("LCD","LCD init OK");
     }
     else {
+        /* 无屏时停止图层读取 SDRAM，保留 LTDC 时序供摄像头消隐期换帧。 */
+        __HAL_LTDC_LAYER_DISABLE(&hltdc, 0U);
+        __HAL_LTDC_RELOAD_IMMEDIATE_CONFIG(&hltdc);
         LOG_ERROR("LCD","LCD init Failed, no RGB screen connected");
     }
 
