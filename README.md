@@ -6,7 +6,7 @@
 
 | 目录 | 说明 | 文档 |
 | --- | --- | --- |
-| `Bootloader/` | 固定 CM7 Bootloader 与 CM4 Stub，负责槽位选择、跳转和本地升级协议 | [AGENTS.md](Bootloader/AGENTS.md) |
+| `Bootloader/` | 固定 CM7 Bootloader 与 CM4 Stub，负责槽位选择、跳转和本地升级协议 | [README.md](Bootloader/README.md) |
 | `BaseProject/` | 双核 A/B 应用固件：摄像头采集、JPEG 编码、LCD、HTTP MJPEG、SD 抓拍、USB 导出 | [README.md](BaseProject/README.md) |
 | `qt-ota/` | Windows OTA 上传客户端：分块上传、CRC32 校验、断点续传与任务恢复 | [README.md](qt-ota/README.md) |
 | `qt-camare/` | Windows 相机客户端：MJPEG 预览、YuNet 人脸检测、表情分类（目录名保留此拼写） | [README.md](qt-camare/README.md) |
