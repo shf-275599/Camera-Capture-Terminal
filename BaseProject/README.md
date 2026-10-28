@@ -38,7 +38,6 @@
 | `Utilities/` | `JPEG/jpeg_utils.c`（CM7 构建使用）、`TJpgDec`（软件 JPEG 解码） |
 | `tests/` | 升级脚本模拟测试、JPEG 色彩回归、HTTP MJPEG 实机测试 |
 | `docs/` | `local_flash_update.md`（本地升级协议）、`superpowers/specs/`（设计文档） |
-| `BSP/` | SDNAND、USBDMSC 板级代码，当前未接入任一核构建 |
 
 ## 构建
 
