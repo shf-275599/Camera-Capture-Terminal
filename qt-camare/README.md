@@ -14,7 +14,7 @@ OpenCV 的 C/C++ 编译增加 `-mstackrealign`，用于旧版 32 位 MinGW 与 W
 
 板端提供 `multipart/x-mixed-replace` HTTP 视频流，Qt 从响应读取 boundary，按每部分的 Content-Length 提取并解码 800×480 JPEG；JPEG 最大 512 KiB，头部最大 8 KiB。完整设计见 `../BaseProject/docs/superpowers/specs/2026-10-23-qt-mjpeg-design.md`。本程序适配当前 HTTP 固件，不再使用原 OCJP 自定义协议。
 
-板端仅允许一个视频观看连接，请先关闭浏览器预览或其他客户端。HTTP 503 表示设备正被观看或 OTA 忙碌，程序显示原因并等待重连。设备必须运行当前 HTTP MJPEG 固件；默认 IP 为 192.168.10.2，请按设备实际地址填写。
+板端允许两个视频观看连接；两个连接都被占用或 OTA 忙碌时返回 HTTP 503，程序显示原因并等待重连。设备必须运行当前 HTTP MJPEG 固件；默认 IP 为 192.168.10.2，请按设备实际地址填写。
 
 接收帧率为完整 JPEG 帧到达速率，解码成功数单独显示。接收、解码和人脸检测在工作线程执行，界面定时读取最新图像并等比例显示。YuNet 模型使用 CPU 检测人脸，检测图像宽度最多 640，置信度阈值 0.8，NMS 阈值 0.3。视频框经一对一匹配和时间平滑后显示：新目标连续两次检出确认，短时漏检最多保留 150 ms，超过 300 ms 无观测删除；断线重连、分辨率变化或检测异常清空轨迹。人数为当前显示框数量，包含短时保留框。这不是身份识别，多人交叉不保证身份保持，侧脸、遮挡或低照度仍可能漏检。状态栏分别显示总处理和检测耗时。模型读取失败时状态栏显示原因，视频继续播放。保留整个部署目录，尤其是 OpenCV DLL、`models/face_detection_yunet_2023mar.onnx`、`models/LICENSE-YuNet.txt`、`imageformats/qjpeg.dll` 和 `platforms/qwindows.dll`，不能只复制 EXE。
 
