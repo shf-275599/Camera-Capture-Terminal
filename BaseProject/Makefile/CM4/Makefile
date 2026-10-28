@@ -1,0 +1,304 @@
+##########################################################################################################################
+# 应用双槽构建入口；CubeMX 重新生成后需核对自定义构建规则。
+##########################################################################################################################
+
+# ------------------------------------------------
+# Generic Makefile (based on gcc)
+#
+# ChangeLog :
+#	2017-02-10 - Several enhancements + project update mode
+#   2015-07-22 - first version
+# ------------------------------------------------
+
+######################################
+# target
+######################################
+# Slot A @ 0x08120000，Reserve @ 0x08180000，Slot B @ 0x081A0000（Stub @ 0x08100000 由 Bootloader 侧占用）
+# 默认 make = Slot A（烧录脚本读取 build/BaseProject_CM4.elf）
+# 一键双槽：make all-slots → build/BaseProject_CM4.bin + build_B/BaseProject_CM4_B.bin
+TARGET_BASE = BaseProject_CM4
+TARGET = BaseProject_CM4
+BUILD_DIR = build
+APP_SLOT ?= A
+APP_SLOT_NAME := $(patsubst a,A,$(patsubst b,B,$(APP_SLOT)))
+
+ifeq ($(APP_SLOT_NAME),A)
+APP_FLASH_ORIGIN = 0x08120000
+LDSCRIPT = stm32h757xx_flash_CM4.ld
+else ifeq ($(APP_SLOT_NAME),B)
+APP_FLASH_ORIGIN = 0x081A0000
+LDSCRIPT = stm32h757xx_flash_CM4_slot_B.ld
+TARGET := BaseProject_CM4_B
+BUILD_DIR := build_B
+else
+$(error APP_SLOT must be A or B)
+endif
+
+
+######################################
+# building variables
+######################################
+# debug build?
+DEBUG = 1
+# optimization
+OPT = -Og
+
+
+#######################################
+# paths
+#######################################
+# Build path（由上方 APP_SLOT 分支决定：A=build / B=build_B）
+
+######################################
+# source
+######################################
+# C sources
+C_SOURCES =  \
+../../Common/Src/mylog.c \
+../../Common/Src/boot_slot.c \
+../../Common/Src/cm4_boot_handoff.c \
+../../Common/Src/bsp_flash_ram.c \
+../../Common/Src/cm4_ota_hold.c \
+../../CM4/APP/IPC/app_ipc_cm4.c \
+../../CM4/Core/Src/main.c \
+../../CM4/Core/Src/stm32h7xx_it.c \
+../../CM4/Core/Src/stm32h7xx_hal_msp.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c \
+../../Common/Src/system_stm32h7xx_dualcore_boot_cm4_cm7.c \
+../../CM4/Core/Src/sysmem.c \
+../../CM4/Core/Src/syscalls.c \
+../../CM4/Core/Src/gpio.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
+../../CM4/Core/Src/freertos.c \
+../../CM4/Core/Src/stm32h7xx_hal_timebase_tim.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/Common/mpu_wrappers_v2.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/list.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c \
+../../CM4/OPENAMP/mbox_hsem.c \
+../../CM4/OPENAMP/openamp.c \
+../../CM4/OPENAMP/rsc_table.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/device.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/init.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/io.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/log.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/shmem.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/condition.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_device.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_init.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_io.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/generic_shmem.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/time.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/remoteproc/remoteproc_virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg/rpmsg_virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtio.c \
+../../Middlewares/Third_Party/OpenAMP/open-amp/lib/virtio/virtqueue.c \
+../../Middlewares/Third_Party/OpenAMP/libmetal/lib/system/generic/cortexm/sys.c \
+../../CM4/Core/Src/mdma.c \
+../../CM4/Core/Src/dma.c \
+../../CM4/Core/Src/iwdg.c \
+../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_iwdg.c
+
+# ASM sources
+ASM_SOURCES =  \
+startup_stm32h757xx_CM4.s
+
+# ASMM sources
+ASMM_SOURCES = 
+
+
+
+#######################################
+# binaries
+#######################################
+PREFIX = arm-none-eabi-
+# The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
+# either it can be added to the PATH environment variable.
+ifdef GCC_PATH
+CC = $(GCC_PATH)/$(PREFIX)gcc
+AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
+CP = $(GCC_PATH)/$(PREFIX)objcopy
+SZ = $(GCC_PATH)/$(PREFIX)size
+else
+CC = $(PREFIX)gcc
+AS = $(PREFIX)gcc -x assembler-with-cpp
+CP = $(PREFIX)objcopy
+SZ = $(PREFIX)size
+endif
+HEX = $(CP) -O ihex
+BIN = $(CP) -O binary -S
+ 
+#######################################
+# CFLAGS
+#######################################
+# cpu
+CPU = -mcpu=cortex-m4
+
+# fpu
+FPU = -mfpu=fpv4-sp-d16
+
+# float-abi
+FLOAT-ABI = -mfloat-abi=hard
+
+# mcu
+MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+
+# macros for gcc
+# AS defines
+AS_DEFS = 
+
+# C defines
+C_DEFS =  \
+-DCORE_CM4 \
+-DUSE_HAL_DRIVER \
+-DSTM32H757xx \
+-DUSE_PWR_LDO_SUPPLY \
+-DMETAL_INTERNAL \
+-DMETAL_MAX_DEVICE_REGIONS=2 \
+-DRPMSG_BUFFER_SIZE=512 \
+-DVIRTIO_SLAVE_ONLY \
+-DNO_ATOMIC_64_SUPPORT
+
+
+# AS includes
+AS_INCLUDES = 
+
+# C includes
+C_INCLUDES =  \
+-I../../CM4/APP/IPC \
+-I../../CM4/Core/Inc \
+-I../../Common/Inc \
+-I../../Drivers/STM32H7xx_HAL_Driver/Inc \
+-I../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
+-I../../Drivers/CMSIS/Device/ST/STM32H7xx/Include \
+-I../../Drivers/CMSIS/Include \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/include \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
+-I../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+-I../../Drivers/CMSIS/RTOS2/Include \
+-I../../CM4/OPENAMP \
+-I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/include \
+-I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include \
+-I../../Middlewares/Third_Party/OpenAMP/libmetal/lib/include/metal/compiler/gcc \
+-I../../Middlewares/Third_Party/OpenAMP/virtual_driver \
+-I../../Middlewares/Third_Party/OpenAMP/open-amp/lib/rpmsg
+
+# compile gcc flags
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+ifeq ($(DEBUG), 1)
+CFLAGS += -g -gdwarf-2
+endif
+
+
+# Generate dependency information
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+
+
+#######################################
+# LDFLAGS
+#######################################
+# link script
+# LDSCRIPT selected by APP_SLOT above (A: 0x08120000 / B: 0x081A0000)
+
+# libraries
+LIBS = -lc -lm -lnosys 
+LIBDIR = 
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+
+# default action: build all
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+
+.PHONY: all slot-a slot-b all-slots clean clean-slots
+
+# 双槽产物（链接地址分别对齐 A/B）
+#   build/BaseProject_CM4.bin @ 0x08120000
+#   build_B/BaseProject_CM4_B.bin @ 0x081A0000
+slot-a:
+	$(MAKE) all APP_SLOT=A
+
+slot-b:
+	$(MAKE) all APP_SLOT=B
+
+all-slots: slot-a slot-b
+	@echo.
+	@echo === CM4 dual-slot bins ready ===
+	@echo   Slot A : build/$(TARGET_BASE).bin  @ 0x08120000
+	@echo   Slot B : build_B/$(TARGET_BASE)_B.bin  @ 0x081A0000
+	@echo.
+
+#######################################
+# build the application
+#######################################
+# list of objects
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(C_SOURCES)))
+# list of ASM program objects
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(ASM_SOURCES)))
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASMM_SOURCES:.S=.o)))
+vpath %.S $(sort $(dir $(ASMM_SOURCES)))
+
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+
+$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile $(LDSCRIPT)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(SZ) $@
+
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(HEX) $< $@
+	
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(BIN) $< $@	
+	
+$(BUILD_DIR):
+	mkdir $@		
+
+#######################################
+# clean up
+#######################################
+clean:
+	-rm -fR $(BUILD_DIR)
+
+clean-slots:
+	-rm -fR build build_B
+#######################################
+# dependencies
+#######################################
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+# *** EOF ***
