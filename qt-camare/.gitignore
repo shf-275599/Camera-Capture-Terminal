@@ -1,0 +1,16 @@
+# qmake 构建产物
+/build/
+
+# 根目录部署产物（由 build.ps1 生成）
+/*.exe
+/*.dll
+/bearer/
+/iconengines/
+/imageformats/
+/platforms/
+/styles/
+/models/
+
+# Qt Creator 本机配置
+*.pro.user
+*.pro.user.*
