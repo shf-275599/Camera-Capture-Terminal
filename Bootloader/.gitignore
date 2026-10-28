@@ -1,0 +1,60 @@
+# CMake build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+ninja.build
+ninja_deps
+ninja_log
+
+# IDE generated project metadata and user settings
+.settings/
+.vscode/*
+.idea/
+.mxproject
+*.user
+*.userprefs
+
+# Keil MDK generated files
+Objects/
+Listings/
+RTE/
+*.uvguix.*
+*.uvoptx
+*.bak
+
+# STM32CubeIDE build output
+Debug/
+Release/
+debug/
+release/
+
+# Firmware and linker output
+*.elf
+*.axf
+*.hex
+*.bin
+*.map
+*.out
+*.lst
+*.d
+
+# Debugger and programmer files
+*.stldr
+*.svd.bak
+*.launch
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
